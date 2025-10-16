@@ -5,7 +5,7 @@ require "tmpdir"
 require_relative "system_call"
 
 module Vectory
-  class InkscapeConverter
+  class InkscapeWrapper
     include Singleton
 
     def self.convert(content:, input_format:, output_format:, output_class:,

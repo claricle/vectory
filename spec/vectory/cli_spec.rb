@@ -170,7 +170,7 @@ RSpec.describe Vectory::CLI do
 
       it "returns conversion error" do
         with_tmp_dir do |dir|
-          expect(Vectory::InkscapeConverter.instance).to receive(:convert)
+          expect(Vectory::InkscapeWrapper.instance).to receive(:convert)
             .and_raise(Vectory::ConversionError)
 
           output = File.join(dir, "output.#{format}")
@@ -205,7 +205,7 @@ RSpec.describe Vectory::CLI do
 
       it "returns inkscape-not-found error" do
         in_tmp_dir do
-          expect(Vectory::InkscapeConverter.instance)
+          expect(Vectory::InkscapeWrapper.instance)
             .to receive(:convert).and_raise(Vectory::InkscapeNotFoundError)
 
           status = described_class.start(["-f", format, input])

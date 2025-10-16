@@ -103,8 +103,8 @@ RSpec.describe Vectory::Ps do
           .and_return("fake pdf content")
 
         # Make Inkscape fail
-        converter = instance_double(Vectory::InkscapeConverter)
-        allow(Vectory::InkscapeConverter).to receive(:instance).and_return(converter)
+        converter = instance_double(Vectory::InkscapeWrapper)
+        allow(Vectory::InkscapeWrapper).to receive(:instance).and_return(converter)
         allow(converter).to receive(:convert)
           .and_raise(Vectory::ConversionError, "Inkscape failed")
       end

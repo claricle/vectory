@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "vector"
-require_relative "inkscape_converter"
+require_relative "inkscape_wrapper"
 
 module Vectory
   class Pdf < Vector
@@ -16,7 +16,7 @@ module Vectory
     end
 
     def to_svg
-      svg = InkscapeConverter.convert(
+      svg = InkscapeWrapper.convert(
         content: content,
         input_format: :pdf,
         output_format: :svg,
@@ -35,7 +35,7 @@ module Vectory
     end
 
     def to_eps
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :pdf,
         output_format: :eps,
@@ -44,7 +44,7 @@ module Vectory
     end
 
     def to_ps
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :pdf,
         output_format: :ps,
@@ -53,7 +53,7 @@ module Vectory
     end
 
     def to_emf
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :pdf,
         output_format: :emf,

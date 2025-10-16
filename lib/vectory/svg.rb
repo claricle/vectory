@@ -32,7 +32,7 @@ module Vectory
     end
 
     def to_emf
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :svg,
         output_format: :emf,
@@ -41,7 +41,7 @@ module Vectory
     end
 
     def to_eps
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :svg,
         output_format: :eps,
@@ -50,7 +50,7 @@ module Vectory
     end
 
     def to_ps
-      InkscapeConverter.convert(
+      InkscapeWrapper.convert(
         content: content,
         input_format: :svg,
         output_format: :ps,
