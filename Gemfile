@@ -7,7 +7,9 @@ gemspec
 
 gem "equivalent-xml"
 gem "rake"
+gem "rexml"
 gem "rspec"
 gem "rubocop"
 gem "rubocop-performance"
-gem "rexml"
+gem "rubocop-rake"
+gem "rubocop-rspec"

@@ -79,7 +79,7 @@ RSpec.describe Vectory::Eps do
 
     # Platform-specific Inkscape timeout issue with inline EPS content
     xit "can be converted to svg" do
-      expect(described_class.from_node(node).to_svg).to be_kind_of(Vectory::Svg)
+      expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end
 
@@ -96,15 +96,21 @@ RSpec.describe Vectory::Eps do
       end
 
       it "propagates error from to_pdf to to_svg" do
-        expect { eps.to_svg }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          eps.to_svg
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
 
       it "propagates error from to_pdf to to_ps" do
-        expect { eps.to_ps }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          eps.to_ps
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
 
       it "propagates error from to_pdf to to_emf" do
-        expect { eps.to_emf }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          eps.to_emf
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
     end
 
@@ -122,7 +128,9 @@ RSpec.describe Vectory::Eps do
       end
 
       it "propagates error from Inkscape to to_svg" do
-        expect { eps.to_svg }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          eps.to_svg
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

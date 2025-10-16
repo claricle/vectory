@@ -6,7 +6,7 @@ RSpec.describe Vectory::Vector do
     let(:vector) { Vectory::Eps.from_path(input) }
 
     it "returns Datauri object" do
-      expect(vector.to_uri).to be_kind_of(Vectory::Datauri)
+      expect(vector.to_uri).to be_a(Vectory::Datauri)
     end
   end
 

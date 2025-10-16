@@ -74,7 +74,7 @@ module Vectory
 
     def image_size_interpret(img, realsize)
       # Extract parent dimensions for percentage calculations
-      parent_w_px = realsize.is_a?(Array) && realsize.length > 0 ? realsize[0] : nil
+      parent_w_px = realsize.is_a?(Array) && realsize.length.positive? ? realsize[0] : nil
       parent_h_px = realsize.is_a?(Array) && realsize.length > 1 ? realsize[1] : nil
 
       # Process width and height using the original css_size_to_px signature
@@ -90,7 +90,7 @@ module Vectory
 
       # If a dimension attribute led to a nil value (e.g. "auto", or "%" of nil parent)
       # and the other dimension is resolved, default the nil dimension to 0.
-      if img["width"] && w.nil? && !h.nil? 
+      if img["width"] && w.nil? && !h.nil?
         w = 0
       end
       if img["height"] && h.nil? && !w.nil?

@@ -2,7 +2,7 @@ require "spec_helper"
 
 RSpec.describe Vectory::SvgMapping do
   context "no namespace" do
-    let(:source) { Vectory::SvgMapping.from_path("doc.xml") }
+    let(:source) { described_class.from_path("doc.xml") }
     let(:reference) { File.read("doc-ref.xml") }
     let(:work_dir) { "spec/examples/svg" }
 
@@ -17,7 +17,7 @@ RSpec.describe Vectory::SvgMapping do
   end
 
   context "with namespaces" do
-    let(:source) { Vectory::SvgMapping.from_path("doc2.xml") }
+    let(:source) { described_class.from_path("doc2.xml") }
     let(:reference) { File.read("doc2-ref.xml") }
     let(:work_dir) { "spec/examples/svg" }
 
@@ -33,7 +33,7 @@ RSpec.describe Vectory::SvgMapping do
   end
 
   context "with non-existent path of image" do
-    let(:source) { Vectory::SvgMapping.from_path("doc3.xml") }
+    let(:source) { described_class.from_path("doc3.xml") }
     let(:reference) { File.read("doc3-ref.xml") }
     let(:work_dir) { "spec/examples/svg" }
 

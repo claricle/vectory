@@ -6,12 +6,12 @@ RSpec.describe Vectory::Emf do
     let(:reference) { "spec/examples/emf2svg/ref.svg" }
 
     it "returns svg content" do
-      expect(Vectory::Emf.from_path(input).to_svg.content)
+      expect(described_class.from_path(input).to_svg.content)
         .to be_equivalent_to File.read(reference)
     end
 
     it "strips the starting xml tag" do
-      expect(Vectory::Emf.from_path(input).to_svg.content)
+      expect(described_class.from_path(input).to_svg.content)
         .not_to start_with "<?xml"
     end
   end
@@ -21,7 +21,7 @@ RSpec.describe Vectory::Emf do
     let(:reference) { "spec/examples/emf2eps/ref.eps" }
 
     it "returns eps content" do
-      expect(Vectory::Emf.from_path(input).to_eps.content)
+      expect(described_class.from_path(input).to_eps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
   end
@@ -31,7 +31,7 @@ RSpec.describe Vectory::Emf do
     let(:reference) { "spec/examples/emf2ps/ref.ps" }
 
     it "returns ps content" do
-      expect(Vectory::Emf.from_path(input).to_ps.content)
+      expect(described_class.from_path(input).to_ps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
   end
@@ -65,7 +65,7 @@ RSpec.describe Vectory::Emf do
     let(:input) { "spec/examples/emf/datauri.xml" }
 
     it "can be converted to eps" do
-      expect(described_class.from_node(node).to_eps).to be_kind_of(Vectory::Eps)
+      expect(described_class.from_node(node).to_eps).to be_a(Vectory::Eps)
     end
   end
 
@@ -82,11 +82,15 @@ RSpec.describe Vectory::Emf do
       end
 
       it "propagates error from to_eps" do
-        expect { emf.to_eps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          emf.to_eps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_ps" do
-        expect { emf.to_ps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          emf.to_ps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

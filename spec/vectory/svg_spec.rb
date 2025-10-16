@@ -6,7 +6,7 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2emf/ref.emf" }
 
     it "returns emf content" do
-      expect(Vectory::Svg.from_path(input).to_emf.content)
+      expect(described_class.from_path(input).to_emf.content)
         .to be_emf
     end
   end
@@ -16,7 +16,7 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2eps/ref.eps" }
 
     it "returns eps content" do
-      expect(Vectory::Svg.from_path(input).to_eps.content)
+      expect(described_class.from_path(input).to_eps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
   end
@@ -26,7 +26,7 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2ps/ref.ps" }
 
     it "returns ps content" do
-      expect(Vectory::Svg.from_path(input).to_ps.content)
+      expect(described_class.from_path(input).to_ps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
   end
@@ -60,7 +60,7 @@ RSpec.describe Vectory::Svg do
     let(:input) { "spec/examples/svg/inline.xml" }
 
     it "can be converted to emf" do
-      expect(described_class.from_node(node).to_emf).to be_kind_of(Vectory::Emf)
+      expect(described_class.from_node(node).to_emf).to be_a(Vectory::Emf)
     end
   end
 
@@ -87,15 +87,21 @@ RSpec.describe Vectory::Svg do
       end
 
       it "propagates error from to_emf" do
-        expect { svg.to_emf }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          svg.to_emf
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_eps" do
-        expect { svg.to_eps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          svg.to_eps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_ps" do
-        expect { svg.to_ps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          svg.to_ps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

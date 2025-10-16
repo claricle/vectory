@@ -1,7 +1,7 @@
 require "spec_helper"
 
 RSpec.describe Vectory::InkscapeConverter do
-  describe "#convert " do
+  describe "#convert" do
     context "file has inproper format: svg extension, but eps content" do
       let(:input) { "spec/examples/eps_but_svg_extension.svg" }
 
@@ -9,11 +9,11 @@ RSpec.describe Vectory::InkscapeConverter do
         content = File.read(input, mode: "rb")
 
         expect do
-          Vectory::InkscapeConverter.convert(
+          described_class.convert(
             content: content,
             input_format: :svg,
             output_format: :emf,
-            output_class: Vectory::Emf
+            output_class: Vectory::Emf,
           )
         end.to raise_error(Vectory::ConversionError,
                            /parser error : Start tag expected/)
@@ -26,15 +26,15 @@ RSpec.describe Vectory::InkscapeConverter do
       it "raises error" do
         content = File.read(input, mode: "rb")
 
-        expect(Vectory::InkscapeConverter.instance)
+        expect(described_class.instance)
           .to receive(:inkscape_path).and_return(nil)
 
         expect do
-          Vectory::InkscapeConverter.convert(
+          described_class.convert(
             content: content,
             input_format: :eps,
             output_format: :svg,
-            output_class: Vectory::Svg
+            output_class: Vectory::Svg,
           )
         end.to raise_error(Vectory::InkscapeNotFoundError)
       end

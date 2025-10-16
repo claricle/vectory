@@ -7,7 +7,7 @@ RSpec.describe Vectory::Datauri do
       let(:vector) { Vectory::Eps.from_path(input) }
 
       it "returns datauri content" do
-        expect(Vectory::Datauri.from_vector(vector).content)
+        expect(described_class.from_vector(vector).content)
           .to eq File.read("#{input}.datauri")
       end
     end
@@ -17,7 +17,7 @@ RSpec.describe Vectory::Datauri do
       let(:vector) { Vectory::Ps.from_path(input) }
 
       it "returns datauri content" do
-        expect(Vectory::Datauri.from_vector(vector).content)
+        expect(described_class.from_vector(vector).content)
           .to eq File.read("#{input}.datauri")
       end
     end
@@ -27,7 +27,7 @@ RSpec.describe Vectory::Datauri do
       let(:vector) { Vectory::Emf.from_path(input) }
 
       it "returns datauri content" do
-        expect(Vectory::Datauri.from_vector(vector).content)
+        expect(described_class.from_vector(vector).content)
           .to eq File.read("#{input}.datauri")
       end
     end
@@ -37,7 +37,7 @@ RSpec.describe Vectory::Datauri do
       let(:vector) { Vectory::Svg.from_path(input) }
 
       it "returns datauri content" do
-        expect(Vectory::Datauri.from_vector(vector).content)
+        expect(described_class.from_vector(vector).content)
           .to eq File.read("#{input}.datauri")
       end
     end
@@ -48,7 +48,7 @@ RSpec.describe Vectory::Datauri do
       let(:not_a_datauri) { "123abc" }
 
       it "raises conversion error" do
-        expect { Vectory::Datauri.new(not_a_datauri).to_vector }
+        expect { described_class.new(not_a_datauri).to_vector }
           .to raise_error(Vectory::ConversionError)
       end
     end
@@ -58,13 +58,13 @@ RSpec.describe Vectory::Datauri do
       let(:reference) { "spec/examples/eps2emf/img.eps" }
 
       it "returns eps content" do
-        expect(Vectory::Datauri.from_path(input).to_vector.content)
+        expect(described_class.from_path(input).to_vector.content)
           .to eq File.read(reference)
       end
 
       it "returns Eps class" do
-        expect(Vectory::Datauri.from_path(input).to_vector)
-          .to be_kind_of(Vectory::Eps)
+        expect(described_class.from_path(input).to_vector)
+          .to be_a(Vectory::Eps)
       end
     end
 
@@ -73,13 +73,13 @@ RSpec.describe Vectory::Datauri do
       let(:reference) { "spec/examples/emf2eps/img.emf" }
 
       it "returns emf content" do
-        expect(Vectory::Datauri.from_path(input).to_vector.content)
+        expect(described_class.from_path(input).to_vector.content)
           .to eq File.binread(reference)
       end
 
       it "returns Emf class" do
-        expect(Vectory::Datauri.from_path(input).to_vector)
-          .to be_kind_of(Vectory::Emf)
+        expect(described_class.from_path(input).to_vector)
+          .to be_a(Vectory::Emf)
       end
     end
 
@@ -88,13 +88,13 @@ RSpec.describe Vectory::Datauri do
       let(:reference) { "spec/examples/svg2emf/img.svg" }
 
       it "returns svg content" do
-        expect(Vectory::Datauri.from_path(input).to_vector.content)
+        expect(described_class.from_path(input).to_vector.content)
           .to be_equivalent_to File.read(reference)
       end
 
       it "returns Svg class" do
-        expect(Vectory::Datauri.from_path(input).to_vector)
-          .to be_kind_of(Vectory::Svg)
+        expect(described_class.from_path(input).to_vector)
+          .to be_a(Vectory::Svg)
       end
     end
   end
@@ -151,9 +151,9 @@ RSpec.describe Vectory::Datauri do
     context "eps" do
       let(:input) { "spec/examples/eps2emf/img.eps.datauri" }
 
-    it "returns height and width" do
-      expect(described_class.from_path(input).height)
-        .to eq 720
+      it "returns height and width" do
+        expect(described_class.from_path(input).height)
+          .to eq 720
 
         expect(described_class.from_path(input).width)
           .to eq 540
@@ -178,15 +178,16 @@ RSpec.describe Vectory::Datauri do
       end
     end
   end
+
   describe "round-trip integrity" do
     context "emf" do
       let(:input_path) { "spec/examples/emf2eps/img.emf" }
 
       it "preserves EMF content through Data URI round-trip" do
         original = Vectory::Emf.from_path(input_path)
-        datauri1 = Vectory::Datauri.from_vector(original)
+        datauri1 = described_class.from_vector(original)
         restored = datauri1.to_vector
-        datauri2 = Vectory::Datauri.from_vector(restored)
+        datauri2 = described_class.from_vector(restored)
 
         expect(datauri2.content).to eq datauri1.content
       end

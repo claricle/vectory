@@ -8,7 +8,7 @@ module Vectory
       (?:charset=[^;]+;)?
       base64,
       (?<data>.+)
-    $}x.freeze
+    $}x
 
     def self.from_vector(vector)
       mimetype = vector.class.mimetype

@@ -36,7 +36,7 @@ module Vectory
         content: content,
         input_format: :svg,
         output_format: :emf,
-        output_class: Emf
+        output_class: Emf,
       )
     end
 
@@ -45,7 +45,7 @@ module Vectory
         content: content,
         input_format: :svg,
         output_format: :eps,
-        output_class: Eps
+        output_class: Eps,
       )
     end
 
@@ -54,14 +54,15 @@ module Vectory
         content: content,
         input_format: :svg,
         output_format: :ps,
-        output_class: Ps
+        output_class: Ps,
       )
     end
 
     def height
       # Try to read height from SVG attributes first
       doc = Nokogiri::XML(content)
-      svg_element = doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
+      svg_element = doc.at_xpath("//svg:svg",
+                                 "svg" => SVG_NS) || doc.at_xpath("//svg")
 
       if svg_element && svg_element["height"]
         svg_element["height"].to_f.round
@@ -74,7 +75,8 @@ module Vectory
     def width
       # Try to read width from SVG attributes first
       doc = Nokogiri::XML(content)
-      svg_element = doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
+      svg_element = doc.at_xpath("//svg:svg",
+                                 "svg" => SVG_NS) || doc.at_xpath("//svg")
 
       if svg_element && svg_element["width"]
         svg_element["width"].to_f.round

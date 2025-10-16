@@ -35,7 +35,7 @@ module Vectory
       emf_slice = beginning.byteslice(0, EMF_MAGIC.size)
       return :emf if emf_slice == EMF_MAGIC
 
-      return :svg if contain_svg_tag?
+      :svg if contain_svg_tag?
     end
 
     private
@@ -47,7 +47,7 @@ module Vectory
     def contain_svg_tag?
       content = File.read(@path, 4096)
 
-      return :svg if content.include?("<svg")
+      :svg if content.include?("<svg")
     end
   end
 end

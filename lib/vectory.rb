@@ -31,9 +31,11 @@ module Vectory
   class ParsingError < Error; end
 
   def self.ui
-    @ui ||= Logger.new(STDOUT).tap do |logger|
-      logger.level = ENV['VECTORY_LOG'] || Logger::WARN
-      logger.formatter = proc { |severity, datetime, progname, msg| "#{msg}\n" }
+    @ui ||= Logger.new($stdout).tap do |logger|
+      logger.level = ENV["VECTORY_LOG"] || Logger::WARN
+      logger.formatter = proc { |_severity, _datetime, _progname, msg|
+        "#{msg}\n"
+      }
     end
   end
 

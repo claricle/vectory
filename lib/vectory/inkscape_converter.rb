@@ -8,18 +8,21 @@ module Vectory
   class InkscapeConverter
     include Singleton
 
-    def self.convert(content:, input_format:, output_format:, output_class:, plain: false)
+    def self.convert(content:, input_format:, output_format:, output_class:,
+plain: false)
       instance.convert(
         content: content,
         input_format: input_format,
         output_format: output_format,
         output_class: output_class,
-        plain: plain
+        plain: plain,
       )
     end
 
-    def convert(content:, input_format:, output_format:, output_class:, plain: false)
-      with_temp_files(content, input_format, output_format) do |input_path, output_path|
+    def convert(content:, input_format:, output_format:, output_class:,
+plain: false)
+      with_temp_files(content, input_format,
+                      output_format) do |input_path, output_path|
         exe = inkscape_path_or_raise_error
         exe = external_path(exe)
         input_path = external_path(input_path)
@@ -120,13 +123,12 @@ module Vectory
         cmd += " --export-plain-svg" if plain && output_format == :svg
         # For PDF input, specify which page to use (avoid interactive prompt)
         cmd += " --export-page=1" if input_path.end_with?(".pdf")
-        cmd += " #{input_path}"
       else
         # Legacy Inkscape (0.x) uses --export-type
         cmd = "#{exe} --export-type=#{output_format}"
         cmd += " --export-plain-svg" if plain && output_format == :svg
-        cmd += " #{input_path}"
       end
+      cmd += " #{input_path}"
       cmd
     end
 
