@@ -1,6 +1,6 @@
 require "spec_helper"
 
-RSpec.describe Vectory::InkscapeConverter do
+RSpec.describe Vectory::InkscapeWrapper do
   describe "#convert" do
     context "file has inproper format: svg extension, but eps content" do
       let(:input) { "spec/examples/eps_but_svg_extension.svg" }

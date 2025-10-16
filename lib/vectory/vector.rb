@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "tempfile"
-require_relative "inkscape_converter"
+require_relative "inkscape_wrapper"
 
 module Vectory
   class Vector < Image
@@ -47,11 +47,11 @@ module Vectory
     end
 
     def height
-      InkscapeConverter.instance.height(content, self.class.default_extension)
+      InkscapeWrapper.instance.height(content, self.class.default_extension)
     end
 
     def width
-      InkscapeConverter.instance.width(content, self.class.default_extension)
+      InkscapeWrapper.instance.width(content, self.class.default_extension)
     end
 
     def to_uri
