@@ -42,7 +42,7 @@ module Vectory
         content: content,
         input_format: :emf,
         output_format: :eps,
-        output_class: Eps
+        output_class: Eps,
       )
     end
 
@@ -51,7 +51,7 @@ module Vectory
         content: content,
         input_format: :emf,
         output_format: :ps,
-        output_class: Ps
+        output_class: Ps,
       )
     end
   end

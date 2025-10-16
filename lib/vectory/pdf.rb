@@ -21,12 +21,13 @@ module Vectory
         input_format: :pdf,
         output_format: :svg,
         output_class: Svg,
-        plain: true
+        plain: true,
       )
 
       # If we have original dimensions from EPS/PS, adjust the SVG
       if original_height && original_width
-        adjusted_content = adjust_svg_dimensions(svg.content, original_width, original_height)
+        adjusted_content = adjust_svg_dimensions(svg.content, original_width,
+                                                 original_height)
         svg = Svg.new(adjusted_content, svg.initial_path)
       end
 
@@ -38,7 +39,7 @@ module Vectory
         content: content,
         input_format: :pdf,
         output_format: :eps,
-        output_class: Eps
+        output_class: Eps,
       )
     end
 
@@ -47,7 +48,7 @@ module Vectory
         content: content,
         input_format: :pdf,
         output_format: :ps,
-        output_class: Ps
+        output_class: Ps,
       )
     end
 
@@ -56,7 +57,7 @@ module Vectory
         content: content,
         input_format: :pdf,
         output_format: :emf,
-        output_class: Emf
+        output_class: Emf,
       )
     end
 
@@ -65,11 +66,11 @@ module Vectory
     def adjust_svg_dimensions(svg_content, width, height)
       # Replace width and height attributes in SVG root element
       svg_content.gsub(/(<svg[^>]*\s)width="[^"]*"/, "\\1width=\"#{width}\"")
-                 .gsub(/(<svg[^>]*\s)height="[^"]*"/, "\\1height=\"#{height}\"")
-                 .gsub(/(<svg[^>]*\s)viewBox="[^"]*"/) do |match|
-                   # Adjust viewBox to match new dimensions
-                   "#{match.split('viewBox')[0]}viewBox=\"0 0 #{width} #{height}\""
-                 end
+        .gsub(/(<svg[^>]*\s)height="[^"]*"/, "\\1height=\"#{height}\"")
+        .gsub(/(<svg[^>]*\s)viewBox="[^"]*"/) do |match|
+        # Adjust viewBox to match new dimensions
+        "#{match.split('viewBox')[0]}viewBox=\"0 0 #{width} #{height}\""
+      end
     end
   end
 end

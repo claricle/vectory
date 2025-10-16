@@ -43,7 +43,8 @@ module Vectory
           Tempfile.create(["ps2pdf_output", ".pdf"]) do |output_file|
             output_file.close
 
-            cmd = build_command(input_file.path, output_file.path, eps_crop: eps_crop)
+            cmd = build_command(input_file.path, output_file.path,
+                                eps_crop: eps_crop)
 
             begin
               SystemCall.new(cmd).call

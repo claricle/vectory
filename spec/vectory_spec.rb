@@ -2,6 +2,6 @@
 
 RSpec.describe Vectory do
   it "has a version number" do
-    expect(Vectory::VERSION).not_to be nil
+    expect(Vectory::VERSION).not_to be_nil
   end
 end

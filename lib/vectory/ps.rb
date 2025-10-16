@@ -71,7 +71,7 @@ module Vectory
         llx: match[1].to_f,
         lly: match[2].to_f,
         urx: match[3].to_f,
-        ury: match[4].to_f
+        ury: match[4].to_f,
       }
     end
   end

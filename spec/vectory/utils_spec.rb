@@ -41,29 +41,29 @@ RSpec.describe Vectory::Utils do
 
   it "recognises data uris" do
     expect(described_class.datauri?("data:img/gif,base64,ABBC"))
-      .to eq true
+      .to be true
     expect(described_class.datauri?("data1:img/gif,base64,ABBC"))
-      .to eq false
+      .to be false
   end
 
   it "recognises uris" do
     expect(described_class.url?("mailto://ABC"))
-      .to eq true
+      .to be true
     expect(described_class.url?("http://ABC"))
-      .to eq true
+      .to be true
     expect(described_class.url?("D:/ABC"))
-      .to eq false
+      .to be false
     expect(described_class.url?("/ABC"))
-      .to eq false
+      .to be false
   end
 
   it "recognises absolute file locations" do
     expect(described_class.absolute_path?("D:/a.html"))
-      .to eq true
+      .to be true
     expect(described_class.absolute_path?("/a.html"))
-      .to eq true
+      .to be true
     expect(described_class.absolute_path?("a.html"))
-      .to eq false
+      .to be false
   end
 
   context "generates data uris" do

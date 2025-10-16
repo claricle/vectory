@@ -6,7 +6,7 @@ RSpec.describe Vectory::Ps do
     let(:reference) { "spec/examples/ps2eps/ref.eps" }
 
     it "returns eps content" do
-      expect(Vectory::Ps.from_path(input).to_eps.content)
+      expect(described_class.from_path(input).to_eps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
   end
@@ -16,7 +16,7 @@ RSpec.describe Vectory::Ps do
     let(:reference) { "spec/examples/ps2emf/ref.emf" }
 
     it "returns emf content" do
-      expect(Vectory::Ps.from_path(input).to_emf.content)
+      expect(described_class.from_path(input).to_emf.content)
         .to be_emf
     end
   end
@@ -26,7 +26,7 @@ RSpec.describe Vectory::Ps do
     let(:reference) { "spec/examples/ps2svg/ref.svg" }
 
     it "returns svg content" do
-      expect(Vectory::Ps.from_path(input).to_svg.content)
+      expect(described_class.from_path(input).to_svg.content)
         .to be_equivalent_xml_to File.read(reference)
     end
   end
@@ -61,7 +61,7 @@ RSpec.describe Vectory::Ps do
     let(:input) { "spec/examples/ps/inline.xml" }
 
     it "can be converted to svg" do
-      expect(described_class.from_node(node).to_svg).to be_kind_of(Vectory::Svg)
+      expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end
 
@@ -78,15 +78,21 @@ RSpec.describe Vectory::Ps do
       end
 
       it "propagates error from to_pdf to to_svg" do
-        expect { ps.to_svg }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          ps.to_svg
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
 
       it "propagates error from to_pdf to to_eps" do
-        expect { ps.to_eps }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          ps.to_eps
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
 
       it "propagates error from to_pdf to to_emf" do
-        expect { ps.to_emf }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        expect do
+          ps.to_emf
+        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
       end
     end
 
@@ -104,7 +110,9 @@ RSpec.describe Vectory::Ps do
       end
 
       it "propagates error from Inkscape to to_svg" do
-        expect { ps.to_svg }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          ps.to_svg
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

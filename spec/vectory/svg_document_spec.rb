@@ -6,7 +6,7 @@ RSpec.describe Vectory::SvgDocument do
 
     context "remapped links beforehand" do
       it "converts successfully" do
-        document = Vectory::SvgDocument.new(File.read(input))
+        document = described_class.new(File.read(input))
 
         expect { document.remap_links({}) }.not_to raise_error
       end

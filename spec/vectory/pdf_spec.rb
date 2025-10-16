@@ -14,19 +14,27 @@ RSpec.describe Vectory::Pdf do
       end
 
       it "propagates error from to_svg" do
-        expect { pdf.to_svg }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          pdf.to_svg
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_eps" do
-        expect { pdf.to_eps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          pdf.to_eps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_ps" do
-        expect { pdf.to_ps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          pdf.to_ps
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
 
       it "propagates error from to_emf" do
-        expect { pdf.to_emf }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        expect do
+          pdf.to_emf
+        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

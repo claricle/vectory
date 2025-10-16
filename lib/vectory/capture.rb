@@ -36,11 +36,11 @@ module Vectory
       def with_timeout(*cmd)
         spawn_opts = Hash === cmd.last ? cmd.pop.dup : {}
         opts = {
-          :stdin_data => spawn_opts.delete(:stdin_data) || "",
-          :binmode    => spawn_opts.delete(:binmode) || false,
-          :timeout    => spawn_opts.delete(:timeout),
-          :signal     => spawn_opts.delete(:signal) || :TERM,
-          :kill_after => spawn_opts.delete(:kill_after) || 2,
+          stdin_data: spawn_opts.delete(:stdin_data) || "",
+          binmode: spawn_opts.delete(:binmode) || false,
+          timeout: spawn_opts.delete(:timeout),
+          signal: spawn_opts.delete(:signal) || :TERM,
+          kill_after: spawn_opts.delete(:kill_after) || 2,
         }
 
         in_r,  in_w  = IO.pipe
@@ -59,11 +59,11 @@ module Vectory
         spawn_opts[:err] = err_w
 
         result = {
-          :pid     => nil,
-          :status  => nil,
-          :stdout  => "",
-          :stderr  => "",
-          :timeout => false,
+          pid: nil,
+          status: nil,
+          stdout: "",
+          stderr: "",
+          timeout: false,
         }
 
         out_reader = nil
@@ -80,21 +80,17 @@ module Vectory
 
           # Start reader threads with timeout protection
           out_reader = Thread.new do
-            begin
-              out_r.read
-            rescue => e
-              Vectory.ui.debug("Output reader error: #{e}")
-              ""
-            end
+            out_r.read
+          rescue StandardError => e
+            Vectory.ui.debug("Output reader error: #{e}")
+            ""
           end
 
           err_reader = Thread.new do
-            begin
-              err_r.read
-            rescue => e
-              Vectory.ui.debug("Error reader error: #{e}")
-              ""
-            end
+            err_r.read
+          rescue StandardError => e
+            Vectory.ui.debug("Error reader error: #{e}")
+            ""
           end
 
           # Write input data
@@ -138,6 +134,7 @@ module Vectory
             loop do
               break unless wait_thr.alive?
               break if Time.now > deadline
+
               sleep 0.1
             end
 
@@ -156,7 +153,6 @@ module Vectory
           while wait_thr.alive? && Time.now < status_deadline
             sleep 0.1
           end
-
         ensure
           # Clean up watchdog
           watchdog&.kill
@@ -164,7 +160,7 @@ module Vectory
           # Get process status
           begin
             result[:status] = wait_thr.value if wait_thr
-          rescue => e
+          rescue StandardError => e
             Vectory.ui.debug("Error getting process status: #{e}")
             # Create a fake failed status
             result[:status] = Process::Status.allocate
@@ -192,7 +188,7 @@ module Vectory
           # Close all pipes
           [in_w, out_r, err_r].each do |io|
             io.close unless io.closed?
-          rescue => e
+          rescue StandardError => e
             Vectory.ui.debug("Error closing pipe: #{e}")
           end
         end
