@@ -68,4 +68,26 @@ RSpec.describe Vectory::Emf do
       expect(described_class.from_node(node).to_eps).to be_kind_of(Vectory::Eps)
     end
   end
+
+  describe "error propagation" do
+    let(:emf_content) { "fake emf content" }
+    let(:emf) { described_class.new(emf_content) }
+
+    context "when Inkscape conversion fails" do
+      before do
+        converter = instance_double(Vectory::InkscapeConverter)
+        allow(Vectory::InkscapeConverter).to receive(:instance).and_return(converter)
+        allow(converter).to receive(:convert)
+          .and_raise(Vectory::ConversionError, "Inkscape failed")
+      end
+
+      it "propagates error from to_eps" do
+        expect { emf.to_eps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
+
+      it "propagates error from to_ps" do
+        expect { emf.to_ps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
+    end
+  end
 end

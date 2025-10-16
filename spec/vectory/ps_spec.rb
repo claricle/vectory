@@ -44,7 +44,7 @@ RSpec.describe Vectory::Ps do
     let(:input) { "spec/examples/ps2emf/img.ps" }
 
     it "returns height" do
-      expect(described_class.from_path(input).height).to eq 707
+      expect(described_class.from_path(input).height).to eq 531
     end
   end
 
@@ -52,7 +52,7 @@ RSpec.describe Vectory::Ps do
     let(:input) { "spec/examples/ps2emf/img.ps" }
 
     it "returns width" do
-      expect(described_class.from_path(input).width).to eq 649
+      expect(described_class.from_path(input).width).to eq 488
     end
   end
 
@@ -62,6 +62,50 @@ RSpec.describe Vectory::Ps do
 
     it "can be converted to svg" do
       expect(described_class.from_node(node).to_svg).to be_kind_of(Vectory::Svg)
+    end
+  end
+
+  describe "error propagation" do
+    let(:ps_content) do
+      "%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n"
+    end
+    let(:ps) { described_class.new(ps_content) }
+
+    context "when ps2pdf conversion fails" do
+      before do
+        allow(Vectory::Ps2pdfWrapper).to receive(:convert)
+          .and_raise(Vectory::ConversionError, "ps2pdf failed")
+      end
+
+      it "propagates error from to_pdf to to_svg" do
+        expect { ps.to_svg }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+      end
+
+      it "propagates error from to_pdf to to_eps" do
+        expect { ps.to_eps }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+      end
+
+      it "propagates error from to_pdf to to_emf" do
+        expect { ps.to_emf }.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+      end
+    end
+
+    context "when Inkscape conversion fails" do
+      before do
+        # Allow ps2pdf to succeed
+        allow(Vectory::Ps2pdfWrapper).to receive(:convert)
+          .and_return("fake pdf content")
+
+        # Make Inkscape fail
+        converter = instance_double(Vectory::InkscapeConverter)
+        allow(Vectory::InkscapeConverter).to receive(:instance).and_return(converter)
+        allow(converter).to receive(:convert)
+          .and_raise(Vectory::ConversionError, "Inkscape failed")
+      end
+
+      it "propagates error from Inkscape to to_svg" do
+        expect { ps.to_svg }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
     end
   end
 end

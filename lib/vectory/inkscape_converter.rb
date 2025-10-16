@@ -8,22 +8,31 @@ module Vectory
   class InkscapeConverter
     include Singleton
 
-    def self.convert(uri, output_extension, option)
-      instance.convert(uri, output_extension, option)
+    def self.convert(content:, input_format:, output_format:, output_class:, plain: false)
+      instance.convert(
+        content: content,
+        input_format: input_format,
+        output_format: output_format,
+        output_class: output_class,
+        plain: plain
+      )
     end
 
-    def convert(uri, output_extension, option)
-      exe = inkscape_path_or_raise_error
-      uri = external_path uri
-      exe = external_path exe
-      cmd = %(#{exe} #{option} #{uri})
+    def convert(content:, input_format:, output_format:, output_class:, plain: false)
+      with_temp_files(content, input_format, output_format) do |input_path, output_path|
+        exe = inkscape_path_or_raise_error
+        exe = external_path(exe)
+        input_path = external_path(input_path)
+        output_path = external_path(output_path)
 
-      call = SystemCall.new(cmd).call
+        cmd = build_command(exe, input_path, output_path, output_format, plain)
+        call = SystemCall.new(cmd).call
 
-      output_path = find_output(uri, output_extension)
-      raise_conversion_error(call) unless output_path
+        actual_output = find_output(input_path, output_format)
+        raise_conversion_error(call) unless actual_output
 
-      output_path
+        output_class.from_path(actual_output)
+      end
     end
 
     def height(content, format)
@@ -103,6 +112,50 @@ module Vectory
       end
     end
 
+    def build_command(exe, input_path, output_path, output_format, plain)
+      # Modern Inkscape (1.0+) uses --export-filename
+      # Older versions use --export-<format>-file or --export-type
+      if inkscape_version_modern?
+        cmd = "#{exe} --export-filename=#{output_path}"
+        cmd += " --export-plain-svg" if plain && output_format == :svg
+        # For PDF input, specify which page to use (avoid interactive prompt)
+        cmd += " --export-page=1" if input_path.end_with?(".pdf")
+        cmd += " #{input_path}"
+      else
+        # Legacy Inkscape (0.x) uses --export-type
+        cmd = "#{exe} --export-type=#{output_format}"
+        cmd += " --export-plain-svg" if plain && output_format == :svg
+        cmd += " #{input_path}"
+      end
+      cmd
+    end
+
+    def inkscape_version_modern?
+      return @inkscape_version_modern if defined?(@inkscape_version_modern)
+
+      exe = inkscape_path
+      return @inkscape_version_modern = true unless exe # Default to modern
+
+      version_output = `#{external_path(exe)} --version 2>&1`
+      version_match = version_output.match(/Inkscape (\d+)\./)
+
+      @inkscape_version_modern = if version_match
+                                   version_match[1].to_i >= 1
+                                 else
+                                   true # Default to modern if we can't detect
+                                 end
+    end
+
+    def with_temp_files(content, input_format, output_format)
+      Dir.mktmpdir do |dir|
+        input_path = File.join(dir, "image.#{input_format}")
+        output_path = File.join(dir, "image.#{output_format}")
+        File.binwrite(input_path, content)
+
+        yield input_path, output_path
+      end
+    end
+
     def query_integer(content, format, options)
       query(content, format, options).to_f.round
     end
@@ -110,7 +163,7 @@ module Vectory
     def query(content, format, options)
       exe = inkscape_path_or_raise_error
 
-      with_file(content, format) do |path|
+      with_temp_file(content, format) do |path|
         cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
 
         call = SystemCall.new(cmd).call
@@ -120,7 +173,7 @@ module Vectory
       end
     end
 
-    def with_file(content, extension)
+    def with_temp_file(content, extension)
       Dir.mktmpdir do |dir|
         path = File.join(dir, "image.#{extension}")
         File.binwrite(path, content)

@@ -58,17 +58,6 @@ module Vectory
       Datauri.from_vector(self)
     end
 
-    def convert_with_inkscape(inkscape_options, target_class)
-      with_file(self.class.default_extension) do |input_path|
-        output_extension = target_class.default_extension
-        output_path = InkscapeConverter.instance.convert(input_path,
-                                                         output_extension,
-                                                         inkscape_options)
-
-        target_class.from_path(output_path)
-      end
-    end
-
     def write(path = nil)
       target_path = path || @path || tmp_path
       File.binwrite(target_path, content)
@@ -82,15 +71,6 @@ module Vectory
     end
 
     private
-
-    def with_file(input_extension)
-      Dir.mktmpdir do |dir|
-        input_path = File.join(dir, "image.#{input_extension}")
-        File.binwrite(input_path, content)
-
-        yield input_path
-      end
-    end
 
     def tmp_path
       dir = Dir.mktmpdir

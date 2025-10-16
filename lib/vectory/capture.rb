@@ -3,15 +3,11 @@ require "timeout"
 module Vectory
   module Capture
     class << self
-      # rubocop:disable all
-      #
-      # Originally from https://gist.github.com/pasela/9392115
-      #
       # Capture the standard output and the standard error of a command.
       # Almost same as Open3.capture3 method except for timeout handling and return value.
       # See Open3.capture3.
       #
-      #   result = capture3_with_timeout([env,] cmd... [, opts])
+      #   result = with_timeout([env,] cmd... [, opts])
       #
       # The arguments env, cmd and opts are passed to Process.spawn except
       # opts[:stdin_data], opts[:binmode], opts[:timeout], opts[:signal]
@@ -44,7 +40,7 @@ module Vectory
           :binmode    => spawn_opts.delete(:binmode) || false,
           :timeout    => spawn_opts.delete(:timeout),
           :signal     => spawn_opts.delete(:signal) || :TERM,
-          :kill_after => spawn_opts.delete(:kill_after),
+          :kill_after => spawn_opts.delete(:kill_after) || 2,
         }
 
         in_r,  in_w  = IO.pipe
@@ -65,51 +61,144 @@ module Vectory
         result = {
           :pid     => nil,
           :status  => nil,
-          :stdout  => nil,
-          :stderr  => nil,
+          :stdout  => "",
+          :stderr  => "",
           :timeout => false,
         }
 
         out_reader = nil
         err_reader = nil
         wait_thr = nil
+        watchdog = nil
 
         begin
-          Timeout.timeout(opts[:timeout]) do
-            result[:pid] = spawn(*cmd, spawn_opts)
-            wait_thr = Process.detach(result[:pid])
-            in_r.close
-            out_w.close
-            err_w.close
+          result[:pid] = spawn(*cmd, spawn_opts)
+          wait_thr = Process.detach(result[:pid])
+          in_r.close
+          out_w.close
+          err_w.close
 
-            out_reader = Thread.new { out_r.read }
-            err_reader = Thread.new { err_r.read }
-
-            in_w.write opts[:stdin_data]
-            in_w.close
-
-            result[:status] = wait_thr.value
-          end
-        rescue Timeout::Error
-          result[:timeout] = true
-          pid = spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
-          Process.kill(opts[:signal], pid)
-          if opts[:kill_after]
-            unless wait_thr.join(opts[:kill_after])
-              Process.kill(:KILL, pid)
+          # Start reader threads with timeout protection
+          out_reader = Thread.new do
+            begin
+              out_r.read
+            rescue => e
+              Vectory.ui.debug("Output reader error: #{e}")
+              ""
             end
           end
+
+          err_reader = Thread.new do
+            begin
+              err_r.read
+            rescue => e
+              Vectory.ui.debug("Error reader error: #{e}")
+              ""
+            end
+          end
+
+          # Write input data
+          begin
+            in_w.write opts[:stdin_data]
+            in_w.close
+          rescue Errno::EPIPE
+            # Process may have exited early
+          end
+
+          # Watchdog thread to enforce timeout
+          if opts[:timeout]
+            watchdog = Thread.new do
+              sleep opts[:timeout]
+              if wait_thr.alive?
+                result[:timeout] = true
+                pid = spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
+
+                begin
+                  Process.kill(opts[:signal], pid)
+                rescue Errno::ESRCH
+                  # Process already dead
+                end
+
+                # Wait for kill_after duration, then force kill
+                sleep opts[:kill_after]
+                if wait_thr.alive?
+                  begin
+                    Process.kill(:KILL, pid)
+                  rescue Errno::ESRCH
+                    # Process already dead
+                  end
+                end
+              end
+            end
+          end
+
+          # Wait for process to complete with timeout
+          if opts[:timeout]
+            deadline = Time.now + opts[:timeout] + (opts[:kill_after] || 2) + 1
+            loop do
+              break unless wait_thr.alive?
+              break if Time.now > deadline
+              sleep 0.1
+            end
+
+            # Force kill if still alive after deadline
+            if wait_thr.alive?
+              begin
+                Process.kill(:KILL, result[:pid])
+              rescue Errno::ESRCH
+                # Process already dead
+              end
+            end
+          end
+
+          # Wait for process status (with timeout protection)
+          status_deadline = Time.now + 5
+          while wait_thr.alive? && Time.now < status_deadline
+            sleep 0.1
+          end
+
         ensure
-          result[:status] = wait_thr.value if wait_thr
-          result[:stdout] = out_reader.value if out_reader
-          result[:stderr] = err_reader.value if err_reader
-          out_r.close unless out_r.closed?
-          err_r.close unless err_r.closed?
+          # Clean up watchdog
+          watchdog&.kill
+
+          # Get process status
+          begin
+            result[:status] = wait_thr.value if wait_thr
+          rescue => e
+            Vectory.ui.debug("Error getting process status: #{e}")
+            # Create a fake failed status
+            result[:status] = Process::Status.allocate
+          end
+
+          # Get output with timeout protection
+          if out_reader
+            if out_reader.join(2)
+              result[:stdout] = out_reader.value || ""
+            else
+              out_reader.kill
+              result[:stdout] = ""
+            end
+          end
+
+          if err_reader
+            if err_reader.join(2)
+              result[:stderr] = err_reader.value || ""
+            else
+              err_reader.kill
+              result[:stderr] = ""
+            end
+          end
+
+          # Close all pipes
+          [in_w, out_r, err_r].each do |io|
+            io.close unless io.closed?
+          rescue => e
+            Vectory.ui.debug("Error closing pipe: #{e}")
+          end
         end
 
         result
       end
-      # rubocop:enable all
     end
   end
 end
