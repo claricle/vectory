@@ -34,10 +34,11 @@ module Vectory
       result = Capture.with_timeout(cmd,
                                     timeout: @timeout,
                                     signal: :KILL, # only KILL works on Windows
-                                    kill_after: @timeout)
-      @stdout = result[:stdout]
-      @stderr = result[:stderr]
+                                    kill_after: 2)
+      @stdout = result[:stdout] || ""
+      @stderr = result[:stderr] || ""
       @status = result[:status]
+      @timed_out = result[:timeout]
     rescue Errno::ENOENT => e
       raise SystemCallError, e.inspect
     end
@@ -49,6 +50,20 @@ module Vectory
     end
 
     def raise_error
+      if @timed_out
+        raise SystemCallError,
+              "Command timed out after #{@timeout} seconds: #{@cmd},\n  " \
+              "stdout: '#{@stdout.strip}',\n  " \
+              "stderr: '#{@stderr.strip}'"
+      end
+
+      if @status.nil?
+        raise SystemCallError,
+              "Failed to run #{@cmd} (no status available),\n  " \
+              "stdout: '#{@stdout.strip}',\n  " \
+              "stderr: '#{@stderr.strip}'"
+      end
+
       raise SystemCallError,
             "Failed to run #{@cmd},\n  " \
             "status: #{@status.exitstatus},\n  " \

@@ -32,15 +32,56 @@ module Vectory
     end
 
     def to_emf
-      convert_with_inkscape("--export-type=emf", Emf)
+      InkscapeConverter.convert(
+        content: content,
+        input_format: :svg,
+        output_format: :emf,
+        output_class: Emf
+      )
     end
 
     def to_eps
-      convert_with_inkscape("--export-type=eps", Eps)
+      InkscapeConverter.convert(
+        content: content,
+        input_format: :svg,
+        output_format: :eps,
+        output_class: Eps
+      )
     end
 
     def to_ps
-      convert_with_inkscape("--export-type=ps", Ps)
+      InkscapeConverter.convert(
+        content: content,
+        input_format: :svg,
+        output_format: :ps,
+        output_class: Ps
+      )
+    end
+
+    def height
+      # Try to read height from SVG attributes first
+      doc = Nokogiri::XML(content)
+      svg_element = doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
+
+      if svg_element && svg_element["height"]
+        svg_element["height"].to_f.round
+      else
+        # Fall back to Inkscape query if no height attribute
+        super
+      end
+    end
+
+    def width
+      # Try to read width from SVG attributes first
+      doc = Nokogiri::XML(content)
+      svg_element = doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
+
+      if svg_element && svg_element["width"]
+        svg_element["width"].to_f.round
+      else
+        # Fall back to Inkscape query if no width attribute
+        super
+      end
     end
 
     private

@@ -6,17 +6,17 @@ RSpec.describe Vectory::InkscapeConverter do
       let(:input) { "spec/examples/eps_but_svg_extension.svg" }
 
       it "raises error" do
-        with_tmp_dir do |dir|
-          tmp_input_path = File.join(dir, File.basename(input))
-          FileUtils.cp(input, tmp_input_path)
+        content = File.read(input, mode: "rb")
 
-          expect do
-            Vectory::InkscapeConverter.convert(tmp_input_path,
-                                               "emf",
-                                               "--export-type=emf")
-          end.to raise_error(Vectory::ConversionError,
-                             /parser error : Start tag expected/)
-        end
+        expect do
+          Vectory::InkscapeConverter.convert(
+            content: content,
+            input_format: :svg,
+            output_format: :emf,
+            output_class: Vectory::Emf
+          )
+        end.to raise_error(Vectory::ConversionError,
+                           /parser error : Start tag expected/)
       end
     end
 
@@ -24,19 +24,19 @@ RSpec.describe Vectory::InkscapeConverter do
       let(:input) { "spec/examples/eps2svg/img.eps" }
 
       it "raises error" do
-        with_tmp_dir do |dir|
-          tmp_input_path = File.join(dir, "image.eps")
-          FileUtils.cp(input, tmp_input_path)
+        content = File.read(input, mode: "rb")
 
-          expect(Vectory::InkscapeConverter.instance)
-            .to receive(:inkscape_path).and_return(nil)
+        expect(Vectory::InkscapeConverter.instance)
+          .to receive(:inkscape_path).and_return(nil)
 
-          expect do
-            Vectory::InkscapeConverter.convert(tmp_input_path,
-                                               "svg",
-                                               "--export-type=svg")
-          end.to raise_error(Vectory::InkscapeNotFoundError)
-        end
+        expect do
+          Vectory::InkscapeConverter.convert(
+            content: content,
+            input_format: :eps,
+            output_format: :svg,
+            output_class: Vectory::Svg
+          )
+        end.to raise_error(Vectory::InkscapeNotFoundError)
       end
     end
   end

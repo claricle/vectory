@@ -28,19 +28,31 @@ module Vectory
     end
 
     def to_svg
-      with_file("emf") do |input_path|
-        content = Emf2svg.from_file(input_path)
+      Dir.mktmpdir do |dir|
+        input_path = File.join(dir, "image.emf")
+        File.binwrite(input_path, content)
 
-        Svg.from_content(content)
+        svg_content = Emf2svg.from_file(input_path)
+        Svg.from_content(svg_content)
       end
     end
 
     def to_eps
-      convert_with_inkscape("--export-type=eps", Eps)
+      InkscapeConverter.convert(
+        content: content,
+        input_format: :emf,
+        output_format: :eps,
+        output_class: Eps
+      )
     end
 
     def to_ps
-      convert_with_inkscape("--export-type=ps", Ps)
+      InkscapeConverter.convert(
+        content: content,
+        input_format: :emf,
+        output_format: :ps,
+        output_class: Ps
+      )
     end
   end
 end

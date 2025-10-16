@@ -185,7 +185,7 @@ RSpec.describe Vectory::CLI do
       let(:input)  { "spec/examples/eps2emf/img.eps" }
       let(:format) { "emf" }
 
-      it "returns system-call error" do
+      it "returns conversion error" do
         with_tmp_dir do |dir|
           expect_any_instance_of(Vectory::SystemCall).to receive(:call)
             .and_raise(Vectory::SystemCallError)
@@ -193,7 +193,8 @@ RSpec.describe Vectory::CLI do
           output = File.join(dir, "output.#{format}")
           status = described_class.start(["-f", format, "-o", output, input])
 
-          expect(status).to be Vectory::CLI::STATUS_SYSTEM_CALL_ERROR
+          # SystemCallError from ps2pdf gets wrapped in ConversionError
+          expect(status).to be Vectory::CLI::STATUS_CONVERSION_ERROR
         end
       end
     end

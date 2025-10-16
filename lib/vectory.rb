@@ -3,10 +3,18 @@
 require "logger"
 require_relative "vectory/version"
 require_relative "vectory/utils"
+
+module Vectory
+  class Error < StandardError; end
+end
+
+require_relative "vectory/errors"
 require_relative "vectory/image"
 require_relative "vectory/image_resize"
 require_relative "vectory/datauri"
 require_relative "vectory/vector"
+require_relative "vectory/ps2pdf_wrapper"
+require_relative "vectory/pdf"
 require_relative "vectory/eps"
 require_relative "vectory/ps"
 require_relative "vectory/emf"
@@ -14,15 +22,7 @@ require_relative "vectory/svg"
 require_relative "vectory/svg_mapping"
 
 module Vectory
-  class Error < StandardError; end
-
-  class ConversionError < Error; end
-
   class SystemCallError < Error; end
-
-  class InkscapeNotFoundError < Error; end
-
-  class InkscapeQueryError < Error; end
 
   class NotImplementedError < Error; end
 

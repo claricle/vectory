@@ -73,4 +73,30 @@ RSpec.describe Vectory::Svg do
       end
     end
   end
+
+  describe "error propagation" do
+    let(:svg_content) { '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>' }
+    let(:svg) { described_class.new(svg_content) }
+
+    context "when Inkscape conversion fails" do
+      before do
+        converter = instance_double(Vectory::InkscapeConverter)
+        allow(Vectory::InkscapeConverter).to receive(:instance).and_return(converter)
+        allow(converter).to receive(:convert)
+          .and_raise(Vectory::ConversionError, "Inkscape failed")
+      end
+
+      it "propagates error from to_emf" do
+        expect { svg.to_emf }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
+
+      it "propagates error from to_eps" do
+        expect { svg.to_eps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
+
+      it "propagates error from to_ps" do
+        expect { svg.to_ps }.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+      end
+    end
+  end
 end

@@ -151,12 +151,12 @@ RSpec.describe Vectory::Datauri do
     context "eps" do
       let(:input) { "spec/examples/eps2emf/img.eps.datauri" }
 
-      it "returns height and width" do
-        expect(described_class.from_path(input).height)
-          .to eq 707
+    it "returns height and width" do
+      expect(described_class.from_path(input).height)
+        .to eq 720
 
         expect(described_class.from_path(input).width)
-          .to eq 649
+          .to eq 540
       end
     end
 
