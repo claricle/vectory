@@ -12,11 +12,11 @@ RSpec.describe Vectory::SystemCall do
       end
 
       it "executes commands with string format" do
-        if Gem.win_platform?
-          call = described_class.new("cmd /c echo test").call
-        else
-          call = described_class.new("echo test").call
-        end
+        call = if Gem.win_platform?
+                 described_class.new("cmd /c echo test").call
+               else
+                 described_class.new("echo test").call
+               end
 
         expect(call.stdout.strip).to eq("test")
         expect(call.status.success?).to be true
@@ -68,7 +68,7 @@ RSpec.describe Vectory::SystemCall do
         cmd = if Gem.win_platform?
                 [
                   "powershell", "-Command",
-                  "Write-Output 'out'; [Console]::Error.WriteLine('err'); exit 1",
+                  "Write-Output 'out'; [Console]::Error.WriteLine('err'); exit 1"
                 ]
               else
                 ["sh", "-c", "echo 'out'; echo 'err' >&2; exit 1"]
@@ -119,7 +119,8 @@ RSpec.describe Vectory::SystemCall do
     context "with different output scenarios" do
       it "captures multiline stdout" do
         cmd = if Gem.win_platform?
-                ["powershell", "-Command", "Write-Output 'line1'; Write-Output 'line2'"]
+                ["powershell", "-Command",
+                 "Write-Output 'line1'; Write-Output 'line2'"]
               else
                 ["sh", "-c", "echo 'line1'; echo 'line2'"]
               end
@@ -134,7 +135,7 @@ RSpec.describe Vectory::SystemCall do
         cmd = if Gem.win_platform?
                 [
                   "powershell", "-Command",
-                  "[Console]::Error.WriteLine('err1'); [Console]::Error.WriteLine('err2')",
+                  "[Console]::Error.WriteLine('err1'); [Console]::Error.WriteLine('err2')"
                 ]
               else
                 ["sh", "-c", "echo 'err1' >&2; echo 'err2' >&2"]
