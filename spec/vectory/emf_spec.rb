@@ -7,7 +7,7 @@ RSpec.describe Vectory::Emf do
 
     it "returns svg content" do
       expect(described_class.from_path(input).to_svg.content)
-        .to be_equivalent_to File.read(reference)
+        .to be_xml_equivalent_to File.read(reference)
     end
 
     it "strips the starting xml tag" do

@@ -89,7 +89,7 @@ RSpec.describe Vectory::Datauri do
 
       it "returns svg content" do
         expect(described_class.from_path(input).to_vector.content)
-          .to be_equivalent_to File.read(reference)
+          .to be_xml_equivalent_to File.read(reference)
       end
 
       it "returns Svg class" do

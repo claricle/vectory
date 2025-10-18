@@ -3,9 +3,14 @@
 require "vectory"
 require "tmpdir"
 require "rspec/matchers"
-require "equivalent-xml"
+require "canon"
 
 Dir["./spec/support/**/*.rb"].sort.each { |file| require file }
+
+# Configure Canon RSpec matchers to use whitespace normalization
+Canon::RSpecMatchers.configure do |config|
+  config.xml_match_profile = :spec_friendly
+end
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

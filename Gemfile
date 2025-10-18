@@ -5,9 +5,8 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in vectory.gemspec
 gemspec
 
-gem "equivalent-xml"
+gem "canon", "~> 0.1.4" #, path: "~/src/lutaml/canon"
 gem "rake"
-gem "rexml"
 gem "rspec"
 gem "rubocop"
 gem "rubocop-performance"
