@@ -11,7 +11,7 @@ RSpec.describe Vectory::SvgMapping do
         content = source.to_xml
         result = strip_image_and_style(content)
 
-        expect(result).to be_equivalent_xml_to(reference)
+        expect(result).to be_xml_equivalent_to(reference)
       end
     end
   end
@@ -27,7 +27,7 @@ RSpec.describe Vectory::SvgMapping do
 
         result = strip_image(content)
 
-        expect(result).to be_equivalent_xml_to(reference)
+        expect(result).to be_xml_equivalent_to(reference)
       end
     end
   end
@@ -43,7 +43,7 @@ RSpec.describe Vectory::SvgMapping do
 
         result = strip_image(content)
 
-        expect(result).to be_equivalent_xml_to(reference)
+        expect(result).to be_xml_equivalent_to(reference)
       end
     end
   end

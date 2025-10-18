@@ -3,7 +3,7 @@ require "spec_helper"
 RSpec.describe Vectory::Utils do
   # Extracted from https://github.com/metanorma/metanorma-utils/blob/v1.6.5/spec/img_spec.rb
 
-  let(:datauri) { File.read("spec/examples/png/rice_image1.datauri") }
+  let(:datauri) { File.read("spec/examples/png/rice_image1.datauri").strip }
 
   context "recognises data uris" do
     let(:path) { "spec/examples/png/rice_image1.png" }
@@ -73,17 +73,17 @@ RSpec.describe Vectory::Utils do
 
     it "returns datauri when path exists" do
       expect(described_class.datauri("spec/examples/png/rice_image1.png"))
-        .to be_equivalent_to(datauri)
+        .to be_string_equivalent_to(datauri)
     end
 
     it "returns datauri when local path exists" do
       expect(described_class.datauri("rice_image1.png", "spec/examples/png"))
-        .to be_equivalent_to(datauri)
+        .to be_string_equivalent_to(datauri)
     end
 
     it "passes path if it does not exist" do
       expect(described_class.datauri("spec/fixtures/missing_image.png"))
-        .to be_equivalent_to "spec/fixtures/missing_image.png"
+        .to be_string_equivalent_to "spec/fixtures/missing_image.png"
     end
 
     it "prints message if path does not exist" do
