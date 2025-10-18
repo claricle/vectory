@@ -116,10 +116,10 @@ module Vectory
                 result[:timeout] = true
                 # Windows doesn't support negative PIDs for process groups
                 pid = if windows?
-                  result[:pid]
-                else
-                  spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
-                end
+                        result[:pid]
+                      else
+                        spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
+                      end
 
                 begin
                   Process.kill(opts[:signal], pid)

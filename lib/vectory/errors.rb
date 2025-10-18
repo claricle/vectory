@@ -9,7 +9,6 @@ module Vectory
     end
   end
 
-
   class GhostscriptNotFoundError < Error
     def initialize(msg = nil)
       super(msg || "Ghostscript not found in PATH. Please install Ghostscript.")
