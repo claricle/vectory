@@ -1,58 +1,58 @@
-<?xml version='1.0'?><standard-document xmlns="http://www.example.com" type="semantic" version="1.8.2">
-     <bibdata type="standard">
-     <title language="en" format="text/plain">Document title</title>
-     <docidentifier/>
-     <docnumber/>
-     <version/>
-     <language>en</language>
-     <script>Latn</script>
-     <status>
-     <stage>published</stage>
-     </status>
-     <copyright>
-     <from>2021</from>
-     </copyright>
-     <ext>
-     <doctype>article</doctype>
-     </ext>
-     </bibdata>
-     <sections><svgmap id="_d5b5049a-dd53-4ea0-bc6f-e8773bd59052"><target href="mn://action_schema"><xref target="ref1">Computer</xref></target></svgmap>
-     <figure>
-     <svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1' id='Layer_1_000000001' x='0px' y='0px' viewBox='0 0 595.28 841.89' style='enable-background:new 0 0 595.28 841.89;' xml:space='preserve'>
-     <style type='text/css'>
-#Layer_1_000000001 { fill:none } svg[id='Layer_1_000000001'] {
-fill:none } .st0{fill:none;stroke:#000000;stroke-miterlimit:10;}
+<?xml version="1.0"?>
+<standard-document xmlns="http://www.example.com" type="semantic" version="1.8.2">
+<bibdata type="standard">
+<title language="en" format="text/plain">Document title</title>
+<docidentifier/>
+<docnumber/>
+<version/>
+<language>en</language>
+<script>Latn</script>
+<status>
+<stage>published</stage>
+</status>
+<copyright>
+<from>2021</from>
+</copyright>
+<ext>
+<doctype>article</doctype>
+</ext>
+</bibdata>
+<sections>
+<svgmap id="_d5b5049a-dd53-4ea0-bc6f-e8773bd59052"><target href="mn://action_schema"><xref target="ref1">Computer</xref></target></svgmap>
+<figure><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1_000000001" x="0px" y="0px" viewBox="0 0 595.28 841.89" style="enable-background:new 0 0 595.28 841.89;" xml:space="preserve">
+<style type="text/css">
+        #Layer_1_000000001 { fill:none }
+        svg[id='Layer_1_000000001'] { fill:none }
+	.st0{fill:none;stroke:#000000;stroke-miterlimit:10;}
 </style>
-       <image/>
-       <a xlink:href='#ref1' xlink:dummy='Layer_1_000000001'>
-         <rect x='123.28' y='273.93' class='st0' width='88.05' height='41.84'/>
-       </a>
-       <a xlink:href='mn://basic_attribute_schema'>
-         <rect x='324.69' y='450.52' class='st0' width='132.62' height='40.75'/>
-       </a>
-       <a xlink:href='mn://support_resource_schema'>
-         <rect x='324.69' y='528.36' class='st0' width='148.16' height='40.75'/>
-       </a>
-     </svg>
-</figure>
-<svgmap id='_60dadf08-48d4-4164-845c-b4e293e00abd'>
-<figure>
-<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1' id='Layer_1_000000002' x='0px' y='0px' viewBox='0 0 595.28 841.89' style='enable-background:new 0 0 595.28 841.89;' xml:space='preserve'>
-<style type='text/css'>
-#Layer_1_000000002 { fill:none } svg[id='Layer_1_000000002'] {
-fill:none } .st0{fill:none;stroke:#000000;stroke-miterlimit:10;}
+<image/>
+<a xlink:href="#ref1" xlink:dummy="Layer_1_000000001">
+	<rect x="123.28" y="273.93" class="st0" width="88.05" height="41.84"/>
+</a>
+<a xlink:href="mn://basic_attribute_schema">
+	<rect x="324.69" y="450.52" class="st0" width="132.62" height="40.75"/>
+</a>
+<a xlink:href="mn://support_resource_schema">
+	<rect x="324.69" y="528.36" class="st0" width="148.16" height="40.75"/>
+</a>
+</svg></figure>
+<svgmap id="_60dadf08-48d4-4164-845c-b4e293e00abd">
+<figure><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1_000000002" x="0px" y="0px" viewBox="0 0 595.28 841.89" style="enable-background:new 0 0 595.28 841.89;" xml:space="preserve">
+<style type="text/css">
+        #Layer_1_000000002 { fill:none }
+        svg[id='Layer_1_000000002'] { fill:none }
+	.st0{fill:none;stroke:#000000;stroke-miterlimit:10;}
 </style>
-         <image/>
-         <a xlink:href='mn://action_schema' xlink:dummy='Layer_1_000000002'>
-           <rect x='123.28' y='273.93' class='st0' width='88.05' height='41.84'/>
-         </a>
-         <a xlink:href='http://www.example.com'>
-           <rect x='324.69' y='450.52' class='st0' width='132.62' height='40.75'/>
-         </a>
-         <a xlink:href='mn://support_resource_schema'>
-           <rect x='324.69' y='528.36' class='st0' width='148.16' height='40.75'/>
-         </a>
-       </svg>
-</figure>
+<image/>
+<a xlink:href="mn://action_schema" xlink:dummy="Layer_1_000000002">
+	<rect x="123.28" y="273.93" class="st0" width="88.05" height="41.84"/>
+</a>
+<a xlink:href="http://www.example.com">
+	<rect x="324.69" y="450.52" class="st0" width="132.62" height="40.75"/>
+</a>
+<a xlink:href="mn://support_resource_schema">
+	<rect x="324.69" y="528.36" class="st0" width="148.16" height="40.75"/>
+</a>
+</svg></figure>
 <target href="mn://support_resource_schema"><eref type="express" bibitemid="express_action_schema" citeas=""><localityStack><locality type="anchor"><referenceFrom>action_schema.basic</referenceFrom></locality></localityStack>Coffee</eref></target></svgmap></sections>
 </standard-document>
