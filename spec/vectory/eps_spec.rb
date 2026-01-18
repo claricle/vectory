@@ -77,8 +77,7 @@ RSpec.describe Vectory::Eps do
     let(:node) { Nokogiri::XML(File.read(input)).child }
     let(:input) { "spec/examples/eps/inline.xml" }
 
-    # Platform-specific Inkscape timeout issue with inline EPS content
-    xit "can be converted to svg" do
+    it "can be converted to svg" do
       expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end

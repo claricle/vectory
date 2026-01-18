@@ -29,7 +29,9 @@ plain: false)
         output_path = external_path(output_path)
 
         cmd = build_command(exe, input_path, output_path, output_format, plain)
-        call = SystemCall.new(cmd).call
+        # Pass environment to disable display on non-Windows systems
+        env = headless_environment
+        call = SystemCall.new(cmd, env: env).call
 
         actual_output = find_output(input_path, output_format)
         raise_conversion_error(call) unless actual_output
@@ -168,7 +170,9 @@ plain: false)
       with_temp_file(content, format) do |path|
         cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
 
-        call = SystemCall.new(cmd).call
+        # Pass environment to disable display on non-Windows systems
+        env = headless_environment
+        call = SystemCall.new(cmd, env: env).call
         raise_query_error(call) if call.stdout.empty?
 
         call.stdout
@@ -191,6 +195,16 @@ plain: false)
             "status: '#{call.status}',\n" \
             "stdout: '#{call.stdout.strip}',\n" \
             "stderr: '#{call.stderr.strip}'."
+    end
+
+    # Returns environment variables for headless operation
+    # On non-Windows systems, disable DISPLAY to prevent X11/GDK initialization
+    def headless_environment
+      win = !!((RUBY_PLATFORM =~ /(win|w)(32|64)$/) ||
+               (RUBY_PLATFORM =~ /mswin|mingw/))
+
+      # On macOS/Linux, disable DISPLAY to prevent Gdk/X11 warnings
+      win ? {} : { "DISPLAY" => "" }
     end
   end
 end

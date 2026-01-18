@@ -25,7 +25,7 @@ module Vectory
       expected_lines
         .zip(actual_lines)
         .each_with_index do |(expected_line, actual_line), current_line|
-        results[current_line] = analyze_line(expected_line, actual_line)
+          results[current_line] = analyze_line(expected_line, actual_line)
       end
 
       print_results(results)

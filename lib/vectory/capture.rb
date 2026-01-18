@@ -40,6 +40,11 @@ module Vectory
       #   }
       def with_timeout(*cmd)
         spawn_opts = Hash === cmd.last ? cmd.pop.dup : {}
+
+        # Separate environment variables (string keys) from spawn options (symbol keys)
+        env_vars = spawn_opts.reject { |k, _| k.is_a?(Symbol) }
+        spawn_opts = spawn_opts.reject { |k, _| k.is_a?(String) }
+
         # Windows only supports :KILL signal reliably, Unix can use :TERM for graceful shutdown
         default_signal = windows? ? :KILL : :TERM
         opts = {
@@ -79,7 +84,14 @@ module Vectory
         watchdog = nil
 
         begin
-          result[:pid] = spawn(*cmd, spawn_opts)
+          # Pass environment variables and command to spawn
+          # spawn signature: spawn([env], cmd..., [options])
+          # If env_vars is not empty, pass it as the first argument
+          result[:pid] = if env_vars.any?
+                           spawn(env_vars, *cmd, spawn_opts)
+                         else
+                           spawn(*cmd, spawn_opts)
+                         end
           wait_thr = Process.detach(result[:pid])
           in_r.close
           out_w.close
