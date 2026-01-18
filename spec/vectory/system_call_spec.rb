@@ -103,9 +103,8 @@ RSpec.describe Vectory::SystemCall do
 
       it "raises error on timeout" do
         cmd = if Gem.win_platform?
-                # On Windows, use ruby -e to create a sleep - most reliable cross-platform
-                # This command will take about 10 seconds to complete
-                ["ruby", "-e", "sleep 10"]
+                # On Windows, use PowerShell Start-Sleep - most reliable native sleep
+                ["powershell", "-Command", "Start-Sleep -Seconds 10"]
               else
                 ["sleep", "10"]
               end
@@ -204,8 +203,8 @@ RSpec.describe Vectory::SystemCall do
         # The SystemCall class uses KILL signal which works on Windows
         # This is tested indirectly through timeout tests
         cmd = if Gem.win_platform?
-                # On Windows, use ruby -e to create a sleep - most reliable cross-platform
-                ["ruby", "-e", "sleep 5"]
+                # On Windows, use PowerShell Start-Sleep - most reliable native sleep
+                ["powershell", "-Command", "Start-Sleep -Seconds 5"]
               else
                 ["sleep", "5"]
               end
