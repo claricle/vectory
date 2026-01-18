@@ -7,7 +7,7 @@
 <title>annotated_3d_model_data_quality_criteria_schema</title>
 <p id="_d9840641-f834-442d-b170-8e5c94a337d5">Mine text</p>
 
-<svgmap><figure id="_9da41439-977e-4a02-9eea-253ba3c4ff81"><image src="spec/examples/svg/non_existent.svg" mimetype="image/svg+xml" id="_18b8dd9a-b33c-473f-9b61-55e7fa46f6dc" height="auto" width="auto"/></figure><target href="1"><eref style="short" bibitemid="express_measure_schema" citeas="">measure_schema</eref></target><target href="2"><eref style="short" bibitemid="express_measure_schemaexpg4" citeas="">measure_schemaexpg4</eref></target><target href="3"><eref style="short" bibitemid="express_measure_schema" citeas="">measure_schema</eref></target></svgmap>
+<svgmap><figure id="_9da41439-977e-4a02-9eea-253ba3c4ff81"><image/></figure><target href="1"><eref style="short" bibitemid="express_measure_schema" citeas="">measure_schema</eref></target><target href="2"><eref style="short" bibitemid="express_measure_schemaexpg4" citeas="">measure_schemaexpg4</eref></target><target href="3"><eref style="short" bibitemid="express_measure_schema" citeas="">measure_schema</eref></target></svgmap>
 </clause>
 
 <clause id="_annotated_3d_model_data_quality_criteria_schema_2" inline-header="false" obligation="normative">
