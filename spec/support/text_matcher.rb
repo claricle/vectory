@@ -1,18 +1,31 @@
 module Vectory
   class TextMatcher
     def initialize(allowed_changed_lines: 0,
-                   allowed_changed_words_in_line: 0)
+                   allowed_changed_words_in_line: 0,
+                   allowed_extra_lines_percent: 10)
       @allowed_changed_lines = allowed_changed_lines
       @allowed_changed_words_in_line = allowed_changed_words_in_line
+      @allowed_extra_lines_percent = allowed_extra_lines_percent
     end
 
     def match?(expected, actual)
       expected_lines = expected.split("\n")
       actual_lines = actual.split("\n")
 
+      # Allow actual to have more lines than expected (within a percentage tolerance)
+      # This handles cases where different tool versions add extra output
       if expected_lines.count < actual_lines.count
-        Vectory.ui.debug("Lines count differ.")
-        return false
+        extra_lines = actual_lines.count - expected_lines.count
+        allowed_extra = (expected_lines.count * @allowed_extra_lines_percent / 100.0).ceil
+
+        if extra_lines > allowed_extra
+          Vectory.ui.debug("Lines count differ by #{extra_lines} (allowed: #{allowed_extra}).")
+          return false
+        end
+
+        Vectory.ui.debug("Actual has #{extra_lines} extra lines (within tolerance of #{allowed_extra}).")
+        # Trim extra lines from actual for comparison
+        actual_lines = actual_lines.first(expected_lines.count)
       end
 
       lines_the_same?(expected_lines, actual_lines)

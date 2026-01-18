@@ -98,10 +98,9 @@ RSpec.describe Vectory::Capture do
     context "with timeout" do
       it "terminates long-running command" do
         if Gem.win_platform?
-          # Windows: use ruby -e to create a sleep - most reliable cross-platform
-          # This command will take about 10 seconds to complete
+          # Windows: use PowerShell Start-Sleep - most reliable native sleep
           result = described_class.with_timeout(
-            "ruby", "-e", "sleep 10",
+            "powershell", "-Command", "Start-Sleep -Seconds 10",
             timeout: 1
           )
         else
@@ -190,9 +189,9 @@ RSpec.describe Vectory::Capture do
       it "uses custom signal on timeout" do
         if Gem.win_platform?
           # Windows only supports KILL signal
-          # Use ruby -e to create a sleep - most reliable cross-platform
+          # Use PowerShell Start-Sleep - most reliable native sleep
           result = described_class.with_timeout(
-            "ruby", "-e", "sleep 10",
+            "powershell", "-Command", "Start-Sleep -Seconds 10",
             timeout: 1,
             signal: :KILL
           )
