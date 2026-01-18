@@ -17,6 +17,9 @@ RSpec.describe Vectory::SvgMapping do
   end
 
   context "with namespaces" do
+    # NOTE: Reference file (doc2-ref.xml) is generated using Nokogiri and external SVG files.
+    # If this test fails after updating Nokogiri or SVG files, regenerate fixtures with:
+    #   bundle exec rake regenerate_fixtures
     let(:source) { described_class.from_path("doc2.xml") }
     let(:reference) { File.read("doc2-ref.xml") }
     let(:work_dir) { "spec/examples/svg" }
@@ -49,11 +52,15 @@ RSpec.describe Vectory::SvgMapping do
   end
 
   def strip_image(xml)
-    xml.gsub(%r{<image.*?</image>}m, "<image/>")
+    # Handle both self-closing and regular image tags with content
+    # Also handle base64-encoded embedded images
+    xml.gsub(%r{<image\b[^>]*>.*?</image>}m, "<image/>")
+      .gsub(%r{<image\b[^>]*/>}, "<image/>")
   end
 
   def strip_image_and_style(xml)
-    xml.gsub(%r{<image.*?</image>}m, "<image/>")
-       .gsub(%r{<style.*?</style>}m, "<style/>") # rubocop:disable Layout/MultilineMethodCallIndentation
+    xml.gsub(%r{<image\b[^>]*>.*?</image>}m, "<image/>")
+      .gsub(%r{<image\b[^>]*/>}, "<image/>")
+      .gsub(%r{<style\b[^>]*>.*?</style>}m, "<style/>")
   end
 end

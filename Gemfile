@@ -5,7 +5,7 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in vectory.gemspec
 gemspec
 
-gem "canon", "~> 0.1.4" #, path: "~/src/lutaml/canon"
+gem "canon", "~> 0.1.7"
 gem "rake"
 gem "rspec"
 gem "rubocop"

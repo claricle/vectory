@@ -68,8 +68,8 @@ module Vectory
       svg_content.gsub(/(<svg[^>]*\s)width="[^"]*"/, "\\1width=\"#{width}\"")
         .gsub(/(<svg[^>]*\s)height="[^"]*"/, "\\1height=\"#{height}\"")
         .gsub(/(<svg[^>]*\s)viewBox="[^"]*"/) do |match|
-        # Adjust viewBox to match new dimensions
-        "#{match.split('viewBox')[0]}viewBox=\"0 0 #{width} #{height}\""
+          # Adjust viewBox to match new dimensions
+          "#{match.split('viewBox')[0]}viewBox=\"0 0 #{width} #{height}\""
       end
     end
   end

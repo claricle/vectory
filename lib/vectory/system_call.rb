@@ -7,15 +7,16 @@ module Vectory
 
     attr_reader :status, :stdout, :stderr, :cmd
 
-    def initialize(cmd, timeout = TIMEOUT)
+    def initialize(cmd, timeout = TIMEOUT, env: {})
       @cmd = cmd
       @timeout = timeout
+      @env = env
     end
 
     def call
       log_cmd(@cmd)
 
-      execute(@cmd)
+      execute(@cmd, @env)
 
       log_result
 
@@ -30,18 +31,21 @@ module Vectory
       Vectory.ui.debug("Cmd: '#{cmd}'")
     end
 
-    def execute(cmd)
-      # If cmd is an array, splat it; otherwise pass as-is (string)
+    def execute(cmd, env)
+      # Build spawn options with environment variables and timeout settings
+      spawn_opts = {}
+      spawn_opts.merge!(env) if env.any?
+      spawn_opts[:timeout] = @timeout
+      spawn_opts[:signal] = :KILL # only KILL works on Windows
+      spawn_opts[:kill_after] = 2
+
+      # Pass command and options directly (without splatting)
+      # Capture.with_timeout expects: cmd, options_hash
+      # It will handle extracting the options correctly
       result = if cmd.is_a?(Array)
-                 Capture.with_timeout(*cmd,
-                                      timeout: @timeout,
-                                      signal: :KILL, # only KILL works on Windows
-                                      kill_after: 2)
+                 Capture.with_timeout(*cmd, spawn_opts)
                else
-                 Capture.with_timeout(cmd,
-                                      timeout: @timeout,
-                                      signal: :KILL, # only KILL works on Windows
-                                      kill_after: 2)
+                 Capture.with_timeout(cmd, spawn_opts)
                end
       @stdout = result[:stdout] || ""
       @stderr = result[:stderr] || ""
