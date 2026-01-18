@@ -31,10 +31,18 @@ module Vectory
     end
 
     def execute(cmd)
-      result = Capture.with_timeout(cmd,
-                                    timeout: @timeout,
-                                    signal: :KILL, # only KILL works on Windows
-                                    kill_after: 2)
+      # If cmd is an array, splat it; otherwise pass as-is (string)
+      result = if cmd.is_a?(Array)
+                 Capture.with_timeout(*cmd,
+                                      timeout: @timeout,
+                                      signal: :KILL, # only KILL works on Windows
+                                      kill_after: 2)
+               else
+                 Capture.with_timeout(cmd,
+                                      timeout: @timeout,
+                                      signal: :KILL, # only KILL works on Windows
+                                      kill_after: 2)
+               end
       @stdout = result[:stdout] || ""
       @stderr = result[:stderr] || ""
       @status = result[:status]

@@ -12,10 +12,12 @@ module Vectory
     STATUS_SYSTEM_CALL_ERROR = 5
     STATUS_INKSCAPE_NOT_FOUND_ERROR = 6
     STATUS_SAME_FORMAT_ERROR = 7
+    STATUS_GHOSTSCRIPT_NOT_FOUND_ERROR = 8
 
     MAP_ERROR_TO_STATUS = {
       Vectory::ConversionError => STATUS_CONVERSION_ERROR,
       Vectory::InkscapeNotFoundError => STATUS_INKSCAPE_NOT_FOUND_ERROR,
+      Vectory::GhostscriptNotFoundError => STATUS_GHOSTSCRIPT_NOT_FOUND_ERROR,
       Vectory::SystemCallError => STATUS_SYSTEM_CALL_ERROR,
     }.freeze
 

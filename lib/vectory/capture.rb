@@ -3,6 +3,11 @@ require "timeout"
 module Vectory
   module Capture
     class << self
+      def windows?
+        !!((RUBY_PLATFORM =~ /(win|w)(32|64)$/) ||
+           (RUBY_PLATFORM =~ /mswin|mingw/))
+      end
+
       # Capture the standard output and the standard error of a command.
       # Almost same as Open3.capture3 method except for timeout handling and return value.
       # See Open3.capture3.
@@ -35,11 +40,13 @@ module Vectory
       #   }
       def with_timeout(*cmd)
         spawn_opts = Hash === cmd.last ? cmd.pop.dup : {}
+        # Windows only supports :KILL signal reliably, Unix can use :TERM for graceful shutdown
+        default_signal = windows? ? :KILL : :TERM
         opts = {
           stdin_data: spawn_opts.delete(:stdin_data) || "",
           binmode: spawn_opts.delete(:binmode) || false,
           timeout: spawn_opts.delete(:timeout),
-          signal: spawn_opts.delete(:signal) || :TERM,
+          signal: spawn_opts.delete(:signal) || default_signal,
           kill_after: spawn_opts.delete(:kill_after) || 2,
         }
 
@@ -107,12 +114,17 @@ module Vectory
               sleep opts[:timeout]
               if wait_thr.alive?
                 result[:timeout] = true
-                pid = spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
+                # Windows doesn't support negative PIDs for process groups
+                pid = if windows?
+                  result[:pid]
+                else
+                  spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
+                end
 
                 begin
                   Process.kill(opts[:signal], pid)
-                rescue Errno::ESRCH
-                  # Process already dead
+                rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
+                  # Process already dead, invalid signal, or permission denied
                 end
 
                 # Wait for kill_after duration, then force kill
@@ -120,8 +132,8 @@ module Vectory
                 if wait_thr.alive?
                   begin
                     Process.kill(:KILL, pid)
-                  rescue Errno::ESRCH
-                    # Process already dead
+                  rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
+                    # Process already dead, invalid signal, or permission denied
                   end
                 end
               end
@@ -142,8 +154,8 @@ module Vectory
             if wait_thr.alive?
               begin
                 Process.kill(:KILL, result[:pid])
-              rescue Errno::ESRCH
-                # Process already dead
+              rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
+                # Process already dead, invalid signal, or permission denied
               end
             end
           end

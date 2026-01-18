@@ -91,34 +91,34 @@ RSpec.describe Vectory::Eps do
 
     context "when ps2pdf conversion fails" do
       before do
-        allow(Vectory::Ps2pdfWrapper).to receive(:convert)
-          .and_raise(Vectory::ConversionError, "ps2pdf failed")
+      allow(Vectory::GhostscriptWrapper).to receive(:convert)
+        .and_raise(Vectory::ConversionError, "ghostscript failed")
       end
 
       it "propagates error from to_pdf to to_svg" do
         expect do
           eps.to_svg
-        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        end.to raise_error(Vectory::ConversionError, /ghostscript failed/)
       end
 
       it "propagates error from to_pdf to to_ps" do
         expect do
           eps.to_ps
-        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        end.to raise_error(Vectory::ConversionError, /ghostscript failed/)
       end
 
       it "propagates error from to_pdf to to_emf" do
         expect do
           eps.to_emf
-        end.to raise_error(Vectory::ConversionError, /ps2pdf failed/)
+        end.to raise_error(Vectory::ConversionError, /ghostscript failed/)
       end
     end
 
     context "when Inkscape conversion fails" do
       before do
         # Allow ps2pdf to succeed
-        allow(Vectory::Ps2pdfWrapper).to receive(:convert)
-          .and_return("fake pdf content")
+      allow(Vectory::GhostscriptWrapper).to receive(:convert)
+        .and_return("fake pdf content")
 
         # Make Inkscape fail
         converter = instance_double(Vectory::InkscapeWrapper)
