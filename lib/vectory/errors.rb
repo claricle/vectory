@@ -9,9 +9,10 @@ module Vectory
     end
   end
 
-  class Ps2pdfNotFoundError < Error
+
+  class GhostscriptNotFoundError < Error
     def initialize(msg = nil)
-      super(msg || "ps2pdf (Ghostscript) not found in PATH. Please install Ghostscript.")
+      super(msg || "Ghostscript not found in PATH. Please install Ghostscript.")
     end
   end
 

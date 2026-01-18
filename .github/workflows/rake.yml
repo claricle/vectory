@@ -9,6 +9,39 @@ on:
   pull_request:
 
 jobs:
+  debug-windows:
+    name: Debug Windows GhostScript paths
+    runs-on: windows-latest
+    steps:
+      - name: Check GhostScript installation paths
+        shell: pwsh
+        run: |
+          Write-Host "=== Checking GhostScript Installation ==="
+          Write-Host ""
+          Write-Host "PATH environment variable:"
+          $env:PATH -split ';' | ForEach-Object { Write-Host "  $_" }
+          Write-Host ""
+          Write-Host "Checking common installation directories:"
+          $paths = @(
+            "C:\Program Files\gs",
+            "C:\Program Files (x86)\gs"
+          )
+          foreach ($path in $paths) {
+            if (Test-Path $path) {
+              Write-Host "Found: $path"
+              Get-ChildItem -Path $path -Recurse -Filter "gswin*.exe" -ErrorAction SilentlyContinue | ForEach-Object {
+                Write-Host "  GhostScript executable: $($_.FullName)"
+              }
+            } else {
+              Write-Host "Not found: $path"
+            }
+          }
+          Write-Host ""
+          Write-Host "Searching PATH for GhostScript:"
+          Get-Command gs -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Found: $($_.Source)" }
+          Get-Command gswin64c -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Found: $($_.Source)" }
+          Get-Command gswin32c -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Found: $($_.Source)" }
+
   rake:
     uses: metanorma/ci/.github/workflows/inkscape-rake.yml@main
     secrets:

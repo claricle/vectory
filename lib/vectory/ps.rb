@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "ps2pdf_wrapper"
+require_relative "ghostscript_wrapper"
 require_relative "pdf"
 
 module Vectory
@@ -35,7 +35,7 @@ module Vectory
     end
 
     def to_pdf
-      pdf_content = Ps2pdfWrapper.convert(content, eps_crop: false)
+      pdf_content = GhostscriptWrapper.convert(content, eps_crop: false)
       pdf = Pdf.new(pdf_content)
       # Pass original BoundingBox dimensions to preserve them in conversions
       bbox = parse_bounding_box

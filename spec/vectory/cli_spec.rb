@@ -215,6 +215,22 @@ RSpec.describe Vectory::CLI do
       end
     end
 
+    context "got GhostscriptNotFoundError" do
+      let(:input)  { Vectory.root_path.join("spec/examples/eps2emf/img.eps") }
+      let(:format) { "emf" }
+
+      it "returns ghostscript-not-found error" do
+        in_tmp_dir do
+          expect(Vectory::GhostscriptWrapper)
+            .to receive(:convert).and_raise(Vectory::GhostscriptNotFoundError)
+
+          status = described_class.start(["-f", format, input])
+
+          expect(status).to be Vectory::CLI::STATUS_GHOSTSCRIPT_NOT_FOUND_ERROR
+        end
+      end
+    end
+
     context "no output option (it's not required)" do
       let(:input)  { Vectory.root_path.join("spec/examples/eps2emf/img.eps") }
       let(:format) { "emf" }
