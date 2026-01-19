@@ -123,40 +123,37 @@ module Vectory
           # Watchdog thread to enforce timeout
           if opts[:timeout]
             watchdog = Thread.new do
+              sleep opts[:timeout]
               if windows?
                 # Windows: Use spawn to run taskkill in background (non-blocking)
-                sleep opts[:timeout]
                 if wait_thr.alive?
                   result[:timeout] = true
                   # Spawn taskkill in background to avoid blocking
                   begin
                     Process.spawn("taskkill", "/pid", result[:pid].to_s, "/f",
-                                  [:out, :err] => File::NULL)
+                                  %i[out err] => File::NULL)
                   rescue Errno::ENOENT
                     # taskkill not found (shouldn't happen on Windows)
                   end
                 end
-              else
+              elsif wait_thr.alive?
                 # Unix: Use Process.kill which works reliably
-                sleep opts[:timeout]
-                if wait_thr.alive?
-                  result[:timeout] = true
-                  pid = spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
+                result[:timeout] = true
+                pid = spawn_opts[:pgroup] ? -result[:pid] : result[:pid]
 
+                begin
+                  Process.kill(opts[:signal], pid)
+                rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
+                  # Process already dead, invalid signal, or permission denied
+                end
+
+                # Wait for kill_after duration, then force kill
+                sleep opts[:kill_after]
+                if wait_thr.alive?
                   begin
-                    Process.kill(opts[:signal], pid)
+                    Process.kill(:KILL, pid)
                   rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
                     # Process already dead, invalid signal, or permission denied
-                  end
-
-                  # Wait for kill_after duration, then force kill
-                  sleep opts[:kill_after]
-                  if wait_thr.alive?
-                    begin
-                      Process.kill(:KILL, pid)
-                    rescue Errno::ESRCH, Errno::EINVAL, Errno::EPERM
-                      # Process already dead, invalid signal, or permission denied
-                    end
                   end
                 end
               end
@@ -171,6 +168,7 @@ module Vectory
               loop do
                 break unless wait_thr.alive?
                 break if Time.now > deadline
+
                 sleep 0.5
               end
             else

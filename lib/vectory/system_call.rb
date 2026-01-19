@@ -36,7 +36,7 @@ module Vectory
       spawn_opts = {}
       spawn_opts.merge!(env) if env.any?
       spawn_opts[:timeout] = @timeout
-      spawn_opts[:signal] = :TERM  # Use TERM on Unix for graceful shutdown
+      spawn_opts[:signal] = :TERM # Use TERM on Unix for graceful shutdown
       spawn_opts[:kill_after] = 2
 
       # Pass command and options directly (without splatting)
