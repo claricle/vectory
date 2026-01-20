@@ -3,6 +3,7 @@
 require "singleton"
 require "tmpdir"
 require_relative "system_call"
+require_relative "platform"
 
 module Vectory
   class InkscapeWrapper
@@ -24,9 +25,9 @@ plain: false)
       with_temp_files(content, input_format,
                       output_format) do |input_path, output_path|
         exe = inkscape_path_or_raise_error
-        exe = external_path(exe)
-        input_path = external_path(input_path)
-        output_path = external_path(output_path)
+        exe = Platform.path_for_execution(exe)
+        input_path = Platform.path_for_execution(input_path)
+        output_path = Platform.path_for_execution(output_path)
 
         cmd = build_command(exe, input_path, output_path, output_format, plain)
         # Pass environment to disable display on non-Windows systems
@@ -63,7 +64,7 @@ plain: false)
     def find_inkscape
       cmds.each do |cmd|
         extensions.each do |ext|
-          paths.each do |path|
+          Platform.executable_search_paths.each do |path|
             exe = File.join(path, "#{cmd}#{ext}")
 
             return exe if File.executable?(exe) && !File.directory?(exe)
@@ -80,10 +81,6 @@ plain: false)
 
     def extensions
       ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-    end
-
-    def paths
-      ENV["PATH"].split(File::PATH_SEPARATOR)
     end
 
     def find_output(source_path, output_extension)
@@ -104,17 +101,6 @@ plain: false)
             "status: '#{call.status}',\n" \
             "stdout: '#{call.stdout.strip}',\n" \
             "stderr: '#{call.stderr.strip}'."
-    end
-
-    def external_path(path)
-      win = !!((RUBY_PLATFORM =~ /(win|w)(32|64)$/) ||
-               (RUBY_PLATFORM =~ /mswin|mingw/))
-      if win
-        path.gsub!(%{/}, "\\")
-        path[/\s/] ? "\"#{path}\"" : path
-      else
-        path
-      end
     end
 
     def build_command(exe, input_path, output_path, output_format, plain)
@@ -140,7 +126,7 @@ plain: false)
       exe = inkscape_path
       return @inkscape_version_modern = true unless exe # Default to modern
 
-      version_output = `#{external_path(exe)} --version 2>&1`
+      version_output = `#{Platform.path_for_execution(exe)} --version 2>&1`
       version_match = version_output.match(/Inkscape (\d+)\./)
 
       @inkscape_version_modern = if version_match
@@ -168,7 +154,7 @@ plain: false)
       exe = inkscape_path_or_raise_error
 
       with_temp_file(content, format) do |path|
-        cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
+        cmd = "#{Platform.path_for_execution(exe)} #{options} #{Platform.path_for_execution(path)}"
 
         # Pass environment to disable display on non-Windows systems
         env = headless_environment
@@ -200,11 +186,8 @@ plain: false)
     # Returns environment variables for headless operation
     # On non-Windows systems, disable DISPLAY to prevent X11/GDK initialization
     def headless_environment
-      win = !!((RUBY_PLATFORM =~ /(win|w)(32|64)$/) ||
-               (RUBY_PLATFORM =~ /mswin|mingw/))
-
       # On macOS/Linux, disable DISPLAY to prevent Gdk/X11 warnings
-      win ? {} : { "DISPLAY" => "" }
+      Platform.windows? ? {} : { "DISPLAY" => "" }
     end
   end
 end
