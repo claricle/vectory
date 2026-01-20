@@ -27,14 +27,14 @@ module Vectory
       #
       # @return [Boolean] true if on macOS platform
       def macos?
-        RbConfig::CONFIG['host_os'] =~ /darwin/
+        RbConfig::CONFIG["host_os"].include?("darwin")
       end
 
       # Detect if running on Linux
       #
       # @return [Boolean] true if on Linux platform
       def linux?
-        RbConfig::CONFIG['host_os'] =~ /linux/
+        RbConfig::CONFIG["host_os"].include?("linux")
       end
 
       # Format a file path for execution on the current platform
@@ -47,7 +47,7 @@ module Vectory
       def path_for_execution(path)
         return path unless path
 
-        formatted_path = windows? ? path.gsub('/', '\\') : path
+        formatted_path = windows? ? path.gsub("/", "\\") : path
 
         # Quote paths with spaces to prevent shell parsing issues
         formatted_path[/\s/] ? "\"#{formatted_path}\"" : formatted_path
@@ -60,8 +60,8 @@ module Vectory
       # @return [Array<String>] array of directory paths
       def executable_search_paths
         @executable_search_paths ||= begin
-          path_sep = windows? ? ';' : ':'
-          (ENV['PATH'] || '').split(path_sep)
+          path_sep = windows? ? ";" : ":"
+          (ENV["PATH"] || "").split(path_sep)
         end
       end
 
@@ -80,7 +80,7 @@ module Vectory
       #
       # @return [String, nil] ".exe" on Windows, nil on Unix
       def command_extension
-        windows? ? '.exe' : nil
+        windows? ? ".exe" : nil
       end
 
       # Get the default shell for the platform
@@ -88,9 +88,9 @@ module Vectory
       # @return [String] shell command (e.g., "cmd.exe" on Windows, "sh" on Unix)
       def default_shell
         if windows?
-          'cmd.exe'
+          "cmd.exe"
         else
-          'sh'
+          "sh"
         end
       end
 

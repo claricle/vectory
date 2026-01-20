@@ -18,16 +18,16 @@ module Vectory
     class InkscapeStrategy < Strategy
       # Inkscape supports bidirectional conversion with SVG as source/target
       SUPPORTED_CONVERSIONS = [
-        [:svg, :eps],
-        [:svg, :ps],
-        [:svg, :emf],
-        [:svg, :pdf],
-        [:eps, :svg],
-        [:eps, :pdf],
-        [:ps, :svg],
-        [:ps, :pdf],
-        [:pdf, :svg],
-        [:emf, :svg],
+        %i[svg eps],
+        %i[svg ps],
+        %i[svg emf],
+        %i[svg pdf],
+        %i[eps svg],
+        %i[eps pdf],
+        %i[ps svg],
+        %i[ps pdf],
+        %i[pdf svg],
+        %i[emf svg],
       ].freeze
 
       # Convert content using Inkscape

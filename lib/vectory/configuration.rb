@@ -22,9 +22,7 @@ module Vectory
     # Default temporary directory
     DEFAULT_TEMP_DIR = nil # Use system default
 
-    attr_accessor :inkscape_path, :ghostscript_path
-    attr_accessor :timeout, :cache_ttl, :cache_enabled
-    attr_accessor :temp_dir, :verbose_logging
+    attr_accessor :inkscape_path, :ghostscript_path, :timeout, :cache_ttl, :cache_enabled, :temp_dir, :verbose_logging
 
     # Get the singleton instance
     #
@@ -159,7 +157,7 @@ module Vectory
         errors << "timeout must be positive, got: #{@timeout}"
       end
 
-      if @cache_ttl && @cache_ttl < 0
+      if @cache_ttl&.negative?
         errors << "cache_ttl must be non-negative, got: #{@cache_ttl}"
       end
 

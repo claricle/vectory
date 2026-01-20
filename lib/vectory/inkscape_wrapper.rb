@@ -25,9 +25,9 @@ plain: false)
       with_temp_files(content, input_format,
                       output_format) do |input_path, output_path|
         exe = inkscape_path_or_raise_error
-        exe = Platform.path_for_execution(exe)
-        input_path = Platform.path_for_execution(input_path)
-        output_path = Platform.path_for_execution(output_path)
+        exe = external_path(exe)
+        input_path = external_path(input_path)
+        output_path = external_path(output_path)
 
         cmd = build_command(exe, input_path, output_path, output_format, plain)
         # Pass environment to disable display on non-Windows systems
@@ -126,7 +126,7 @@ plain: false)
       exe = inkscape_path
       return @inkscape_version_modern = true unless exe # Default to modern
 
-      version_output = `#{Platform.path_for_execution(exe)} --version 2>&1`
+      version_output = `#{external_path(exe)} --version 2>&1`
       version_match = version_output.match(/Inkscape (\d+)\./)
 
       @inkscape_version_modern = if version_match
@@ -154,7 +154,7 @@ plain: false)
       exe = inkscape_path_or_raise_error
 
       with_temp_file(content, format) do |path|
-        cmd = "#{Platform.path_for_execution(exe)} #{options} #{Platform.path_for_execution(path)}"
+        cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
 
         # Pass environment to disable display on non-Windows systems
         env = headless_environment
@@ -181,6 +181,18 @@ plain: false)
             "status: '#{call.status}',\n" \
             "stdout: '#{call.stdout.strip}',\n" \
             "stderr: '#{call.stderr.strip}'."
+    end
+
+    # Format paths for command execution on current platform
+    # Handles Windows backslash conversion and quoting for paths with spaces
+    def external_path(path)
+      return path unless path
+      return path unless Platform.windows?
+
+      # Convert forward slashes to backslashes
+      path.gsub!(%r{/}, "\\")
+      # Quote paths with spaces
+      path[/\s/] ? "\"#{path}\"" : path
     end
 
     # Returns environment variables for headless operation
