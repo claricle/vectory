@@ -39,14 +39,18 @@ module Vectory
 
       # Format a file path for execution on the current platform
       #
-      # On Windows, converts forward slashes to backslashes.
+      # On Windows, converts forward slashes to backslashes and quotes paths with spaces.
       # On Unix-like systems, returns the path unchanged.
       #
       # @param path [String] the file path to format
       # @return [String] platform-formatted path
       def path_for_execution(path)
         return path unless path
-        windows? ? path.gsub('/', '\\') : path
+
+        formatted_path = windows? ? path.gsub('/', '\\') : path
+
+        # Quote paths with spaces to prevent shell parsing issues
+        formatted_path[/\s/] ? "\"#{formatted_path}\"" : formatted_path
       end
 
       # Get the PATH environment variable as an array
@@ -55,7 +59,7 @@ module Vectory
       #
       # @return [Array<String>] array of directory paths
       def executable_search_paths
-        @search_paths ||= begin
+        @executable_search_paths ||= begin
           path_sep = windows? ? ';' : ':'
           (ENV['PATH'] || '').split(path_sep)
         end
@@ -94,7 +98,7 @@ module Vectory
       #
       # @api private
       def reset_cache
-        @search_paths = nil
+        @executable_search_paths = nil
       end
     end
   end
