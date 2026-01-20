@@ -15,7 +15,9 @@ RSpec.describe Vectory::SvgDocument do
 
   describe ".update_ids_css" do
     let(:input) { File.read("spec/fixtures/svg-style-attrs-input.svg") }
-    let(:expected_output) { File.read("spec/fixtures/svg-style-attrs-output.svg") }
+    let(:expected_output) do
+      File.read("spec/fixtures/svg-style-attrs-output.svg")
+    end
     let(:document) { Nokogiri::XML(input).root }
     let(:ids) { ["Layer_1", "rect1", "rect2", "grad1"] }
     let(:suffix) { "000000001" }
@@ -47,8 +49,10 @@ RSpec.describe Vectory::SvgDocument do
 
       # Check that direct ID attributes are updated
       expect(document["id"]).to eq("Layer_1_000000001")
-      expect(document.xpath(".//m:rect[@id='rect1_000000001']", "m" => Vectory::SvgDocument::SVG_NS).first["id"]).to eq("rect1_000000001")
-      expect(document.xpath(".//m:rect[@id='rect2_000000001']", "m" => Vectory::SvgDocument::SVG_NS).first["id"]).to eq("rect2_000000001")
+      expect(document.xpath(".//m:rect[@id='rect1_000000001']",
+                            "m" => Vectory::SvgDocument::SVG_NS).first["id"]).to eq("rect1_000000001")
+      expect(document.xpath(".//m:rect[@id='rect2_000000001']",
+                            "m" => Vectory::SvgDocument::SVG_NS).first["id"]).to eq("rect2_000000001")
 
       # Check that url(#id) references in attributes are updated
       # rect2 has fill="url(#grad1)" attribute (not inline style)
@@ -59,7 +63,9 @@ RSpec.describe Vectory::SvgDocument do
 
   describe "#suffix_ids" do
     let(:input) { File.read("spec/fixtures/svg-style-attrs-input.svg") }
-    let(:expected_output) { File.read("spec/fixtures/svg-style-attrs-output.svg") }
+    let(:expected_output) do
+      File.read("spec/fixtures/svg-style-attrs-output.svg")
+    end
     let(:document) { described_class.new(input) }
 
     it "updates IDs in style tags, inline styles, and attributes with url(#id)" do
