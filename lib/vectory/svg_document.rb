@@ -4,6 +4,44 @@ module Vectory
   class SvgDocument
     SVG_NS = "http://www.w3.org/2000/svg".freeze
 
+    class << self
+      # Update instances of id in style statements in a nokogiri document
+      def update_ids_css(document, ids, suffix)
+        suffix = suffix.is_a?(Integer) ? sprintf("%09d", suffix) : suffix
+        document.xpath(".//m:style", "m" => SVG_NS).each do |s|
+          c = s.children.to_xml
+          s.children = update_ids_css_string(c, ids, suffix)
+        end
+        document.xpath(".//*[@style]").each do |s|
+          s["style"] = update_ids_css_string(s["style"], ids, suffix)
+        end
+      end
+
+      # Update instances of id in style statements in the string style
+      def update_ids_css_string(style, ids, suffix)
+        ids.each do |i|
+          style = style.gsub(%r[##{i}\b],
+                             sprintf("#%<id>s_%<suffix>s", id: i,
+                                                           suffix: suffix))
+            .gsub(%r(\[id\s*=\s*['"]?#{i}['"]?\]),
+                  sprintf("[id='%<id>s_%<suffix>s']", id: i,
+                                                      suffix: suffix))
+        end
+        style
+      end
+
+      def update_ids_attrs(document, ids, suffix)
+        suffix = suffix.is_a?(Integer) ? sprintf("%09d", suffix) : suffix
+        document.xpath(". | .//*[@*]").each do |a|
+          a.attribute_nodes.each do |x|
+            val = x.value.sub(/^#/, "")
+            ids.include?(val) and x.value += "_#{suffix}"
+            x.value = x.value.sub(%r{url\(#([^()]+)\)}, "url(#\\1_#{suffix})")
+          end
+        end
+      end
+    end
+
     def initialize(content)
       @document = Nokogiri::XML(content)
     end
@@ -33,8 +71,8 @@ module Vectory
       ids = collect_ids
       return if ids.empty?
 
-      update_ids_attrs(ids, suffix)
-      update_ids_css(ids, suffix)
+      self.class.update_ids_attrs(@document.root, ids, suffix)
+      self.class.update_ids_css(@document.root, ids, suffix)
 
       self
     end
@@ -49,28 +87,6 @@ module Vectory
 
     def collect_ids
       @document.xpath("./@id | .//@id").map(&:value)
-    end
-
-    def update_ids_attrs(ids, suffix)
-      @document.xpath(". | .//*[@*]").each do |a|
-        a.attribute_nodes.each do |x|
-          ids.include?(x.value) and x.value += sprintf("_%09d", suffix)
-        end
-      end
-    end
-
-    def update_ids_css(ids, suffix)
-      @document.xpath("//m:style", "m" => SVG_NS).each do |s|
-        c = s.children.to_xml
-        ids.each do |i|
-          c = c.gsub(%r[##{i}\b],
-                     sprintf("#%<id>s_%<suffix>09d", id: i, suffix: suffix))
-            .gsub(%r(\[id\s*=\s*['"]?#{i}['"]?\]),
-                  sprintf("[id='%<id>s_%<suffix>09d']", id: i, suffix: suffix))
-        end
-
-        s.children = c
-      end
     end
   end
 end
