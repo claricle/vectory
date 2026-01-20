@@ -1,0 +1,277 @@
+---
+layout: default
+title: Architecture
+parent: Understanding
+nav_order: 1
+---
+= Architecture Overview
+
+Vectory's design principles and architecture.
+
+== Purpose
+
+This section explains Vectory's architecture, design decisions, and implementation patterns.
+
+== Design Philosophy
+
+Vectory follows these core principles:
+
+* **Object-Oriented Design**: Clear class hierarchy with inheritance
+* **Wrapper Pattern**: External tools abstracted behind clean interfaces
+* **Singleton Pattern**: Shared tool instances for efficiency
+* **Model-Based**: Object representation rather than serialization manipulation
+* **Separation of Concerns**: Each class has a single responsibility
+
+== Class Hierarchy
+
+[source,ruby]
+----
+Vectory::Image          # Base class for all images
+    │
+    └── Vectory::Vector  # Abstract base for vector formats
+            │
+            ├── Vectory::Eps      # Encapsulated PostScript
+            ├── Vectory::Ps       # PostScript
+            ├── Vectory::Emf      # Enhanced Metafile
+            ├── Vectory::Svg      # Scalable Vector Graphics
+            └── Vectory::Pdf      # PDF (intermediate format)
+----
+
+Each format class inherits from `Vectory::Vector` and shares common functionality.
+
+== Design Patterns
+
+=== Wrapper Pattern
+
+External tools are wrapped in singleton classes:
+
+[source,ruby]
+----
+# Inkscape wrapper
+class InkscapeWrapper
+  include Singleton
+
+  def executable
+    @executable ||= find_inkscape
+  end
+
+  def version
+    @version ||= detect_version
+  end
+end
+----
+
+**Benefits**:
+
+* Clean interface to external tools
+* Centralized tool discovery
+* Version detection and caching
+* Error handling
+
+=== Singleton Pattern
+
+Tool wrappers use singleton pattern:
+
+[source,ruby]
+----
+# Single instance shared across conversions
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Version detected once, cached
+puts inkscape.version  # Cached result
+----
+
+**Benefits**:
+
+* Efficient resource usage
+* Version detection happens once
+* Consistent behavior across conversions
+
+=== Factory Methods
+
+Each format class provides factory methods:
+
+[source,ruby]
+----
+Vectory::Eps.from_path(path)      # Load from file
+Vectory::Eps.from_content(content) # Load from string
+Vectory::Eps.from_datauri(uri)     # Load from data URI
+Vectory::Eps.from_node(node)       # Load from XML node
+----
+
+**Benefits**:
+
+* Flexible input sources
+* Consistent API across formats
+* Easy testing and mocking
+
+== Conversion Pipeline
+
+=== Direct Conversions
+
+Some conversions are direct:
+
+[source,text]
+----
+SVG → Inkscape → EPS/PS/EMF/PDF
+EMF → emf2svg → SVG
+----
+
+=== Two-Step Conversions
+
+Other conversions use intermediate formats:
+
+[source,text]
+----
+EPS/PS → Ghostscript → PDF → Inkscape → SVG
+----
+
+This preserves BoundingBox information from EPS/PS files.
+
+== Component Interaction
+
+[.flowchart]
+----
+User Code
+    │
+    ├─→ Vectory::Eps.from_path()
+    │       │
+    │       ├─→ Vectory::FileMagic.detect_format()
+    │       │
+    │       └─→ Vectory::Eps.new()
+    │
+    └─→ Vectory::Eps#to_svg()
+            │
+            ├─→ Vectory::Pdf#to_pdf() ──→ GhostscriptWrapper
+            │
+            └─→ Vectory::Pdf#to_svg() ──→ InkscapeWrapper
+----
+
+== File System Operations
+
+=== Path Tracking
+
+Each image tracks two paths:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("input.eps")
+
+# Where it was loaded from (read-only)
+eps.initial_path  # => "input.eps"
+
+# Where it's currently written
+eps.path  # Raises NotWrittenToDiskError if not written
+
+eps.write("output.eps")
+eps.path  # => "output.eps"
+----
+
+=== Temporary Files
+
+Vectory manages temporary files for conversions:
+
+[source,ruby]
+----
+# Temporary files created automatically
+eps = Vectory::Eps.from_path("diagram.eps")
+svg = eps.to_svg  # Creates temp PDF, then temp SVG
+
+# Write to final location
+svg.write("diagram.svg")
+----
+
+Temp files are cleaned up automatically.
+
+== Error Handling
+
+Structured error hierarchy:
+
+[source,ruby]
+----
+Vectory::Error                  # Base error
+    ├── SystemCallError         # External tool failures
+    ├── NotWrittenToDiskError   # Path access before write
+    ├── ParsingError           # Content parsing failures
+    ├── InkscapeNotFoundError  # Inkscape unavailable
+    ├── ConversionError        # Conversion failures
+    └── InkscapeQueryError     # Dimension query failures
+----
+
+== Performance Considerations
+
+=== Caching
+
+[source,ruby]
+----
+# Tool version cached
+inkscape = Vectory::InkscapeWrapper.instance
+inkscape.version  # Detected once, cached
+
+# Tool path cached
+inkscape.executable  # Discovered once, cached
+----
+
+=== Lazy Evaluation
+
+[source,ruby]
+----
+# Version detected only when needed
+inkscape = Vectory::InkscapeWrapper.instance
+# Version not detected until first use
+puts inkscape.version  # Detection happens here
+----
+
+=== Process Management
+
+[source,ruby]
+----
+# Non-blocking timeout on Windows
+spawn("taskkill", "/pid", pid, "/f",
+      %i[out err] => File::NULL)
+
+# Blocking timeout on Unix
+Process.kill(:TERM, pid)
+----
+
+== Extensibility
+
+=== Adding New Formats
+
+To add a new format:
+
+. Create format class inheriting from `Vectory::Vector`
+. Implement `#to_*` conversion methods
+. Add format detection to `FileMagic`
+
+[source,ruby]
+----
+class Vectory::NewFormat < Vectory::Vector
+  def to_svg
+    # Convert to SVG
+  end
+
+  def self.from_path(path)
+    # Load from file
+  end
+end
+----
+
+=== Adding New Conversions
+
+Add conversion methods to existing format classes:
+
+[source,ruby]
+----
+class Vectory::Eps < Vectory::Vector
+  def to_new_format
+    # Convert to new format
+  end
+end
+----
+
+== See Also
+
+* link:class-hierarchy/[Class Hierarchy] - Detailed class structure
+* link:conversion-pipeline/[Conversion Pipeline] - How conversions work
+* link:wrapper-pattern/[Wrapper Pattern] - Tool abstraction details

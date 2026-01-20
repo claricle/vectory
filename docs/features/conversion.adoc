@@ -1,0 +1,205 @@
+---
+layout: default
+title: Conversion Features
+parent: Features
+nav_order: 1
+---
+= Conversion Features
+
+How Vectory converts between vector image formats.
+
+== Overview
+
+Vectory supports pairwise conversion between EPS, PS, EMF, SVG, and PDF formats. Conversions are performed through external tools (Inkscape, Ghostscript, emf2svg) with a unified Ruby interface.
+
+== Conversion Paths
+
+=== Direct Conversions (via Inkscape)
+
+Inkscape handles direct conversions between SVG and other formats:
+
+* **SVG → EPS**: Export SVG to Encapsulated PostScript
+* **SVG → PS**: Export SVG to PostScript
+* **SVG → EMF**: Export SVG to Enhanced Metafile
+* **SVG → PDF**: Export SVG to PDF
+* **EPS → SVG**: Import EPS and export to SVG
+* **PS → SVG**: Import PS and export to SVG
+* **EMF → SVG**: Import EMF and export to SVG
+* **PDF → SVG**: Import PDF and export to SVG
+
+[source,ruby]
+----
+# Direct conversion examples
+svg_to_eps = Vectory::Svg.from_path("diagram.svg").to_eps
+eps_to_svg = Vectory::Eps.from_path("diagram.eps").to_svg
+----
+
+=== Two-Step Conversions (EPS/PS → SVG)
+
+EPS and PS files are converted to SVG through a PDF intermediate:
+
+1. **EPS/PS → PDF** (via Ghostscript): Preserves BoundingBox information
+2. **PDF → SVG** (via Inkscape): Converts PDF to SVG
+
+[source,ruby]
+----
+# Two-step conversion (automatic)
+eps = Vectory::Eps.from_path("diagram.eps")
+svg = eps.to_svg  # Internally: EPS → PDF → SVG
+----
+
+This two-step process ensures accurate dimension preservation from EPS/PS files.
+
+=== EMF Conversions (via emf2svg)
+
+EMF files are converted using the emf2svg gem:
+
+[source,ruby]
+----
+# EMF to SVG conversion
+emf = Vectory::Emf.from_path("chart.emf")
+svg = emf.to_svg  # Uses emf2svg gem
+----
+
+== Conversion Matrix
+
+[cols="2,1a,2a"]
+|===
+|Source|Target|Tool Used
+
+|SVG|EPS|Inkscape
+|SVG|PS|Inkscape
+|SVG|EMF|Inkscape
+|SVG|PDF|Inkscape
+
+|EPS|SVG|Ghostscript + Inkscape (two-step)
+|EPS|PDF|Ghostscript
+|EPS|PS|Via PDF intermediate
+
+|PS|SVG|Ghostscript + Inkscape (two-step)
+|PS|PDF|Ghostscript
+|PS|EPS|Via PDF intermediate
+
+|EMF|SVG|emf2svg gem
+|EMF|EPS|Via SVG intermediate
+|EMF|PS|Via SVG intermediate
+
+|PDF|SVG|Inkscape
+|PDF|EPS|Via SVG intermediate
+|PDF|PS|Via SVG intermediate
+|===
+
+== Quality Considerations
+
+=== BoundingBox Preservation
+
+Ghostscript preserves exact BoundingBox dimensions from EPS/PS files when converting to PDF:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+pdf = eps.to_pdf  # BoundingBox preserved exactly
+----
+
+=== Font Handling
+
+* **Ghostscript**: Embeds fonts in PDF intermediate
+* **Inkscape**: May convert fonts to paths for SVG output
+
+=== Precision
+
+Vector graphics maintain full precision through conversions. Rasterization does not occur.
+
+== Performance
+
+=== Conversion Speed
+
+* **Direct conversions** (via Inkscape): ~1-3 seconds for typical files
+* **Two-step conversions** (EPS/PS → SVG): ~2-5 seconds (Ghostscript + Inkscape)
+* **EMF conversions** (via emf2svg): ~1-2 seconds
+
+=== Caching
+
+Vectory caches external tool information:
+
+* **Inkscape version**: Detected once per session
+* **Tool paths**: Discovered once and cached
+
+[source,ruby]
+----
+# Version detection is cached
+inkscape = Vectory::InkscapeWrapper.instance
+puts inkscape.version  # Cached result
+----
+
+== Common Conversion Tasks
+
+=== Batch Conversions
+
+Convert multiple files in a directory:
+
+[source,ruby]
+----
+Dir["diagrams/*.eps"].each do |eps_file|
+  svg = Vectory::Eps.from_path(eps_file).to_svg
+  svg.write(eps_file.sub(".eps", ".svg"))
+end
+----
+
+=== Content Conversion
+
+Convert from content string without writing to disk:
+
+[source,ruby]
+----
+eps_content = File.read("diagram.eps")
+svg = Vectory::Eps.from_content(eps_content).to_svg
+svg_content = svg.content
+----
+
+=== Dimension-Preserving Conversion
+
+Query dimensions before conversion:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+puts "Original size: #{width}x#{height}"
+
+svg = eps.to_svg
+svg_width, svg_height = svg.dimensions
+puts "Converted size: #{svg_width}x#{svg_height}"
+----
+
+== Error Handling
+
+=== Conversion Failures
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("invalid.eps").to_svg
+rescue Vectory::ConversionError => e
+  puts "Conversion failed: #{e.message}"
+  puts "Diagnostics: #{e.diagnostics}"
+end
+----
+
+=== Tool Not Found
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+  puts "Install Inkscape or set INKSCAPE_PATH"
+end
+----
+
+== See Also
+
+* link:../understanding/conversion-pipeline/[Conversion Pipeline] - Internal conversion architecture
+* link:../guides/error-handling/[Error Handling Guide] - Common errors and solutions
+* link:../reference/api/[API Reference] - Conversion method documentation

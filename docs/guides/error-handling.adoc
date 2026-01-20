@@ -1,0 +1,400 @@
+---
+layout: default
+title: Error Handling
+parent: Guides
+nav_order: 1
+---
+= Error Handling
+
+Common errors and how to resolve them.
+
+== Purpose
+
+This guide covers common errors you may encounter when using Vectory and how to resolve them.
+
+== Error Classes
+
+Vectory uses a structured error hierarchy:
+
+[source,ruby]
+----
+Vectory::Error                  # Base error class
+    ├── SystemCallError         # External tool execution failures
+    ├── NotWrittenToDiskError   # Accessing path before write
+    ├── ParsingError           # Content parsing failures
+    ├── InkscapeNotFoundError  # Inkscape not available
+    ├── ConversionError        # Conversion failures with diagnostics
+    └── InkscapeQueryError     # Dimension query failures
+----
+
+== Common Errors
+
+=== Inkscape Not Found
+
+[source,ruby]
+----
+Vectory::InkscapeNotFoundError: Inkscape not found in PATH
+----
+
+**Causes**:
+
+* Inkscape not installed
+* Inkscape not in system PATH
+* Custom path not configured
+
+**Solutions**:
+
+. Install Inkscape:
++
+[source,shell]
+----
+# macOS
+brew install --cask inkscape
+
+# Ubuntu/Debian
+sudo apt install inkscape
+
+# Windows
+# Download from https://inkscape.org/release/
+----
+
+. Verify installation:
++
+[source,shell]
+----
+inkscape --version
+----
+
+. Set custom path:
++
+[source,ruby]
+----
+ENV["INKSCAPE_PATH"] = "/custom/path/to/inkscape"
+----
+
+=== Ghostscript Not Found
+
+[source,ruby]
+----
+Vectory::SystemCallError: Ghostscript conversion failed
+----
+
+**Causes**:
+
+* Ghostscript not installed
+* Ghostscript not in system PATH
+
+**Solutions**:
+
+. Install Ghostscript:
++
+[source,shell]
+----
+# macOS
+brew install ghostscript
+
+# Ubuntu/Debian
+sudo apt install ghostscript
+
+# Windows
+# Download from https://www.ghostscript.com/download/gsdnld.html
+----
+
+. Verify installation:
++
+[source,shell]
+----
+gs --version
+----
+
+=== Conversion Timeout
+
+[source,ruby]
+----
+Vectory::SystemCallError: Command timed out: inkscape
+----
+
+**Causes**:
+
+* Large file being processed
+* Complex vector graphics
+* System resource constraints
+* Inkscape hanging on macOS
+
+**Solutions**:
+
+. Check if file is valid:
++
+[source,ruby]
+----
+# Verify file can be opened
+File.open("diagram.eps", "r") { |f| f.read(100) }
+----
+
+. Increase timeout:
++
+[source,ruby]
+----
+# Default timeout is 60 seconds
+# For larger files, you may need to wait longer
+----
+
+. On macOS, ensure `DISPLAY=""` is set (automatic in Vectory)
+
+=== Not Written to Disk Error
+
+[source,ruby]
+----
+Vectory::NotWrittenToDiskError: File has not been written to disk yet
+----
+
+**Causes**:
+
+* Accessing `path` before calling `write()`
+
+**Solution**:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+
+# WRONG: This raises error
+puts eps.path  # => NotWrittenToDiskError
+
+# CORRECT: Write first, then access path
+eps.write("output.eps")
+puts eps.path  # => "output.eps"
+----
+
+=== Parsing Error
+
+[source,ruby]
+----
+Vectory::ParsingError: Unable to detect file format
+----
+
+**Causes**:
+
+* Invalid file content
+* Corrupted file
+* Unsupported format
+
+**Solutions**:
+
+. Verify file format:
++
+[source,ruby]
+----
+content = File.read("unknown_file", 100)
+puts content  # Check first 100 bytes
+----
+
+. Use explicit format:
++
+[source,ruby]
+----
+# Force format if detection fails
+svg = Vectory::Svg.from_path("diagram")  # Treat as SVG
+----
+
+=== Dimension Query Failed
+
+[source,ruby]
+----
+Vectory::InkscapeQueryError: Failed to query dimensions
+----
+
+**Causes**:
+
+* Invalid input file
+* Inkscape version incompatibility
+
+**Solutions**:
+
+. Verify file is valid:
++
+[source,ruby]
+----
+# Try converting first
+svg = Vectory::Svg.from_path("diagram.svg")
+# If conversion works, file is valid
+----
+
+. Check Inkscape version:
++
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+puts inkscape.version  # Should be 0.92 or later
+----
+
+## Error Handling Patterns
+
+=== Rescue Specific Errors
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+rescue Vectory::ConversionError => e
+  puts "Conversion failed: #{e.message}"
+  puts "Diagnostics: #{e.diagnostics}"
+rescue Vectory::Error => e
+  puts "Vectory error: #{e.message}"
+end
+----
+
+=== Retry Logic
+
+[source,ruby]
+----
+require 'vectory'
+
+def convert_with_retry(input, output, max_retries = 3)
+  retries = 0
+
+  begin
+    svg = Vectory::Eps.from_path(input).to_svg
+    svg.write(output)
+  rescue Vectory::SystemCallError => e
+    retries += 1
+    if retries < max_retries
+      puts "Retry #{retries}/#{max_retries}..."
+      sleep 1
+      retry
+    else
+      raise
+    end
+  end
+end
+----
+
+=== Validation Before Conversion
+
+[source,ruby]
+----
+def validate_file(path)
+  # Check file exists
+  raise "File not found: #{path}" unless File.exist?(path)
+
+  # Check file readable
+  raise "File not readable: #{path}" unless File.readable?(path)
+
+  # Try to detect format
+  content = File.read(path, 100)
+  format = Vectory::FileMagic.detect_format(content)
+
+  if format == :unknown
+    raise "Unable to detect format: #{path}"
+  end
+
+  true
+end
+
+# Usage
+begin
+  validate_file("diagram.eps")
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue RuntimeError => e
+  puts "Validation failed: #{e.message}"
+end
+----
+
+## Debugging
+
+=== Enable Debug Logging
+
+[source,ruby]
+----
+# Enable logging
+ENV["VECTORY_LOG"] = "1"
+
+require 'vectory'
+
+# Now all external tool commands are logged
+svg = Vectory::Eps.from_path("diagram.eps").to_svg
+# Logs: [DEBUG] Executing: inkscape ...
+----
+
+=== Check Tool Availability
+
+[source,ruby]
+----
+require 'vectory'
+
+# Check all tools
+inkscape = Vectory::InkscapeWrapper.instance
+puts "Inkscape: #{inkscape.available? ? "OK" : "MISSING"}"
+puts "  Path: #{inkscape.executable}"
+puts "  Version: #{inkscape.version}"
+
+gs = Vectory::GhostscriptWrapper.instance
+puts "Ghostscript: #{gs.available? ? "OK" : "MISSING"}"
+puts "  Path: #{gs.executable}"
+----
+
+### Test Conversion Simple File
+
+[source,ruby]
+----
+# Create simple SVG for testing
+test_svg = '<svg width="100" height="100"><rect width="100" height="100" fill="red"/></svg>'
+
+File.write("test.svg", test_svg)
+
+# Test conversion
+begin
+  svg = Vectory::Svg.from_path("test.svg")
+  eps = svg.to_eps
+  puts "Conversion successful!"
+rescue => e
+  puts "Conversion failed: #{e.message}"
+ensure
+  File.delete("test.svg") if File.exist?("test.svg")
+end
+----
+
+## Platform-Specific Issues
+
+### macOS
+
+**Inkscape timeout**:
+
+[source,ruby]
+----
+# Vectory automatically sets this, but you can also set manually
+ENV["DISPLAY"] = ""
+----
+
+### Windows
+
+**Inkscape 1.3.1+ EPS issues**:
+
+* Use Inkscape 1.3.0 instead
+* Download from: https://inkscape.org/gallery/item/inkscape-1.3.0/
+
+**Process management**:
+
+[source,ruby]
+----
+# Windows uses taskkill instead of Process.kill
+# This is handled automatically by Vectory
+----
+
+### Linux
+
+**Permission errors**:
+
+[source,shell]
+----
+# Ensure proper permissions
+chmod +x diagrams/*
+----
+
+## See Also
+
+* link:../features/external-dependencies/[External Dependencies] - Tool requirements
+* link:../understanding/error-classes/[Error Classes] - Error hierarchy
+* link:../reference/api/[API Reference] - Method documentation

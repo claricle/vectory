@@ -1,0 +1,18 @@
+source "https://rubygems.org"
+
+# Jekyll plugins
+gem "jekyll", "~> 3.0"
+gem "just-the-docs", "~> 0.7"
+
+# Markdown and AsciiDoc processing
+gem "jekyll-asciidoc", "~> 3.0"
+gem "asciidoctor", "~> 2.0"
+gem "kramdown-parser-gfm"
+
+# SEO and metadata
+gem "jekyll-seo-tag", "~> 2.0"
+gem "jekyll-sitemap", "~> 1.0"
+
+# Windows compatibility
+gem "jekyll-watch", "~> 2.0", platforms: [:mingw, :x64_mingw]
+gem "wdm", "~> 0.1", platforms: [:mingw, :x64_mingw]

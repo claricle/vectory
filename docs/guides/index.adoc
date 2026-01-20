@@ -1,0 +1,197 @@
+---
+layout: default
+title: Guides
+nav_order: 6
+has_children: true
+---
+= Guides
+
+Step-by-step guides for common Vectory tasks.
+
+== Overview
+
+This section provides practical, task-oriented guides for using Vectory. Each guide focuses on a specific use case with detailed examples.
+
+== Getting Started Guides
+
+link:batch-processing[**Batch Processing Images**]::
+Convert multiple images in a directory.
++
+Iterate through files, convert formats, handle errors.
+
+link:error-handling[**Error Handling**]::
+Common errors and how to resolve them.
++
+Missing tools, conversion failures, timeout issues.
+
+link:dimension-query[**Querying Image Dimensions**]::
+Get image dimensions without full conversion.
++
+Fast dimension retrieval for validation.
+
+== Conversion Guides
+
+link:eps-to-svg[**Converting EPS to SVG**]::
+Complete EPS to SVG conversion workflow.
++
+Ghostscript + Inkscape pipeline, bounding box preservation.
+
+link:svg-to-emf[**Converting SVG to EMF**]::
+SVG to EMF conversion for Windows compatibility.
++
+Inkscape conversion, quality considerations.
+
+link:emf-to-svg[**Converting EMF to SVG**]::
+EMF to SVG conversion workflow.
++
+emf2svg integration, output validation.
+
+== Integration Guides
+
+link:metanorma-integration[**Metanorma Integration**]::
+Using Vectory with Metanorma documents.
++
+SVG mapping, link rewriting, XML processing.
+
+link:rails-integration[**Rails Integration**]::
+Using Vectory in Ruby on Rails applications.
++
+Active Storage integration, background jobs.
+
+link:cli-integration[**Command-Line Integration**]::
+Using Vectory in shell scripts and CI/CD.
++
+One-liners, batch processing, error handling.
+
+== Advanced Guides
+
+link:custom-configuration[**Custom Configuration**]::
+Configuring Vectory for specific needs.
++
+Environment variables, tool paths, timeout settings.
+
+link:performance-optimization[**Performance Optimization**]::
+Tips for faster conversions.
++
+Caching, batch processing, parallel execution.
+
+link:debugging[**Debugging Conversion Issues**]::
+Troubleshooting failed conversions.
++
+Verbose logging, intermediate file inspection.
+
+== Quick Reference Guides
+
+=== Common Conversions
+
+[cols="1,1,1a"]
+|===
+|Input Format|Output Format|Method
+
+|EPS
+|SVG
+|`Vectory::Eps.from_path(file).to_svg`
+
+|PS
+|SVG
+|`Vectory::Ps.from_path(file).to_svg`
+
+|EMF
+|SVG
+|`Vectory::Emf.from_path(file).to_svg`
+
+|SVG
+|EPS
+|`Vectory::Svg.from_path(file).to_eps`
+
+|SVG
+|PDF
+|`Vectory::Svg.from_path(file).to_pdf`
+|===
+
+=== Error Resolution
+
+[cols="1,2a"]
+|===
+|Error|Solution
+
+|`InkscapeNotFoundError`
+|Install Inkscape and ensure it's in PATH
+
+|`SystemCallError` (timeout)
+|Increase timeout or check input file
+
+|`ParsingError`
+|Verify file format and content
+
+|`NotWrittenToDiskError`
+|Call `write()` before accessing `path`
+|===
+
+== Example Workflows
+
+=== Basic Conversion Workflow
+
+. Load image from file
+. Convert to desired format
+. Write to output location
+
+[source,ruby]
+----
+require 'vectory'
+
+# Load EPS file
+eps = Vectory::Eps.from_path("input.eps")
+
+# Convert to SVG
+svg = eps.to_svg
+
+# Write to file
+svg.write("output.svg")
+----
+
+=== Batch Conversion Workflow
+
+. Iterate through input directory
+. Detect file format
+. Convert to target format
+. Handle errors gracefully
+
+[source,ruby]
+----
+require 'vectory'
+
+Dir["input/*.eps"].each do |file|
+  begin
+    svg = Vectory::Eps.from_path(file).to_svg
+    svg.write(File.join("output", File.basename(file, ".eps") + ".svg"))
+    puts "Converted: #{file}"
+  rescue Vectory::Error => e
+    warn "Failed to convert #{file}: #{e.message}"
+  end
+end
+----
+
+=== Dimension Query Workflow
+
+. Load image
+. Query dimensions
+. Use dimensions for validation or layout
+
+[source,ruby]
+----
+require 'vectory'
+
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+
+if width > 1000 || height > 1000
+  puts "Warning: Image dimensions are large"
+end
+----
+
+== See Also
+
+* link:../features/[Features] - Feature documentation
+* link:../understanding/[Understanding] - Internal architecture
+* link:../reference/[Reference] - Complete API documentation

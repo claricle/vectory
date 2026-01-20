@@ -1,0 +1,160 @@
+---
+layout: default
+title: Quick Start
+parent: Getting Started
+nav_order: 1
+---
+
+Learn the basics of Vectory with simple examples.
+
+== Purpose
+
+This guide introduces Vectory's core functionality through practical examples. After completing this guide, you will be able to convert vector images between different formats and query image dimensions.
+
+== Installation
+
+Add Vectory to your Gemfile:
+
+[source,ruby]
+----
+gem 'vectory'
+----
+
+Or install it yourself:
+
+[source,shell]
+----
+gem install vectory
+----
+
+Ensure you have https://inkscape.org/[Inkscape] and https://www.ghostscript.com/[Ghostscript] installed on your system.
+
+== Basic Conversion
+
+=== Converting EPS to SVG
+
+The most common use case is converting EPS files to SVG:
+
+[source,ruby]
+----
+require 'vectory'
+
+# Load an EPS file
+eps = Vectory::Eps.from_path("diagram.eps")
+
+# Convert to SVG
+svg = eps.to_svg
+
+# Write to file
+svg.write("diagram.svg")
+----
+
+=== Converting SVG to EPS
+
+Convert SVG files back to EPS:
+
+[source,ruby]
+----
+require 'vectory'
+
+# Load an SVG file
+svg = Vectory::Svg.from_path("drawing.svg")
+
+# Convert to EPS
+eps = svg.to_eps
+
+# Write to file
+eps.write("drawing.eps")
+----
+
+== Format Detection
+
+Vectory can automatically detect file formats from content:
+
+[source,ruby]
+----
+require 'vectory'
+
+# Detect format from file
+image = Vectory::Image.from_path("unknown_file")
+puts image.class  # => Vectory::Eps, Vectory::Svg, etc.
+
+# Or detect from content string
+content = File.read("unknown_file")
+format = Vectory::FileMagic.detect_format(content)
+puts format  # => :eps, :ps, :emf, :svg, or :unknown
+----
+
+== Querying Dimensions
+
+Get image dimensions without full conversion:
+
+[source,ruby]
+----
+require 'vectory'
+
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+
+puts "Width: #{width} points"
+puts "Height: #{height} points"
+----
+
+== Working with Content
+
+Load images from content strings instead of files:
+
+[source,ruby]
+----
+require 'vectory'
+
+# Load from content string
+eps_content = File.read("diagram.eps")
+eps = Vectory::Eps.from_content(eps_content)
+
+# Convert and get content
+svg = eps.to_svg
+svg_content = svg.content
+
+# Write to file later
+svg.write("diagram.svg")
+----
+
+== Error Handling
+
+Handle common errors gracefully:
+
+[source,ruby]
+----
+require 'vectory'
+
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+  svg.write("diagram.svg")
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+  puts "Please install Inkscape"
+rescue Vectory::ConversionError => e
+  puts "Conversion failed: #{e.message}"
+rescue Vectory::Error => e
+  puts "Vectory error: #{e.message}"
+end
+----
+
+== Supported Conversions
+
+Vectory supports pairwise conversion between:
+
+* **EPS** (Encapsulated PostScript)
+* **PS** (PostScript)
+* **EMF** (Enhanced Metafile)
+* **SVG** (Scalable Vector Graphics)
+* **PDF** (intermediate format)
+
+See link:../features/conversion/[Conversion Features] for complete conversion paths.
+
+== Next Steps
+
+. Read link:core-concepts[Core Concepts] to understand Vectory's architecture
+. Explore link:../guides/[Guides] for specific use cases
+. Check link:../reference/api[API Reference] for complete documentation
