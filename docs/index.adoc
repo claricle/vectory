@@ -1,0 +1,146 @@
+---
+layout: default
+title: Home
+nav_order: 1
+description: "Vectory: Vector image conversion library for Ruby"
+permalink: /
+---
+= Vectory Documentation
+:toc: macro
+:toclevels: 2
+
+[.lead]
+Vectory provides pairwise vector image conversion for Ruby applications, supporting EPS, PS, EMF, SVG, and PDF formats through integration with external conversion tools.
+
+toc::[]
+
+== Welcome
+
+Vectory helps you:
+
+* **Convert** between vector image formats (EPS, PS, EMF, SVG, PDF)
+* **Preserve** document metadata and bounding boxes
+* **Leverage** external tools (Inkscape, Ghostscript, emf2svg) for reliable conversions
+* **Process** images from files, content, or data URIs
+* **Query** image dimensions without full rendering
+
+== Quick Navigation
+
+=== By Your Role
+
+**Application Developer**::
+Start with link:features/ruby-api/[Ruby API] to integrate Vectory into your applications.
+
+**Metanorma User**::
+Start with link:guides/metanorma-integration[Metanorma Integration] for SVG mapping in XML documents.
+
+**Library Maintainer**::
+Start with link:understanding/architecture[Architecture] to understand Vectory's design.
+
+=== By Task
+
+**Convert EPS to SVG**::
+* link:getting-started/quick-start#converting-eps-to-svg[Quick Start: EPS to SVG]
+* link:features/conversion/[Conversion Features]
+
+**Batch process images**::
+* link:guides/batch-processing[Guide: Batch Processing]
+* link:reference/api[API Reference]
+
+**Handle format detection**::
+* link:features/format-detection[Format Detection]
+* link:guides/error-handling[Guide: Error Handling]
+
+**Query image dimensions**::
+* link:guides/dimension-query[Guide: Dimension Query]
+
+=== By Format
+
+link:features/formats/eps[**EPS (Encapsulated PostScript)**]::
+PostScript-based vector format with bounding box support
+
+link:features/formats/ps[**PS (PostScript)**]::
+Full PostScript document format
+
+link:features/formats/emf[**EMF (Enhanced Metafile)**]::
+Windows vector metafile format
+
+link:features/formats/svg[**SVG (Scalable Vector Graphics)**]::
+XML-based vector format for web graphics
+
+link:features/formats/pdf[**PDF (Portable Document Format)**]::
+Intermediate format for conversion pipeline
+
+== Learning Path
+
+=== Level 1: Get Started (5 minutes)
+
+. link:getting-started/installation[Install Vectory]
+. link:getting-started/quick-start[Try basic examples]
+. link:getting-started/core-concepts[Understand core concepts]
+
+=== Level 2: Learn Features (15 minutes)
+
+. link:features/conversion/[Conversion methods]
+. link:features/format-detection/[Automatic format detection]
+. link:features/dimension-query/[Dimension queries]
+
+=== Level 3: Understand Vectory (30 minutes)
+
+. link:understanding/architecture[Architecture overview]
+. link:understanding/external-dependencies/[External tools: Inkscape and Ghostscript]
+. link:understanding/conversion-pipeline/[Conversion pipeline]
+
+=== Level 4: Advanced Topics (As needed)
+
+* link:features/speed[Speed optimizations]
+* link:guides/metanorma-integration[Metanorma SVG mapping]
+* link:reference/error-handling[Error handling reference]
+
+== Popular Topics
+
+* link:features/conversion/[Supported Conversions] - All format-to-format conversion paths
+* link:reference/api[Public API] - Complete class and method reference
+* link:features/inkscape-version[Inkscape Version Handling] - Version 0.x vs 1.x+ compatibility
+* link:guides/error-handling[Error Handling] - Common errors and solutions
+* link:reference/configuration[Configuration Options] - Environment variables and settings
+
+== Requirements
+
+Vectory requires external tools for vector image conversion:
+
+=== Required Tools
+
+* **Inkscape** (version 0.92 or later recommended)
+** for SVG ↔ EPS/PS/EMF/PDF conversions
+** for dimension queries
+** Version 1.0+ recommended; 1.3.0 for Windows (1.3.1+ has EPS/PS issues)
+
+* **Ghostscript** (version 9.0 or later)
+** for EPS/PS → PDF conversion (bounding box preservation)
+** required for EPS and PS format support
+
+* **Ruby** (version 3.1 or later)
+** runtime environment for Vectory gem
+
+=== Ruby Gems (installed automatically)
+
+* **emf2svg** (~> 1.0)
+** for EMF → SVG conversion
+** provides Windows EMF format support
+
+* **moxml** (~> 0.5)
+** for XML/HTML parsing (Metanorma integration)
+
+See link:getting-started/installation[Installation] for detailed setup instructions including platform-specific requirements.
+
+== Getting Help
+
+**Found a bug?**::
+link:https://github.com/metanorma/vectory/issues[Report an issue on GitHub]
+
+**Have a question?**::
+Search this documentation or check link:reference/glossary[Glossary]
+
+**Want to contribute?**::
+See link:contributing[Contributing to Documentation]

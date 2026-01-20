@@ -1,0 +1,214 @@
+---
+layout: default
+title: Core Concepts
+parent: Getting Started
+nav_order: 3
+---
+
+Understanding Vectory's architecture and design principles.
+
+== Purpose
+
+This section explains Vectory's core concepts including its class hierarchy, conversion pipeline, and design patterns. Understanding these concepts will help you use Vectory effectively.
+
+== Class Hierarchy
+
+Vectory uses an object-oriented, inheritance-based architecture:
+
+[source,ruby]
+----
+Vectory::Image          # Base class for all images
+    └── Vectory::Vector  # Abstract base for vector formats
+            ├── Vectory::Eps      # Encapsulated PostScript
+            ├── Vectory::Ps       # PostScript
+            ├── Vectory::Emf      # Enhanced Metafile
+            ├── Vectory::Svg      # Scalable Vector Graphics
+            └── Vectory::Pdf      # PDF (intermediate format)
+----
+
+Each format class inherits from `Vectory::Vector`, which provides common functionality for vector image manipulation.
+
+== Factory Methods
+
+All format classes support four factory methods for creating image objects:
+
+=== from_path
+
+Load from a file path:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+----
+
+=== from_content
+
+Load from a content string:
+
+[source,ruby]
+----
+content = File.read("diagram.eps")
+eps = Vectory::Eps.from_content(content)
+----
+
+=== from_datauri
+
+Load from a data URI:
+
+[source,ruby]
+----
+uri = "data:image/svg+xml;base64,PHN2Zy..."
+svg = Vectory::Svg.from_datauri(uri)
+----
+
+=== from_node
+
+Load from an XML node (Metanorma integration):
+
+[source,ruby]
+----
+# Used internally by Metanorma's SVG mapping
+----
+
+== Conversion Methods
+
+Each format class can convert to any other format:
+
+[source,ruby]
+----
+# Convert EPS to SVG
+svg = Vectory::Eps.from_path("diagram.eps").to_svg
+
+# Convert SVG to EMF
+emf = Vectory::Svg.from_path("drawing.svg").to_emf
+
+# Convert EMF to PDF
+pdf = Vectory::Emf.from_path("chart.emf").to_pdf
+----
+
+== Conversion Pipeline
+
+Vectory uses a flexible conversion pipeline:
+
+=== Direct Conversions
+
+Some conversions are direct:
+* **SVG → EPS/PS/EMF/PDF**: Via Inkscape
+* **EMF → SVG**: Via emf2svg
+
+=== Two-Step Conversions
+
+Other conversions use an intermediate PDF format:
+* **EPS/PS → PDF → SVG**: Via Ghostscript + Inkscape
+
+This two-step conversion ensures:
+* BoundingBox preservation from EPS/PS
+* High-quality output from Inkscape
+
+== Properties
+
+All image objects have these properties:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+
+# Raw content
+content = eps.content
+
+# Original file location
+original_path = eps.initial_path
+
+# Current file location (raises error if not written)
+current_path = eps.path  # => NotWrittenToDiskError
+
+# Image dimensions
+width, height = eps.dimensions
+
+# Write to file
+output_path = eps.write("output.eps")
+----
+
+== File System Operations
+
+Vectory distinguishes between two file paths:
+
+* **`initial_path`**: Where the file was originally loaded from (read-only)
+* **`path`**: Where the file is currently written (raises error if not yet written)
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("input.eps")
+puts eps.initial_path  # => "input.eps"
+
+puts eps.path  # => raises NotWrittenToDiskError
+
+eps.write("output.eps")
+puts eps.path  # => "output.eps"
+----
+
+Writing without arguments uses a temporary directory:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("input.eps")
+temp_path = eps.write  # => "/tmp/vectory_20250119..."
+----
+
+== Format Detection
+
+Vectory detects formats using:
+* **Magic numbers** for EPS, PS, EMF (file signatures)
+* **Content inspection** for SVG (XML structure)
+* **File extension** as fallback
+
+[source,ruby]
+----
+# Auto-detect from file
+image = Vectory::Image.from_path("unknown_file")
+puts image.class  # => Vectory::Eps, Vectory::Svg, etc.
+
+# Detect format from content
+content = File.read("unknown_file")
+format = Vectory::FileMagic.detect_format(content)
+puts format  # => :eps, :ps, :emf, :svg, or :unknown
+----
+
+== Error Handling
+
+Vectory uses a structured error hierarchy:
+
+[source,ruby]
+----
+Vectory::Error                  # Base error class
+    ├── SystemCallError         # External tool execution failures
+    ├── NotWrittenToDiskError   # Accessing path before write
+    ├── ParsingError           # Content parsing failures
+    ├── InkscapeNotFoundError  # Inkscape not available
+    ├── ConversionError        # Conversion failures with diagnostics
+    └── InkscapeQueryError     # Dimension query failures
+----
+
+== External Tool Integration
+
+Vectory uses the https://en.wikipedia.org/wiki/Singleton_pattern[Singleton pattern] for external tool wrappers:
+
+[source,ruby]
+----
+# Shared Inkscape instance across conversions
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Version is cached
+puts inkscape.version  # => "1.3.0" (cached)
+
+# Tool discovery is done once
+puts inkscape.executable  # => "/usr/bin/inkscape"
+----
+
+This design improves performance and ensures consistent behavior.
+
+== Next Steps
+
+. Explore link:../features/[Features] for supported formats and conversions
+. Check link:../guides/[Guides] for practical examples
+. See link:../understanding/[Understanding] for internal architecture details

@@ -1,0 +1,148 @@
+---
+layout: default
+title: Understanding
+nav_order: 5
+has_children: true
+---
+
+Learn how Vectory works internally.
+
+== Overview
+
+This section explains Vectory's internal architecture, design decisions, and implementation details. Understanding these concepts will help you use Vectory effectively and troubleshoot issues.
+
+== Architecture
+
+link:architecture[**Architecture Overview**]::
+Class hierarchy and design patterns used in Vectory.
++
+Object-oriented design with inheritance, singleton pattern for tool wrappers, and model-based architecture.
+
+link:class-hierarchy[**Class Hierarchy**]::
+Detailed explanation of the `Vectory::Image` inheritance tree.
++
+`Vectory::Image` → `Vectory::Vector` → Format-specific classes.
+
+link:conversion-pipeline[**Conversion Pipeline**]::
+How conversions flow through intermediate formats.
++
+Direct conversions vs. two-step conversions through PDF.
+
+== External Tools
+
+link:external-dependencies[**External Dependencies Overview**]::
+Comprehensive guide to all external tools and gems.
++
+Inkscape, Ghostscript, emf2svg, moxml - their purposes and how Vectory integrates with them.
+
+link:inkscape-wrapper[**Inkscape Wrapper**]::
+Singleton pattern implementation for Inkscape integration.
++
+Version detection, command generation, timeout management, 0.x vs 1.x+ syntax differences.
+
+link:ghostscript-wrapper[**Ghostscript Wrapper**]::
+Ghostscript integration for EPS/PS to PDF conversion.
++
+BoundingBox preservation, PDF generation, command-line options.
+
+link:emf2svg-integration[**emf2svg Integration**]::
+EMF format support via the emf2svg gem.
++
+Windows EMF conversion, cross-platform compatibility.
+
+link:moxml-integration[**moxml Integration**]::
+XML/HTML parsing for Metanorma SVG mapping.
++
+Link rewriting, ID preservation, namespace handling.
+
+== Design Patterns
+
+link:wrapper-pattern[**Wrapper Pattern**]::
+Abstracting external tool dependencies.
++
+`InkscapeWrapper` and `GhostscriptWrapper` provide clean interfaces.
+
+link:singleton[**Singleton Pattern**]::
+Shared Inkscape instance across conversions.
++
+Version detection caching, resource efficiency.
+
+link:factory-methods[**Factory Methods**]::
+Class methods for creating image objects.
++
+`from_path`, `from_content`, `from_datauri`, `from_node`.
+
+== File System Operations
+
+link:file-paths[**Path Management**]::
+`initial_path` vs `path` distinction.
++
+Original file location vs. current write location.
+
+link:temp-files[**Temporary File Handling**]::
+How Vectory manages intermediate files.
++
+Automatic cleanup, temp directory usage.
+
+== Error Handling
+
+link:error-classes[**Error Class Hierarchy**]::
+Exception types and when they're raised.
++
+`SystemCallError`, `NotWrittenToDiskError`, `ParsingError`, etc.
+
+link:timeout-handling[**Timeout Management**]::
+How Vectory handles hung external processes.
++
+Platform-specific timeout implementation (Unix vs Windows).
+
+== Format Detection
+
+link:magic-numbers[**Magic Number Detection**]::
+How file formats are detected from content.
++
+EPS, PS, EMF magic numbers; SVG content inspection.
+
+link:file-type-heuristics[**File Type Heuristics**]::
+Fallback strategies when magic numbers aren't enough.
+
+== Performance
+
+link:caching[**Caching Strategies**]::
+Version detection caching, tool discovery caching.
+
+link:batch-optimization[**Batch Processing**]::
+Optimizations for processing multiple files.
+
+== Platform-Specific Behavior
+
+link:windows-support[**Windows Support**]::
+Special considerations for Windows platforms.
++
+Path handling, process management, Inkscape version compatibility.
+
+link:macos-support[**macOS Support**]::
+Display environment configuration for headless operation.
++
+`DISPLAY=""` for Inkscape timeout prevention.
+
+link:linux-support[**Linux Support**]::
+Standard Unix behavior for Vectory.
+
+== Technical Constraints
+
+link:format-limitations[**Format Limitations**]::
+Known limitations of each supported format.
++
+Conversion artifacts, precision issues.
+
+link:tool-versions[**Tool Version Requirements**]::
+Inkscape and Ghostscript version compatibility.
++
+Inkscape 0.x vs 1.x+ syntax differences, known issues.
+
+== See Also
+
+* link:../features/[Features] - What Vectory can do
+* link:../guides/[Guides] - How to use Vectory
+* link:../reference/[Reference] - Complete API documentation

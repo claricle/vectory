@@ -1,0 +1,318 @@
+---
+layout: default
+title: Installation
+parent: Getting Started
+nav_order: 2
+---
+
+Install and configure Vectory on your system.
+
+== Purpose
+
+This guide covers installing Vectory and its external dependencies on different platforms. Vectory leverages several external tools for vector image conversion:
+
+* **Inkscape** - Primary conversion tool for most format conversions
+* **Ghostscript** - EPS/PS to PDF conversion with bounding box preservation
+* **emf2svg** (gem) - EMF format support
+
+== Installing the Gem
+
+Add Vectory to your Gemfile:
+
+[source,ruby]
+----
+gem 'vectory'
+----
+
+Then run:
+
+[source,shell]
+----
+bundle install
+----
+
+Or install the gem directly:
+
+[source,shell]
+----
+gem install vectory
+----
+
+== External Dependencies Overview
+
+Vectory requires external tools for vector image conversion. These tools are invoked by Vectory to perform the actual conversion operations.
+
+=== Tool Matrix
+
+[cols="1,2a,2a"]
+|===
+|Tool|Purpose|Required For
+
+|**Inkscape**
+|Vector graphics editor with CLI interface
+|SVG ↔ EPS/PS/EMF/PDF conversions, dimension queries
+
+|**Ghostscript**
+|PostScript and PDF interpreter
+|EPS/PS → PDF conversion (bounding box preservation)
+
+|**emf2svg**
+|EMF to SVG converter (Ruby gem)
+|EMF → SVG conversion
+
+|**moxml**
+|XML/HTML parser (Ruby gem)
+|Metanorma SVG mapping (link rewriting, ID preservation)
+|===
+
+=== Inkscape
+
+Inkscape is the primary conversion tool used by Vectory. It handles:
+
+* **SVG → EPS/PS/EMF/PDF**: Direct export to various vector formats
+* **EPS/PS/EMF/PDF → SVG**: Import and convert to SVG format
+* **Dimension queries**: Query image dimensions without full rendering
+* **High-quality output**: Professional-grade vector conversion
+
+==== Version Requirements
+
+[cols="1,2a"]
+|===
+|Version|Notes
+
+|**1.0+ (recommended)**
+|Best compatibility and performance
+
+|**0.92+**
+|Minimum supported version
+
+|**1.3.0 (Windows)**
+|Use this version on Windows (1.3.1+ has EPS/PS issues)
+
+|**1.3.1+ (avoid on Windows)**
+|Known issues with EPS/PS conversion on Windows
+|===
+
+==== Installation
+
+* **macOS**: `brew install --cask inkscape`
+* **Ubuntu/Debian**: `sudo apt install inkscape`
+* **Windows**: Download from https://inkscape.org/release/
+* **Fedora**: `sudo dnf install inkscape`
+* **Arch Linux**: `sudo pacman -S inkscape`
+
+==== Verification
+
+[source,shell]
+----
+inkscape --version
+# Inkscape 1.3.0 (or similar)
+----
+
+=== Ghostscript
+
+Ghostscript is required for EPS and PS format support. It handles:
+
+* **EPS/PS → PDF**: Converts PostScript to PDF with bounding box preservation
+* **BoundingBox handling**: Maintains exact dimensions from EPS/PS files
+* **Font embedding**: Preserves fonts during conversion
+* **Intermediate format**: Creates PDF as intermediate step for EPS/PS → SVG
+
+==== Version Requirements
+
+* **Version 9.0 or later** recommended
+* Versions 8.x may work but have limited features
+* Must be in system PATH or configured via `GHOSTSCRIPT_PATH`
+
+==== Installation
+
+* **macOS**: `brew install ghostscript`
+* **Ubuntu/Debian**: `sudo apt install ghostscript`
+* **Windows**: Download from https://www.ghostscript.com/download/gsdnld.html
+* **Fedora**: `sudo dnf install ghostscript`
+* **Arch Linux**: `sudo pacman -S ghostscript`
+
+==== Verification
+
+[source,shell]
+----
+gs --version
+# 10.02.0 (or similar)
+----
+
+=== emf2svg (Ruby Gem)
+
+The `emf2svg` gem is automatically installed with Vectory. It handles:
+
+* **EMF → SVG**: Converts Windows Enhanced Metafile format to SVG
+* **Windows format support**: Provides EMF format support on all platforms
+* **Native conversion**: No external tool dependency for EMF
+
+This gem is installed automatically as a dependency of Vectory.
+
+=== moxml (Ruby Gem)
+
+The `moxml` gem is used for Metanorma integration. It handles:
+
+* **XML parsing**: Parse XML/HTML documents for SVG mapping
+* **Link rewriting**: Rewrite internal SVG links for embedded use
+* **ID preservation**: Maintain unique IDs when embedding SVGs
+
+This gem is installed automatically as a dependency of Vectory.
+
+== Verifying Installation
+
+Test that Vectory can find the required tools:
+
+[source,ruby]
+----
+require 'vectory'
+
+# Check Inkscape availability
+inkscape = Vectory::InkscapeWrapper.instance
+puts "Inkscape found: #{inkscape.executable}"
+puts "Inkscape version: #{inkscape.version}"
+
+# Check Ghostscript availability
+gs = Vectory::GhostscriptWrapper.instance
+puts "Ghostscript found: #{gs.executable}"
+----
+
+== Platform-Specific Notes
+
+=== macOS
+
+Inkscape may require X11 on older versions. On macOS Catalina and later, Inkscape runs without X11 but may timeout during conversions.
+
+To prevent timeouts, Vectory automatically sets `DISPLAY=""` on macOS for headless operation.
+
+[cols="1,2a"]
+|===
+|Tool|macOS Notes
+
+|Inkscape
+|Install via Homebrew; timeout prevention via `DISPLAY=""`
+
+|Ghostscript
+|Install via Homebrew; standard Unix behavior
+
+|emf2svg gem
+|Works natively on macOS
+|===
+
+=== Windows
+
+Windows has specific considerations for external tools:
+
+* Ensure Inkscape and Ghostscript are in your PATH
+* Use Inkscape 1.3.0 for EPS/PS conversion (1.3.1+ has known issues)
+* Process management differs from Unix platforms (taskkill vs Process.kill)
+* Temp file handling uses Windows temp directory
+
+[cols="1,2a"]
+|===
+|Tool|Windows Notes
+
+|Inkscape
+|Install from installer or MSYS2; version 1.3.0 recommended for EPS/PS
+
+|Ghostscript
+|Install from 32-bit or 64-bit installer; must be in PATH
+
+|emf2svg gem
+|Works natively on Windows
+|===
+
+=== Linux
+
+Standard Unix behavior applies on Linux distributions.
+
+[cols="1,2a"]
+|===
+|Tool|Linux Notes
+
+|Inkscape
+|Available in all major distributions; ensure X11 libraries
+
+|Ghostscript
+|Standard package; may need `gsfonts` for full functionality
+
+|emf2svg gem
+|Works natively on Linux
+|===
+
+=== CI/CD Environments
+
+For GitHub Actions, GitLab CI, or similar:
+
+* Install Inkscape and Ghostscript in your workflow
+* Set `DISPLAY=""` for headless environments
+* Consider caching tool installations for faster builds
+
+Example GitHub Actions setup:
+
+[source,yaml]
+----
+- name: Install dependencies
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y inkscape ghostscript
+  env:
+    DISPLAY: ""
+----
+
+== Configuration
+
+Vectory can be configured via environment variables:
+
+[cols="1,2a"]
+|===
+|Variable|Description
+
+|`VECTORY_LOG`
+|Enable debug logging (set to `1` or `true`)
+
+|`INKSCAPE_PATH`
+|Custom path to Inkscape executable
+
+|`GHOSTSCRIPT_PATH`
+|Custom path to Ghostscript executable
+|===
+
+== Troubleshooting
+
+=== Inkscape Not Found
+
+[source,ruby]
+----
+Vectory::InkscapeNotFoundError: Inkscape not found in PATH
+----
+
+**Solution**: Install Inkscape or set `INKSCAPE_PATH` environment variable.
+
+=== Conversion Timeout
+
+[source,ruby]
+----
+Vectory::SystemCallError: Command timed out: inkscape
+----
+
+**Solution**:
+* Check if input file is valid
+* Verify Inkscape version compatibility
+* Increase timeout (default is 60 seconds)
+
+=== Ghostscript Errors
+
+[source,ruby]
+----
+Vectory::SystemCallError: Ghostscript conversion failed
+----
+
+**Solution**: Install Ghostscript or check input EPS/PS file validity.
+
+== Next Steps
+
+After installation, try the link:quick-start[Quick Start] guide to learn basic conversions.
+
+See link:../reference/environment-variables[Environment Variables] for complete configuration options.

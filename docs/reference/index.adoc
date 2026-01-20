@@ -1,0 +1,189 @@
+---
+layout: default
+title: Reference
+nav_order: 7
+has_children: true
+---
+= Reference
+
+Complete API reference and technical documentation.
+
+== Overview
+
+This section provides comprehensive reference documentation for Vectory's public API, configuration options, and technical details.
+
+== API Reference
+
+link:api[**Public API**]::
+Complete class and method reference.
++
+`Vectory::Image`, `Vectory::Vector`, format-specific classes.
+
+link:factory-methods[**Factory Methods**]::
+Class methods for creating image objects.
++
+`from_path`, `from_content`, `from_datauri`, `from_node`.
+
+link:conversion-methods[**Conversion Methods**]::
+Format conversion methods.
++
+`to_eps`, `to_ps`, `to_emf`, `to_svg`, `to_pdf`.
+
+== Configuration
+
+link:environment-variables[**Environment Variables**]::
+All configurable environment variables.
++
+`VECTORY_LOG`, tool paths, timeout settings.
+
+link:tool-configuration[**External Tool Configuration**]::
+Inkscape and Ghostscript configuration.
++
+Version requirements, path discovery, compatibility.
+
+== Error Reference
+
+link:error-classes[**Error Classes**]::
+Complete exception hierarchy.
++
+`Vectory::Error`, `SystemCallError`, `NotWrittenToDiskError`, etc.
+
+link:error-messages[**Error Messages**]::
+Common error messages and their causes.
++
+Interpretation and resolution strategies.
+
+== Format Reference
+
+link:format-specs[**Format Specifications**]::
+Technical details for each supported format.
++
+EPS, PS, EMF, SVG, PDF specifications and limitations.
+
+link:magic-numbers[**Magic Numbers**]::
+File signatures used for format detection.
++
+Byte patterns for EPS, PS, EMF identification.
+
+== External Tools
+
+link:inkscape[**Inkscape**]::
+Inkscape requirements and compatibility.
++
+Version differences, command-line options, known issues.
+
+link:ghostscript[**Ghostscript**]::
+Ghostscript requirements and usage.
++
+EPS/PS to PDF conversion, bounding box handling.
+
+link:emf2svg[**emf2svg**]::
+emf2svg gem integration.
++
+EMF format support and limitations.
+
+== Platform Reference
+
+link:windows[**Windows Platform**]::
+Windows-specific behavior and requirements.
++
+Path handling, process management, tool compatibility.
+
+link:macos[**macOS Platform**]::
+macOS-specific configuration.
++
+Display environment, X11 requirements.
+
+link:linux[**Linux Platform**]::
+Linux-specific behavior.
++
+Package requirements, tool availability.
+
+== Quick Reference
+
+=== Class Hierarchy
+
+[source,text]
+----
+Vectory::Image (base class)
+    └── Vectory::Vector (abstract base)
+            ├── Vectory::Eps
+            ├── Vectory::Ps
+            ├── Vectory::Emf
+            ├── Vectory::Svg
+            └── Vectory::Pdf (intermediate format)
+----
+
+=== Factory Methods
+
+All format classes support:
+* `from_path(path)` - Load from file path
+* `from_content(content)` - Load from content string
+* `from_datauri(uri)` - Load from data URI
+* `from_node(node)` - Load from XML node (Metanorma)
+
+=== Conversion Methods
+
+All format classes support:
+* `to_eps` - Convert to EPS
+* `to_ps` - Convert to PS
+* `to_emf` - Convert to EMF
+* `to_svg` - Convert to SVG
+* `to_pdf` - Convert to PDF (intermediate)
+
+=== Properties
+
+* `content` - Raw file content (string)
+* `path` - Current file location (raises error if not written)
+* `initial_path` - Original file location
+* `dimensions` - Array of [width, height]
+* `write(path = nil)` - Write to file (temp directory if no path)
+
+== Method Signatures
+
+=== Vectory::Eps.from_path
+
+[source,ruby]
+----
+def self.from_path(path)
+  # @param path [String] Path to EPS file
+  # @return [Vectory::Eps] EPS image object
+end
+----
+
+=== Vectory::Eps#to_svg
+
+[source,ruby]
+----
+def to_svg
+  # @return [Vectory::Svg] Converted SVG image
+  # @raise [Vectory::ConversionError] If conversion fails
+end
+----
+
+=== Vectory::Eps#dimensions
+
+[source,ruby]
+----
+def dimensions
+  # @return [Array<Integer>] [width, height] in points
+  # @raise [Vectory::InkscapeQueryError] If query fails
+end
+----
+
+=== Vectory::Eps#write
+
+[source,ruby]
+----
+def write(path = nil)
+  # @param path [String, nil] Output path (uses temp if nil)
+  # @return [String] Path to written file
+  # @raise [Vectory::SystemCallError] If write fails
+end
+----
+
+== See Also
+
+* link:../features/[Features] - Feature documentation
+* link:../guides/[Guides] - How-to guides
+* link:../understanding/[Understanding] - Internal architecture

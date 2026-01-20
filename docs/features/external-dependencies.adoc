@@ -1,0 +1,305 @@
+---
+layout: default
+title: External Dependencies
+parent: Features
+nav_order: 3
+---
+= External Dependencies
+
+Comprehensive guide to external tools and gems used by Vectory.
+
+== Overview
+
+Vectory relies on external tools for vector image conversion. This document explains each dependency, its purpose, and how Vectory integrates with it.
+
+== Tool Dependencies
+
+=== Inkscape
+
+**Purpose**: Primary conversion engine
+
+Inkscape handles most vector format conversions:
+
+* SVG ↔ EPS/PS/EMF/PDF conversions
+* Dimension queries
+* High-quality vector output
+
+**Version Requirements**:
+
+* **Recommended**: 1.0 or later
+* **Minimum**: 0.92
+* **Windows**: 1.3.0 (1.3.1+ has EPS/PS issues)
+
+**Integration**:
+
+[source,ruby]
+----
+# Singleton pattern for efficiency
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Version detection
+puts inkscape.version  # => "1.3.0"
+
+# Executable path
+puts inkscape.executable  # => "/usr/bin/inkscape"
+
+# Version-specific command generation
+inkscape.modern?  # => true for 1.x, false for 0.x
+----
+
+**Version Compatibility**:
+
+Inkscape 0.x and 1.x use different command-line syntax. Vectory automatically detects the version and uses appropriate commands:
+
+[source,ruby]
+----
+# Inkscape 0.x syntax
+inkscape --file=input.svg --export-eps=output.eps
+
+# Inkscape 1.x syntax
+inkscape input.svg --export-type=eps --output-file=output.eps
+----
+
+Vectory handles this automatically.
+
+**Known Issues**:
+
+* **Inkscape 1.3.1+ on Windows**: EPS/PS conversion issues
+* **macOS**: May timeout without `DISPLAY=""` environment variable
+
+**Installation**: See link:../../getting-started/installation/[Installation Guide]
+
+=== Ghostscript
+
+**Purpose**: EPS/PS to PDF conversion
+
+Ghostscript converts PostScript files to PDF while preserving:
+
+* BoundingBox information
+* Font embeddings
+* Vector paths
+
+**Version Requirements**:
+
+* **Recommended**: 9.0 or later
+* **Minimum**: 8.x (limited features)
+
+**Integration**:
+
+[source,ruby]
+----
+# Singleton pattern
+gs = Vectory::GhostscriptWrapper.instance
+
+# Executable path
+puts gs.executable  # => "/usr/bin/gs"
+
+# EPS to PDF conversion
+pdf = gs.eps_to_pdf("diagram.eps", "output.pdf")
+----
+
+**BoundingBox Preservation**:
+
+[source,ruby]
+----
+# Ghostscript preserves exact BoundingBox
+eps = Vectory::Eps.from_path("diagram.eps")
+pdf = eps.to_pdf  # BoundingBox preserved from EPS
+----
+
+**Installation**: See link:../../getting-started/installation/[Installation Guide]
+
+== Gem Dependencies
+
+=== emf2svg
+
+**Purpose**: EMF format support
+
+**Version**: ~> 1.0
+
+emf2svg provides EMF to SVG conversion without external tool dependencies.
+
+**Integration**:
+
+[source,ruby]
+----
+# Automatic conversion
+emf = Vectory::Emf.from_path("chart.emf")
+svg = emf.to_svg  # Uses emf2svg internally
+----
+
+**Features**:
+
+* Cross-platform EMF support
+* No external tool dependency
+* Native Ruby implementation
+
+=== moxml
+
+**Purpose**: XML/HTML parsing (Metanorma integration)
+
+**Version**: ~> 0.5
+
+moxml parses XML/HTML for link:../../guides/metanorma-integration/[Metanorma SVG mapping].
+
+**Integration**:
+
+[source,ruby]
+----
+# Used internally by SvgMapping
+require 'vectory/svg_mapping'
+
+mapping = Vectory::SvgMapping.new(xml_doc, base_uri)
+mapping.process  # Uses moxml for parsing
+----
+
+**Features**:
+
+* Link rewriting for embedded SVGs
+* ID preservation and suffixing
+* Namespace handling
+
+== Tool Discovery
+
+=== Automatic Discovery
+
+Vectory automatically discovers tools in system PATH:
+
+[source,ruby]
+----
+# Automatic discovery
+inkscape = Vectory::InkscapeWrapper.instance
+puts inkscape.executable  # => "/usr/bin/inkscape" (or similar)
+----
+
+=== Custom Paths
+
+Override with environment variables:
+
+[source,bash]
+----
+export INKSCAPE_PATH="/custom/path/to/inkscape"
+export GHOSTSCRIPT_PATH="/custom/path/to/gs"
+----
+
+Or in Ruby:
+
+[source,ruby]
+----
+ENV["INKSCAPE_PATH"] = "/custom/path/to/inkscape"
+inkscape = Vectory::InkscapeWrapper.instance
+----
+
+=== Verification
+
+Check if tools are available:
+
+[source,ruby]
+----
+# Check Inkscape
+if Vectory::InkscapeWrapper.instance.available?
+  puts "Inkscape found"
+else
+  puts "Inkscape not found"
+end
+
+# Check Ghostscript
+if Vectory::GhostscriptWrapper.instance.available?
+  puts "Ghostscript found"
+else
+  puts "Ghostscript not found"
+end
+----
+
+== Error Handling
+
+=== Tool Not Found
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+  puts "Install Inkscape or set INKSCAPE_PATH"
+end
+----
+
+=== Version Incompatibility
+
+[source,ruby]
+----
+# Check version compatibility
+inkscape = Vectory::InkscapeWrapper.instance
+if inkscape.version < "0.92"
+  puts "Warning: Inkscape version is too old"
+end
+----
+
+=== Tool Execution Failures
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue Vectory::SystemCallError => e
+  puts "Tool execution failed: #{e.message}"
+  puts "Command: #{e.command}"
+  puts "Exit code: #{e.exit_code}"
+end
+----
+
+== Platform-Specific Notes
+
+=== macOS
+
+* **Inkscape**: May timeout without `DISPLAY=""`
+* **Fix**: Vectory automatically sets `DISPLAY=""` on macOS
+
+=== Windows
+
+* **Inkscape 1.3.1+**: EPS/PS conversion issues
+* **Fix**: Use Inkscape 1.3.0
+* **Process management**: Uses `taskkill` instead of `Process.kill`
+
+=== Linux
+
+* Standard Unix behavior
+* Ensure proper file permissions
+
+== CI/CD Integration
+
+Example GitHub Actions setup:
+
+[source,yaml]
+----
+- name: Install dependencies
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y inkscape ghostscript
+  env:
+    DISPLAY: ""
+
+- name: Run tests
+  run: bundle exec rspec
+----
+
+## Troubleshooting
+
+**Inkscape timeout on macOS**::
+Set `DISPLAY=""` environment variable (automatic in Vectory)
+
+**Inkscape 1.3.1+ EPS issues on Windows**::
+Downgrade to Inkscape 1.3.0
+
+**Ghostscript not found**::
+Install Ghostscript or set `GHOSTSCRIPT_PATH`
+
+**emf2svg conversion fails**::
+Ensure emf2svg gem is installed: `gem install emf2svg`
+
+== See Also
+
+* link:../../getting-started/installation/[Installation Guide] - Detailed setup instructions
+* link:../understanding/inkscape-wrapper/[Inkscape Wrapper] - Technical details
+* link:../understanding/ghostscript-wrapper/[Ghostscript Wrapper] - Technical details

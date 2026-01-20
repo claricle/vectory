@@ -1,0 +1,355 @@
+---
+layout: default
+title: Public API
+parent: Reference
+nav_order: 1
+---
+= API Reference
+
+Complete reference for Vectory's public API.
+
+== Format Classes
+
+=== Vectory::Image
+
+Base class for all image types.
+
+[source,ruby]
+----
+# Factory method (auto-detects format)
+image = Vectory::Image.from_path("diagram.eps")
+----
+
+**Methods**:
+
+* `Vectory::Image.from_path(path)` - Load from file path
+* `Vectory::Image.from_content(content)` - Load from content string
+* `Vectory::Image.from_datauri(uri)` - Load from data URI
+
+=== Vectory::Vector
+
+Abstract base class for vector formats. Inherits from `Vectory::Image`.
+
+[source,ruby]
+----
+# Conversion methods available on all vector formats
+vector.to_eps
+vector.to_ps
+vector.to_emf
+vector.to_svg
+vector.to_pdf
+----
+
+=== Vectory::Eps
+
+Encapsulated PostScript format.
+
+[source,ruby]
+----
+# Load EPS
+eps = Vectory::Eps.from_path("diagram.eps")
+
+# Convert to other formats
+svg = eps.to_svg
+pdf = eps.to_pdf
+ps = eps.to_ps
+----
+
+**Key Methods**:
+
+* `Vectory::Eps.from_path(path)` - Load from file
+* `Vectory::Eps.from_content(content)` - Load from string
+* `Vectory::Eps.from_datauri(uri)` - Load from data URI
+* `#dimensions` - Get [width, height] in points
+* `#to_svg` - Convert to SVG
+* `#to_pdf` - Convert to PDF
+* `#to_eps` - Return self
+* `#to_ps` - Convert to PS
+* `#to_emf` - Convert to EMF (via SVG)
+* `#write(path = nil)` - Write to file
+* `#content` - Raw file content
+* `#initial_path` - Original file location
+* `#path` - Current write location
+
+=== Vectory::Ps
+
+PostScript format. Same API as `Vectory::Eps`.
+
+[source,ruby]
+----
+ps = Vectory::Ps.from_path("document.ps")
+svg = ps.to_svg
+----
+
+=== Vectory::Svg
+
+Scalable Vector Graphics format.
+
+[source,ruby]
+----
+svg = Vectory::Svg.from_path("drawing.svg")
+eps = svg.to_eps
+pdf = svg.to_pdf
+----
+
+=== Vectory::Emf
+
+Enhanced Metafile format.
+
+[source,ruby]
+----
+emf = Vectory::Emf.from_path("chart.emf")
+svg = emf.to_svg
+----
+
+Uses the emf2svg gem for conversion.
+
+=== Vectory::Pdf
+
+PDF format (used internally as intermediate format).
+
+[source,ruby]
+----
+pdf = Vectory::Pdf.from_path("document.pdf")
+svg = pdf.to_svg
+----
+
+## Factory Methods
+
+All format classes support these factory methods:
+
+### from_path
+
+Load from file path:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+----
+
+### from_content
+
+Load from content string:
+
+[source,ruby]
+----
+content = File.read("diagram.eps")
+eps = Vectory::Eps.from_content(content)
+----
+
+### from_datauri
+
+Load from data URI:
+
+[source,ruby]
+----
+uri = "data:image/svg+xml;base64,PHN2Zy..."
+svg = Vectory::Svg.from_datauri(uri)
+----
+
+### from_node
+
+Load from XML node (Metanorma integration):
+
+[source,ruby]
+----
+# Used internally by Metanorma
+svg = Vectory::Svg.from_node(xml_node)
+----
+
+## Conversion Methods
+
+All format classes support conversion to any other format:
+
+[source,ruby]
+----
+# Convert EPS to SVG
+svg = Vectory::Eps.from_path("diagram.eps").to_svg
+
+# Convert SVG to EPS
+eps = Vectory::Svg.from_path("diagram.svg").to_eps
+
+# Convert EMF to SVG
+svg = Vectory::Emf.from_path("chart.emf").to_svg
+----
+
+## Properties
+
+### content
+
+Raw file content as string:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+raw = eps.content
+----
+
+### initial_path
+
+Original file location (read-only):
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+puts eps.initial_path  # => "diagram.eps"
+----
+
+### path
+
+Current file location (raises error if not written):
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+
+# WRONG: raises error
+puts eps.path  # => NotWrittenToDiskError
+
+# CORRECT: write first
+eps.write("output.eps")
+puts eps.path  # => "output.eps"
+----
+
+### dimensions
+
+Image dimensions as [width, height]:
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+puts "Size: #{width}x#{height}"
+----
+
+## Methods
+
+### write
+
+Write image to file:
+
+[source,ruby]
+----
+# Write to specific path
+svg.write("output.svg")
+
+# Write to temp directory
+svg.write
+----
+
+Returns the path to the written file.
+
+## Utility Classes
+
+### Vectory::FileMagic
+
+Format detection utilities:
+
+[source,ruby]
+----
+# Detect format from content
+content = File.read("unknown_file")
+format = Vectory::FileMagic.detect_format(content)
+
+# Format symbols: :eps, :ps, :emf, :svg, :unknown
+----
+
+### Vectory::InkscapeWrapper
+
+Singleton wrapper for Inkscape:
+
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Check availability
+inkscape.available?
+
+# Get version
+inkscape.version
+
+# Get executable path
+inkscape.executable
+
+# Check if modern version (1.x)
+inkscape.modern?
+----
+
+### Vectory::GhostscriptWrapper
+
+Singleton wrapper for Ghostscript:
+
+[source,ruby]
+----
+gs = Vectory::GhostscriptWrapper.instance
+
+# Check availability
+gs.available?
+
+# Get executable path
+gs.executable
+----
+
+## Error Classes
+
+[source,ruby]
+----
+Vectory::Error                  # Base error
+    ├── SystemCallError         # External tool failures
+    ├── NotWrittenToDiskError   # Path access before write
+    ├── ParsingError           # Content parsing failures
+    ├── InkscapeNotFoundError  # Inkscape unavailable
+    ├── ConversionError        # Conversion failures
+    └── InkscapeQueryError     # Dimension query failures
+----
+
+## Usage Examples
+
+=== Basic Conversion
+
+[source,ruby]
+----
+require 'vectory'
+
+# EPS to SVG
+svg = Vectory::Eps.from_path("diagram.eps").to_svg
+svg.write("diagram.svg")
+----
+
+=== Batch Processing
+
+[source,ruby]
+----
+Dir["diagrams/*.eps"].each do |eps_file|
+  svg = Vectory::Eps.from_path(eps_file).to_svg
+  svg.write(eps_file.sub(".eps", ".svg"))
+end
+----
+
+=== Error Handling
+
+[source,ruby]
+----
+begin
+  svg = Vectory::Eps.from_path("diagram.eps").to_svg
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+rescue Vectory::ConversionError => e
+  puts "Conversion failed: #{e.message}"
+end
+----
+
+=== Dimension Query
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+puts "Dimensions: #{width}x#{height}"
+----
+
+## See Also
+
+* link:../guides/error-handling/[Error Handling Guide] - Common errors and solutions
+* link:../understanding/architecture/[Architecture] - Design patterns
+* link:../features/conversion/[Conversion Features] - Conversion details

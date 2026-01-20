@@ -1,0 +1,25 @@
+# Lychee configuration for Vectory documentation
+# Excludes certain patterns from link checking
+
+# Exclude common localhost patterns
+exclude = [
+  'http://localhost:*',
+  'http://127.0.0.1:*',
+  'file:///*',
+]
+
+# Exclude mailto: links
+exclude = [
+  'mailto:*',
+]
+
+# Exclude version-specific URLs that may break
+exclude = [
+  'https://github.com/*/releases/tag/*',  # GitHub release tags
+  'https://rubygems.org/gems/*/versions/*',  # RubyGem version history
+]
+
+# Allow certain redirects
+exclude = [
+  'https://example.com/*',  # Example domains used in docs
+]

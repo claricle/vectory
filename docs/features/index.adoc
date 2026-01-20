@@ -1,0 +1,205 @@
+---
+layout: default
+title: Features
+nav_order: 4
+has_children: true
+---
+= Features
+
+Explore Vectory's conversion capabilities and format support.
+
+== Overview
+
+Vectory provides pairwise vector image conversion between EPS, PS, EMF, SVG, and PDF formats. This section covers all supported formats, conversion methods, and special features.
+
+== Supported Formats
+
+=== Input Formats
+
+link:formats/eps[**EPS (Encapsulated PostScript)**]::
+PostScript-based vector format with bounding box support.
+
+link:formats/ps[**PS (PostScript)**]::
+Full PostScript document format.
+
+link:formats/emf[**EMF (Enhanced Metafile)**]::
+Windows vector metafile format.
+
+link:formats/svg[**SVG (Scalable Vector Graphics)**]::
+XML-based vector format for web graphics.
+
+=== Output Formats
+
+All input formats can be converted to:
+* link:formats/eps[EPS]
+* link:formats/ps[PS]
+* link:formats/emf[EMF]
+* link:formats/svg[SVG]
+* link:formats/pdf[PDF] (intermediate format)
+
+== Key Features
+
+link:conversion/[**Pairwise Conversion**]::
+Convert any supported format to any other format.
++
+Transparent conversion through PDF intermediate format when needed.
+
+link:format-detection/[**Automatic Format Detection**]::
+Detect image format from file content, not just extension.
++
+Uses magic numbers for EPS, PS, EMF; content inspection for SVG.
+
+link:dimension-query/[**Dimension Queries**]::
+Query image dimensions without full rendering.
++
+Fast dimension retrieval using external tools.
+
+link:content-sources/[**Multiple Input Sources**]::
+Load images from files, content strings, or data URIs.
+
+link:speed/[**Performance**]::
+Efficient caching and external tool management.
++
+Singleton pattern for Inkscape wrapper, version detection.
+
+== Conversion Paths
+
+Vectory uses different external tools depending on the source and target formats.
+
+=== Direct Conversions (via Inkscape)
+
+* **SVG → EPS/PS/EMF/PDF** (via Inkscape export)
+* **EPS/PS/EMF/PDF → SVG** (via Inkscape import)
+
+Inkscape handles direct conversions to and from SVG format.
+
+=== Direct Conversions (via emf2svg)
+
+* **EMF → SVG** (via emf2svg gem)
+
+The emf2svg gem provides native EMF to SVG conversion without external tool dependencies.
+
+=== Two-Step Conversions (via Ghostscript + Inkscape)
+
+* **EPS → PDF → SVG** (Ghostscript for EPS→PDF, Inkscape for PDF→SVG)
+* **PS → PDF → SVG** (Ghostscript for PS→PDF, Inkscape for PDF→SVG)
+
+This two-step process preserves BoundingBox information from EPS/PS files.
+
+=== Conversion Tool Matrix
+
+[cols="2,2a"]
+|===
+|Conversion|Tool Used
+
+|SVG ↔ EPS
+|Inkscape
+
+|SVG ↔ PS
+|Inkscape
+
+|SVG ↔ EMF
+|Inkscape (SVG→EMF), emf2svg (EMF→SVG)
+
+|SVG ↔ PDF
+|Inkscape
+
+|EPS → PDF
+|Ghostscript (preserves BoundingBox)
+
+|PS → PDF
+|Ghostscript (preserves BoundingBox)
+
+|EPS/PS → SVG
+|Ghostscript + Inkscape (two-step)
+
+|EMF → SVG
+|emf2svg gem
+|===
+
+See link:conversion/[Conversion Features] for detailed conversion paths and options.
+
+== External Tool Integration
+
+Vectory relies on external tools for actual conversion operations. The library provides a unified Ruby interface while delegating the heavy lifting to specialized tools.
+
+link:inkscape-version/[**Inkscape Version Handling**]::
+Automatic version detection for 0.x vs 1.x+ syntax differences.
++
+Vectory detects the installed Inkscape version and uses appropriate command-line syntax.
+
+link:external-dependencies/[**External Dependencies**]::
+Comprehensive guide to all external tools and gems.
++
+* **Inkscape** - Primary conversion engine for SVG, EPS, PS, EMF, PDF
+* **Ghostscript** - EPS/PS to PDF conversion with BoundingBox preservation
+* **emf2svg** - EMF format support via Ruby gem
+* **moxml** - XML/HTML parsing for Metanorma integration
+
+link:timeout-handling/[**Timeout and Error Handling**]::
+Robust error handling for external tool failures.
++
+Automatic tool discovery, timeout management, platform-specific process handling.
+
+== Special Features
+
+link:metadata/[**Metadata Preservation**]::
+Preserves document metadata during conversions.
+
+link:bounding-box/[**Bounding Box Handling**]::
+Maintains EPS/PS bounding box information through conversion pipeline.
+
+link:metanorma-integration/[**Metanorma Integration**]::
+SVG mapping features for XML/HTML document processing.
++
+Link rewriting, ID preservation, namespace handling.
+
+== Quick Examples
+
+=== Convert EPS to SVG
+
+[source,ruby]
+----
+require 'vectory'
+
+svg = Vectory::Eps.from_path("diagram.eps").to_svg
+svg.write("diagram.svg")
+----
+
+=== Detect Format from Content
+
+[source,ruby]
+----
+content = File.read("unknown_file")
+format = Vectory::FileMagic.detect_format(content)
+# => :eps, :ps, :emf, :svg, or :unknown
+----
+
+=== Query Dimensions
+
+[source,ruby]
+----
+eps = Vectory::Eps.from_path("diagram.eps")
+width, height = eps.dimensions
+puts "Size: #{width}x#{height}"
+----
+
+== Common Use Cases
+
+**Batch conversion**::
+Use link:guides/batch-processing[batch processing guide] for multiple files.
+
+**Format validation**::
+Use link:format-detection[format detection] to verify file types.
+
+**Dimension extraction**::
+Use link:dimension-query[dimension queries] for fast size retrieval.
+
+**Metanorma documents**::
+Use link:metanorma-integration[SVG mapping] for XML integration.
+
+== See Also
+
+* link:../understanding/[Understanding Vectory] - How features work internally
+* link:../guides/[Guides] - Practical how-to guides
+* link:../reference/[Reference] - Complete API documentation

@@ -2,4 +2,8 @@
 Gemfile.lock
 .rspec_status
 .rubocop-*
+
+.sass-cache
+_site
 CLAUDE.md
+.kilocode

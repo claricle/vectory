@@ -1,0 +1,270 @@
+---
+layout: default
+title: Inkscape Wrapper
+parent: Understanding
+nav_order: 2
+---
+= Inkscape Wrapper
+
+Singleton pattern implementation for Inkscape integration.
+
+== Overview
+
+The `InkscapeWrapper` class provides a clean interface to Inkscape's command-line tools. It uses the singleton pattern to share a single instance across all conversions.
+
+== Singleton Pattern
+
+[source,ruby]
+----
+class InkscapeWrapper
+  include Singleton
+
+  def initialize
+    @executable = nil
+    @version = nil
+  end
+end
+----
+
+[source,ruby]
+----
+# Get singleton instance
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Same instance returned on subsequent calls
+inkscape2 = Vectory::InkscapeWrapper.instance
+puts inkscape.equal?(inkscape2)  # => true
+----
+
+== Version Detection
+
+=== Automatic Detection
+
+Inkscape version is detected on first access:
+
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Version detected automatically
+puts inkscape.version  # => "1.3.0"
+----
+
+=== Version Caching
+
+Version is cached after first detection:
+
+[source,ruby]
+----
+# First call: detects version
+version1 = inkscape.version
+
+# Subsequent calls: returns cached value
+version2 = inkscape.version
+
+puts version1.equal?(version2)  # => true
+----
+
+=== Version Checking
+
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Check if modern version (1.x)
+if inkscape.modern?
+  puts "Using Inkscape 1.x syntax"
+else
+  puts "Using Inkscape 0.x syntax"
+end
+----
+
+== Command Generation
+
+=== Version-Specific Syntax
+
+Inkscape 0.x and 1.x use different command-line syntax:
+
+[source,ruby]
+----
+# Inkscape 0.x syntax
+inkscape --file=input.svg --export-eps=output.eps
+
+# Inkscape 1.x syntax
+inkscape input.svg --export-type=eps --output-file=output.eps
+----
+
+Vectory generates appropriate commands automatically:
+
+[source,ruby]
+----
+class InkscapeWrapper
+  def command(input, output, format)
+    if modern?
+      # Inkscape 1.x syntax
+      [executable, input, "--export-type=#{format}",
+       "--output-file=#{output}"]
+    else
+      # Inkscape 0.x syntax
+      [executable, "--file=#{input}",
+       "--export-#{format}=#{output}"]
+    end
+  end
+end
+----
+
+== Conversion Methods
+
+=== SVG to Other Formats
+
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+
+# SVG to PDF
+inkscape.svg_to_pdf("input.svg", "output.pdf")
+
+# SVG to EPS
+inkscape.svg_to_eps("input.svg", "output.eps")
+
+# SVG to PS
+inkscape.svg_to_ps("input.svg", "output.ps")
+
+# SVG to EMF
+inkscape.svg_to_emf("input.svg", "output.emf")
+----
+
+=== Other Formats to SVG
+
+[source,ruby]
+----
+# PDF to SVG
+inkscape.pdf_to_svg("input.pdf", "output.svg")
+
+# EPS to SVG
+inkscape.eps_to_svg("input.eps", "output.svg")
+
+# PS to SVG
+inkscape.ps_to_svg("input.ps", "output.svg")
+----
+
+== Dimension Queries
+
+=== Query Without Rendering
+
+[source,ruby]
+----
+inkscape = Vectory::InkscapeWrapper.instance
+
+# Query dimensions without full conversion
+width, height = inkscape.query_dimensions("diagram.svg")
+puts "Size: #{width}x#{height}"
+----
+
+=== Implementation
+
+Uses Inkscape's `--query-width` and `--query-height` options:
+
+[source,ruby]
+----
+def query_dimensions(input)
+  output = `#{executable} --query-width --query-height #{input}`
+  # Parse output to extract dimensions
+  parse_dimensions(output)
+end
+----
+
+== Error Handling
+
+=== Tool Not Found
+
+[source,ruby]
+----
+begin
+  inkscape = Vectory::InkscapeWrapper.instance
+  inkscape.version
+rescue Vectory::InkscapeNotFoundError => e
+  puts "Inkscape not found: #{e.message}"
+  puts "Install Inkscape or set INKSCAPE_PATH"
+end
+----
+
+=== Execution Failures
+
+[source,ruby]
+----
+begin
+  inkscape.svg_to_pdf("input.svg", "output.pdf")
+rescue Vectory::SystemCallError => e
+  puts "Conversion failed: #{e.message}"
+  puts "Exit code: #{e.exit_code}"
+end
+----
+
+== Platform-Specific Behavior
+
+=== macOS
+
+Vectory automatically sets `DISPLAY=""` to prevent timeouts:
+
+[source,ruby]
+----
+# Automatic on macOS
+ENV["DISPLAY"] = "" if RUBY_PLATFORM =~ /darwin/
+----
+
+=== Windows
+
+* Inkscape 1.3.1+ has EPS/PS issues
+* Use Inkscape 1.3.0 for best compatibility
+
+=== Linux
+
+Standard Unix behavior applies.
+
+== Configuration
+
+=== Custom Inkscape Path
+
+[source,bash]
+----
+# Set environment variable
+export INKSCAPE_PATH="/custom/path/to/inkscape"
+----
+
+[source,ruby]
+----
+# Or set in code
+ENV["INKSCAPE_PATH"] = "/custom/path/to/inkscape"
+inkscape = Vectory::InkscapeWrapper.instance
+puts inkscape.executable  # => "/custom/path/to/inkscape"
+----
+
+## Performance
+
+=== Singleton Efficiency
+
+[source,ruby]
+----
+# Single instance shared across conversions
+1000.times do
+  svg = Vectory::Eps.from_path("file#{i}.eps").to_svg
+end
+# InkscapeWrapper.instance created once, reused 1000 times
+----
+
+=== Version Detection Cost
+
+[source,ruby]
+----
+# Version detected once
+inkscape = Vectory::InkscapeWrapper.instance
+version1 = inkscape.version  # Detects: ~50ms
+version2 = inkscape.version  # Cached: ~0ms
+----
+
+== See Also
+
+* link:../architecture/[Architecture Overview] - Design patterns
+* link:ghostscript-wrapper/[Ghostscript Wrapper] - Other tool wrapper
+* link:../features/external-dependencies/[External Dependencies] - Tool requirements

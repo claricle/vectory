@@ -1,0 +1,173 @@
+---
+layout: default
+title: Format Detection
+parent: Features
+nav_order: 2
+---
+= Format Detection
+
+How Vectory automatically detects vector image formats.
+
+== Overview
+
+Vectory can automatically detect image formats from file content, not just file extensions. This ensures reliable format identification even when files have incorrect or missing extensions.
+
+== Detection Methods
+
+=== Magic Number Detection
+
+Vectory uses file signatures (magic numbers) to identify binary formats:
+
+[cols="1,2a"]
+|===
+|Format|Magic Number
+
+|EPS
+|%!PS-Adobe-3.0 EPSF-3.0
+
+|PS
+|%!PS-Adobe-3.0 (without EPSF)
+
+|EMF
+|\x01\x00\x00\x00 (EMF header signature)
+|===
+
+[source,ruby]
+----
+# Automatic detection from file
+image = Vectory::Image.from_path("unknown_file")
+puts image.class  # => Vectory::Eps, Vectory::Ps, Vectory::Emf, etc.
+----
+
+=== Content Inspection
+
+SVG files are detected by XML content inspection:
+
+[source,ruby]
+----
+# Detects <svg> tag in XML content
+svg = Vectory::Image.from_path("no_extension_file")
+puts svg.class  # => Vectory::Svg
+----
+
+=== Explicit Factory Methods
+
+You can also explicitly specify the format:
+
+[source,ruby]
+----
+# Explicit format selection
+eps = Vectory::Eps.from_path("diagram")
+svg = Vectory::Svg.from_path("diagram")
+----
+
+== Format Detection API
+
+=== FileMagic.detect_format
+
+Detect format from content string:
+
+[source,ruby]
+----
+content = File.read("unknown_file")
+format = Vectory::FileMagic.detect_format(content)
+
+case format
+when :eps
+  puts "This is an EPS file"
+when :ps
+  puts "This is a PS file"
+when :emf
+  puts "This is an EMF file"
+when :svg
+  puts "This is an SVG file"
+else
+  puts "Unknown format"
+end
+----
+
+=== from_path Auto-Detection
+
+[source,ruby]
+----
+# Auto-detects format from file path and content
+image = Vectory::Image.from_path("diagram")
+
+if image.is_a?(Vectory::Eps)
+  puts "Detected EPS format"
+elsif image.is_a?(Vectory::Svg)
+  puts "Detected SVG format"
+end
+----
+
+== Detection Priority
+
+Vectory uses a cascading detection strategy:
+
+. **Magic numbers** for EPS, PS, EMF (most reliable)
+. **XML content inspection** for SVG (looks for `<svg>` tag)
+. **File extension** as fallback (`.eps`, `.ps`, `.emf`, `.svg`)
+
+[source,ruby]
+----
+# Detection priority example
+content = "%!PS-Adobe-3.0 EPSF-3.0"
+format = Vectory::FileMagic.detect_format(content)
+puts format  # => :eps (magic number detected)
+----
+
+== Edge Cases
+
+=== EPS vs PS Detection
+
+The presence of `EPSF-3.0` distinguishes EPS from PS:
+
+[source,ruby]
+----
+eps_content = "%!PS-Adobe-3.0 EPSF-3.0"
+ps_content = "%!PS-Adobe-3.0"
+
+Vectory::FileMagic.detect_format(eps_content)  # => :eps
+Vectory::FileMagic.detect_format(ps_content)    # => :ps
+----
+
+=== Invalid Files
+
+[source,ruby]
+----
+begin
+  image = Vectory::Image.from_path("corrupt_file")
+rescue Vectory::ParsingError => e
+  puts "Failed to detect format: #{e.message}"
+end
+----
+
+=== Empty Files
+
+[source,ruby]
+----
+empty_content = ""
+format = Vectory::FileMagic.detect_format(empty_content)
+puts format  # => :unknown
+----
+
+== Performance
+
+Format detection is fast and efficient:
+
+* **Magic number check**: First few bytes only
+* **XML inspection**: Checks for `<svg>` tag
+* **No full file parsing**: Detection is separate from conversion
+
+[source,ruby]
+----
+# Detection is fast even for large files
+large_eps = Vectory::Image.from_path("100mb_diagram.eps")
+# Detection completes in milliseconds
+----
+
+== See Also
+
+* link:conversion/[Conversion Features] - What happens after detection
+* link:../understanding/magic-numbers/[Magic Numbers] - Technical details
+* link:../reference/api/[API Reference] - Detection methods
