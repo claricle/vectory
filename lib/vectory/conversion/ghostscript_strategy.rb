@@ -14,8 +14,8 @@ module Vectory
     class GhostscriptStrategy < Strategy
       # Ghostscript supports PS/EPS → PDF conversions
       SUPPORTED_CONVERSIONS = [
-        [:ps, :pdf],
-        [:eps, :pdf],
+        %i[ps pdf],
+        %i[eps pdf],
       ].freeze
 
       # Convert PS/EPS content to PDF using Ghostscript
@@ -34,12 +34,13 @@ module Vectory
                 "Ghostscript only supports PDF output, got: #{output_format}"
         end
 
-        unless [:ps, :eps].include?(input_format)
+        unless %i[ps eps].include?(input_format)
           raise ArgumentError,
                 "Ghostscript only supports PS/EPS input, got: #{input_format}"
         end
 
-        GhostscriptWrapper.convert(content, eps_crop: options[:eps_crop] || false)
+        GhostscriptWrapper.convert(content,
+                                   eps_crop: options[:eps_crop] || false)
       end
 
       # Check if this conversion is supported

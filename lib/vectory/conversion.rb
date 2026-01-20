@@ -31,13 +31,16 @@ module Vectory
         strategy = find_strategy(from, to)
 
         unless strategy
-          supported = supported_conversions.map { |a, b| "#{a} → #{b}" }.join(", ")
+          supported = supported_conversions.map do |a, b|
+            "#{a} → #{b}"
+          end.join(", ")
           raise Vectory::ConversionError,
                 "No strategy found for #{from} → #{to} conversion. " \
                 "Supported: #{supported}"
         end
 
-        strategy.convert(content, input_format: from, output_format: to, **options)
+        strategy.convert(content, input_format: from, output_format: to,
+                                  **options)
       end
 
       # Get all available strategies

@@ -22,9 +22,8 @@ module Vectory
     # Default temporary directory
     DEFAULT_TEMP_DIR = nil # Use system default
 
-    attr_accessor :inkscape_path, :ghostscript_path
-    attr_accessor :timeout, :cache_ttl, :cache_enabled
-    attr_accessor :temp_dir, :verbose_logging
+    attr_accessor :inkscape_path, :ghostscript_path, :timeout, :cache_ttl,
+                  :cache_enabled, :temp_dir, :verbose_logging
 
     # Get the singleton instance
     #
@@ -91,9 +90,11 @@ module Vectory
       config.ghostscript_path = config_data["ghostscript_path"] if config_data["ghostscript_path"]
       config.timeout = config_data["timeout"] || config.timeout
       config.cache_ttl = config_data["cache_ttl"] || config.cache_ttl
-      config.cache_enabled = config_data.fetch("cache_enabled", config.cache_enabled)
+      config.cache_enabled = config_data.fetch("cache_enabled",
+                                               config.cache_enabled)
       config.temp_dir = config_data["temp_dir"] || config.temp_dir
-      config.verbose_logging = config_data.fetch("verbose_logging", config.verbose_logging)
+      config.verbose_logging = config_data.fetch("verbose_logging",
+                                                 config.verbose_logging)
 
       config
     end
@@ -159,7 +160,7 @@ module Vectory
         errors << "timeout must be positive, got: #{@timeout}"
       end
 
-      if @cache_ttl && @cache_ttl < 0
+      if @cache_ttl&.negative?
         errors << "cache_ttl must be non-negative, got: #{@cache_ttl}"
       end
 
@@ -169,7 +170,8 @@ module Vectory
 
       return true if errors.empty?
 
-      raise ArgumentError, "Invalid configuration:\n  - #{errors.join("\n  - ")}"
+      raise ArgumentError,
+            "Invalid configuration:\n  - #{errors.join("\n  - ")}"
     end
   end
 end
