@@ -16,4 +16,4 @@ jobs:
   rake:
     uses: metanorma/ci/.github/workflows/inkscape-rake.yml@main
     secrets:
-      pat_token: ${{ secrets.METANORMA_CI_PAT_TOKEN }}
+      pat_token: ${{ secrets.CLARICLE_CI_PAT_TOKEN }}
