@@ -51,7 +51,7 @@ module Vectory
       #
       # @return [String] the tool name
       def tool_name
-        self.class.name.split('::').last.gsub(/Strategy$/, '').downcase
+        self.class.name.split("::").last.gsub(/Strategy$/, "").downcase
       end
     end
   end
