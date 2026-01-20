@@ -9,6 +9,9 @@ module Vectory
 end
 
 require_relative "vectory/errors"
+require_relative "vectory/platform"
+require_relative "vectory/configuration"
+require_relative "vectory/conversion"
 require_relative "vectory/image"
 require_relative "vectory/image_resize"
 require_relative "vectory/datauri"

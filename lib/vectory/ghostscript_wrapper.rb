@@ -4,6 +4,7 @@ require "tempfile"
 require "fileutils"
 require_relative "errors"
 require_relative "system_call"
+require_relative "platform"
 
 module Vectory
   # GhostscriptWrapper converts PS and EPS files to PDF using Ghostscript
@@ -89,7 +90,7 @@ module Vectory
 
       def ghostscript_path
         # First try common installation paths specific to each platform
-        if windows?
+        if Platform.windows?
           # Check common Windows installation directories first
           common_windows_paths = [
             "C:/Program Files/gs/gs*/bin/gswin64c.exe",
@@ -104,27 +105,22 @@ module Vectory
 
           # Then try PATH for Windows executables
           ["gswin64c.exe", "gswin32c.exe", "gs"].each do |cmd|
-            path = which(cmd)
+            path = find_in_path(cmd)
             return path if path
           end
         else
           # On Unix-like systems, check PATH
-          path = which("gs")
+          path = find_in_path("gs")
           return path if path
         end
 
         raise GhostscriptNotFoundError
       end
 
-      def windows?
-        !!((RUBY_PLATFORM =~ /(win|w)(32|64)$/) ||
-           (RUBY_PLATFORM =~ /mswin|mingw/))
-      end
-
-      def which(cmd)
+      def find_in_path(cmd)
         # If command already has an extension, try it as-is first
         if File.extname(cmd) != ""
-          ENV["PATH"].split(File::PATH_SEPARATOR).each do |path|
+          Platform.executable_search_paths.each do |path|
             exe = File.join(path, cmd)
             return exe if File.executable?(exe) && !File.directory?(exe)
           end
@@ -132,7 +128,7 @@ module Vectory
 
         # Try with PATHEXT extensions
         exts = ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-        ENV["PATH"].split(File::PATH_SEPARATOR).each do |path|
+        Platform.executable_search_paths.each do |path|
           exts.each do |ext|
             exe = File.join(path, "#{cmd}#{ext}")
             return exe if File.executable?(exe) && !File.directory?(exe)
