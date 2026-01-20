@@ -77,9 +77,9 @@ jobs:
         retention-days: 30
 
     - name: Comment PR with results
-      if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
+      if: "${{ failure() && github.event_name == 'pull_request' }}"
+      uses: actions/github-script@v7
+      with:
           script: |
             const fs = require('fs');
             let comment = '## 🔗 Link Check Failed\n\n';
