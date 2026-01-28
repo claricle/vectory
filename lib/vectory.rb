@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "logger"
+require "ukiryu"
 require_relative "vectory/version"
 require_relative "vectory/utils"
 
