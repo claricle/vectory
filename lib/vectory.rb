@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "logger"
+require "ukiryu"
 require_relative "vectory/version"
 require_relative "vectory/utils"
 
@@ -10,13 +11,6 @@ end
 
 require_relative "vectory/errors"
 require_relative "vectory/platform"
-require_relative "vectory/system_command"
-
-# Configure SystemCommand to use Vectory::Platform for enhanced platform detection
-# This allows SystemCommand to benefit from Platform's additional methods
-# (macos?, linux?, command_available?, etc.) while remaining reusable by other libraries
-Vectory::SystemCommand.platform_detector = Vectory::Platform
-
 require_relative "vectory/configuration"
 require_relative "vectory/conversion"
 require_relative "vectory/image"

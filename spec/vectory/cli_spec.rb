@@ -187,13 +187,14 @@ RSpec.describe Vectory::CLI do
 
       it "returns conversion error" do
         with_tmp_dir do |dir|
-          expect_any_instance_of(Vectory::SystemCall).to receive(:call)
-            .and_raise(Vectory::SystemCallError)
+          # Since we're now using Ukiryu directly, mock GhostscriptWrapper to raise ConversionError
+          expect(Vectory::GhostscriptWrapper).to receive(:convert)
+            .and_raise(Vectory::ConversionError, "Conversion failed")
 
           output = File.join(dir, "output.#{format}")
           status = described_class.start(["-f", format, "-o", output, input])
 
-          # SystemCallError from ps2pdf gets wrapped in ConversionError
+          # ConversionError from GhostscriptWrapper should return STATUS_CONVERSION_ERROR
           expect(status).to be Vectory::CLI::STATUS_CONVERSION_ERROR
         end
       end

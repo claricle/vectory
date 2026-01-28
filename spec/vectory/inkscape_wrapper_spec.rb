@@ -26,8 +26,9 @@ RSpec.describe Vectory::InkscapeWrapper do
       it "raises error" do
         content = File.read(input, mode: "rb")
 
-        expect(described_class.instance)
-          .to receive(:inkscape_path).and_return(nil)
+        # Mock the Tool.get to raise ToolNotFoundError
+        allow(Ukiryu::Tool).to receive(:get).with("inkscape")
+          .and_raise(Ukiryu::ToolNotFoundError, "Tool not found: inkscape")
 
         expect do
           described_class.convert(
