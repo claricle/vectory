@@ -2,18 +2,24 @@
 
 require "tempfile"
 require "fileutils"
-require_relative "errors"
-require_relative "system_call"
-require_relative "platform"
+require "ukiryu"
 
 module Vectory
   # GhostscriptWrapper converts PS and EPS files to PDF using Ghostscript
+  #
+  # Uses Ukiryu for platform-adaptive command execution.
   class GhostscriptWrapper
     SUPPORTED_INPUT_FORMATS = %w[ps eps].freeze
 
+    # Configure Ukiryu registry path
+    @registry_path = nil
+
     class << self
+      attr_accessor :registry_path
+
       def available?
-        ghostscript_path
+        configure_registry
+        ghostscript_tool
         true
       rescue GhostscriptNotFoundError
         false
@@ -22,14 +28,14 @@ module Vectory
       def version
         return nil unless available?
 
-        cmd = [ghostscript_path, "--version"]
-        call = SystemCall.new(cmd).call
-        call.stdout.strip
+        tool = ghostscript_tool
+        tool.version
       rescue StandardError
         nil
       end
 
       def convert(content, options = {})
+        configure_registry
         raise GhostscriptNotFoundError unless available?
 
         eps_crop = options.fetch(:eps_crop, false)
@@ -49,15 +55,22 @@ module Vectory
           # Close output file so GhostScript can write to it
           output_file.close
 
-          cmd = build_command(input_file.path, output_file.path,
-                              eps_crop: eps_crop)
+          # Get the tool and execute
+          tool = ghostscript_tool
+          params = build_convert_params(input_file.path, output_file.path,
+                                        eps_crop: eps_crop)
 
-          call = nil
-          begin
-            call = SystemCall.new(cmd).call
-          rescue SystemCallError => e
+          result = tool.execute(:convert,
+                                execution_timeout: Configuration.instance.timeout,
+                                **params)
+
+          unless result.success?
             raise ConversionError,
-                  "GhostScript conversion failed: #{e.message}"
+                  "GhostScript conversion failed. " \
+                  "Command: #{result.command}, " \
+                  "Exit status: #{result.status}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
           end
 
           unless File.exist?(output_file.path)
@@ -71,9 +84,9 @@ module Vectory
           if output_content.size < 100
             raise ConversionError,
                   "GhostScript created invalid PDF (#{output_content.size} bytes). " \
-                  "Command: #{cmd.join(' ')}, " \
-                  "stdout: '#{call&.stdout&.strip}', " \
-                  "stderr: '#{call&.stderr&.strip}'"
+                  "Command: #{result.command}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
           end
 
           output_content
@@ -88,72 +101,100 @@ module Vectory
 
       private
 
-      def ghostscript_path
-        # First try common installation paths specific to each platform
-        if Platform.windows?
-          # Check common Windows installation directories first
-          common_windows_paths = [
-            "C:/Program Files/gs/gs*/bin/gswin64c.exe",
-            "C:/Program Files (x86)/gs/gs*/bin/gswin32c.exe",
-          ]
+      # Configure the Ukiryu registry path
+      def configure_registry
+        return if @registry_configured
 
-          common_windows_paths.each do |pattern|
-            Dir.glob(pattern).sort.reverse.each do |path|
-              return path if File.executable?(path)
-            end
-          end
-
-          # Then try PATH for Windows executables
-          ["gswin64c.exe", "gswin32c.exe", "gs"].each do |cmd|
-            path = find_in_path(cmd)
-            return path if path
-          end
+        # Explicit path takes precedence
+        if @registry_path
+          Ukiryu::Register.default_register_path = @registry_path
+        elsif ENV["UKIRYU_REGISTER"]
+          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTER"]
         else
-          # On Unix-like systems, check PATH
-          path = find_in_path("gs")
-          return path if path
+          # Ensure register is available (auto-clones if needed)
+          ensure_register_available
         end
 
-        raise GhostscriptNotFoundError
+        @registry_configured = true
       end
 
-      def find_in_path(cmd)
-        # If command already has an extension, try it as-is first
-        if File.extname(cmd) != ""
-          Platform.executable_search_paths.each do |path|
-            exe = File.join(path, cmd)
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
+      # Ensure the ukiryu register is available
+      # This triggers the auto-clone mechanism if needed
+      def ensure_register_available
+        # First check if UKIRYU_REGISTER is set and directory exists
+        env_path = ENV["UKIRYU_REGISTER"]
+        if env_path && Dir.exist?(env_path)
+          Ukiryu::Register.default_register_path = env_path
+          return
         end
 
-        # Try with PATHEXT extensions
-        exts = ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-        Platform.executable_search_paths.each do |path|
-          exts.each do |ext|
-            exe = File.join(path, "#{cmd}#{ext}")
-            return exe if File.executable?(exe) && !File.directory?(exe)
+        # Try to use RegisterAutoManager's auto-clone mechanism
+        begin
+          register_path = Ukiryu::RegisterAutoManager.register_path
+          if register_path && Dir.exist?(register_path)
+            Ukiryu::Register.default_register_path = register_path
+            return
           end
+        rescue StandardError => e
+          # Auto-clone failed, try manual clone
+          warn "[Vectory] RegisterAutoManager failed: #{e.message}"
         end
-        nil
+
+        # If we get here, try manual clone to a default location
+        manual_clone_register
       end
 
-      def build_command(input_path, output_path, options = {})
-        cmd_parts = []
-        cmd_parts << ghostscript_path
-        cmd_parts << "-sDEVICE=pdfwrite"
-        cmd_parts << "-dNOPAUSE"
-        cmd_parts << "-dBATCH"
-        cmd_parts << "-dSAFER"
-        # Use separate arguments for output file to ensure proper path handling
-        cmd_parts << "-sOutputFile=#{output_path}"
-        cmd_parts << "-dEPSCrop" if options[:eps_crop]
-        cmd_parts << "-dAutoRotatePages=/None"
-        cmd_parts << "-dQUIET"
-        # Use -f to explicitly specify input file
-        cmd_parts << "-f"
-        cmd_parts << input_path
+      # Manually clone the register if all else fails
+      def manual_clone_register
+        require "fileutils"
 
-        cmd_parts
+        # Use a consistent location for the register
+        register_path = File.expand_path("~/.ukiryu/register")
+
+        return if Dir.exist?(register_path)
+
+        parent_dir = File.dirname(register_path)
+        FileUtils.mkdir_p(parent_dir) unless Dir.exist?(parent_dir)
+
+        register_url = "https://github.com/ukiryu/register"
+
+        # Try to clone using system git
+        success = system("git clone --depth 1 #{register_url} #{register_path}")
+        success ||= system('"C:\Program Files\Git\bin\git.exe" clone --depth 1 ' \
+                           "#{register_url} #{register_path}")
+
+        if success && Dir.exist?(register_path)
+          Ukiryu::Register.default_register_path = register_path
+        else
+          warn "[Vectory] Warning: Failed to clone ukiryu register"
+        end
+      rescue StandardError => e
+        warn "[Vectory] Warning: Failed to setup ukiryu register: #{e.message}"
+      end
+
+      # Get the Ghostscript tool from Ukiryu
+      def ghostscript_tool
+        Ukiryu::Tool.get("ghostscript")
+      rescue Ukiryu::Errors::ToolNotFoundError => e
+        # Tool not found - raise the original GhostscriptNotFoundError
+        raise GhostscriptNotFoundError, "Ghostscript not available: #{e.message}"
+      end
+
+      # Build convert parameters for Ukiryu
+      def build_convert_params(input_path, output_path, options = {})
+        params = {
+          inputs: [input_path],
+          device: :pdfwrite,
+          output: output_path,
+          batch: true,
+          no_pause: true,
+          quiet: true,
+        }
+
+        # Add EPS crop option
+        params[:eps_crop] = true if options[:eps_crop]
+
+        params
       end
     end
   end

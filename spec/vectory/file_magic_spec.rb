@@ -1,7 +1,5 @@
 require "spec_helper"
 
-require_relative "../../lib/vectory/file_magic"
-
 RSpec.describe Vectory::FileMagic do
   describe "#detect" do
     references = {

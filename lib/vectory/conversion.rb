@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "conversion/strategy"
-require_relative "conversion/inkscape_strategy"
-require_relative "conversion/ghostscript_strategy"
-
 module Vectory
   # Conversion module provides strategy-based conversion interface
   #
@@ -16,6 +12,10 @@ module Vectory
   # @example Get available strategies for a conversion
   #   Vectory::Conversion.strategies_for(:svg, :eps)
   module Conversion
+    # Autoload strategy classes
+    autoload :Strategy, "vectory/conversion/strategy"
+    autoload :InkscapeStrategy, "vectory/conversion/inkscape_strategy"
+    autoload :GhostscriptStrategy, "vectory/conversion/ghostscript_strategy"
     class << self
       # Convert content from one format to another
       #
