@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "tempfile"
-require_relative "inkscape_wrapper"
 
 module Vectory
   class Vector < Image

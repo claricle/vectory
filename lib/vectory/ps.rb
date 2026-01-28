@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "ghostscript_wrapper"
-require_relative "pdf"
-
 module Vectory
   class Ps < Vector
     def self.default_extension

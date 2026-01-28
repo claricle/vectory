@@ -1,30 +1,14 @@
 # frozen_string_literal: true
 
+# External dependencies
 require "logger"
-require_relative "vectory/version"
-require_relative "vectory/utils"
+require "ukiryu"
 
+# Define base error class and additional error classes
+# (used in class bodies like cli.rb, so can't be autoloaded)
 module Vectory
   class Error < StandardError; end
-end
 
-require_relative "vectory/errors"
-require_relative "vectory/platform"
-require_relative "vectory/configuration"
-require_relative "vectory/conversion"
-require_relative "vectory/image"
-require_relative "vectory/image_resize"
-require_relative "vectory/datauri"
-require_relative "vectory/vector"
-require_relative "vectory/ghostscript_wrapper"
-require_relative "vectory/pdf"
-require_relative "vectory/eps"
-require_relative "vectory/ps"
-require_relative "vectory/emf"
-require_relative "vectory/svg"
-require_relative "vectory/svg_mapping"
-
-module Vectory
   class SystemCallError < Error; end
 
   class NotImplementedError < Error; end
@@ -32,7 +16,42 @@ module Vectory
   class NotWrittenToDiskError < Error; end
 
   class ParsingError < Error; end
+end
 
+require_relative "vectory/errors"
+
+# Lazy load: all other internal Vectory dependencies via autoload
+module Vectory
+  # Core utilities
+  autoload :Version, "vectory/version"
+  autoload :Utils, "vectory/utils"
+  autoload :Platform, "vectory/platform"
+
+  # Wrappers
+  autoload :GhostscriptWrapper, "vectory/ghostscript_wrapper"
+  autoload :InkscapeWrapper, "vectory/inkscape_wrapper"
+
+  # Conversion system
+  autoload :Conversion, "vectory/conversion"
+
+  # Format classes
+  autoload :Configuration, "vectory/configuration"
+  autoload :Image, "vectory/image"
+  autoload :ImageResize, "vectory/image_resize"
+  autoload :Datauri, "vectory/datauri"
+  autoload :Vector, "vectory/vector"
+  autoload :Pdf, "vectory/pdf"
+  autoload :Eps, "vectory/eps"
+  autoload :Ps, "vectory/ps"
+  autoload :Emf, "vectory/emf"
+  autoload :Svg, "vectory/svg"
+  autoload :SvgMapping, "vectory/svg_mapping"
+  autoload :SvgDocument, "vectory/svg_document"
+  autoload :FileMagic, "vectory/file_magic"
+end
+
+# Define additional module methods
+module Vectory
   def self.ui
     @ui ||= Logger.new($stdout).tap do |logger|
       logger.level = ENV["VECTORY_LOG"] || Logger::WARN
