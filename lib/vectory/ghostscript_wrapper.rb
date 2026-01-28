@@ -5,6 +5,7 @@ require "fileutils"
 require_relative "errors"
 require_relative "system_call"
 require_relative "platform"
+require_relative "system_command"
 
 module Vectory
   # GhostscriptWrapper converts PS and EPS files to PDF using Ghostscript
@@ -105,36 +106,16 @@ module Vectory
 
           # Then try PATH for Windows executables
           ["gswin64c.exe", "gswin32c.exe", "gs"].each do |cmd|
-            path = find_in_path(cmd)
+            path = SystemCommand.find_executable(cmd)
             return path if path
           end
         else
           # On Unix-like systems, check PATH
-          path = find_in_path("gs")
+          path = SystemCommand.find_executable("gs")
           return path if path
         end
 
         raise GhostscriptNotFoundError
-      end
-
-      def find_in_path(cmd)
-        # If command already has an extension, try it as-is first
-        if File.extname(cmd) != ""
-          Platform.executable_search_paths.each do |path|
-            exe = File.join(path, cmd)
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
-
-        # Try with PATHEXT extensions
-        exts = ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-        Platform.executable_search_paths.each do |path|
-          exts.each do |ext|
-            exe = File.join(path, "#{cmd}#{ext}")
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
-        nil
       end
 
       def build_command(input_path, output_path, options = {})
