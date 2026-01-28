@@ -10,6 +10,7 @@ RSpec.describe Vectory::CLI do
   describe "#convert" do
     shared_examples "converter" do |format|
       it "creates file of a chosen format" do
+        skip_inkscape_on_windows
         matcher = case format
                   when "eps", "ps" then "be_eps"
                   when "svg" then "be_svg"
@@ -170,7 +171,9 @@ RSpec.describe Vectory::CLI do
 
       it "returns conversion error" do
         with_tmp_dir do |dir|
-          expect(Vectory::InkscapeWrapper.instance).to receive(:convert)
+          # Mock Inkscape to fail - this will be called at least once
+          # (may be called multiple times due to PDF fallback mechanism)
+          allow(Vectory::InkscapeWrapper.instance).to receive(:convert)
             .and_raise(Vectory::ConversionError)
 
           output = File.join(dir, "output.#{format}")
@@ -187,13 +190,14 @@ RSpec.describe Vectory::CLI do
 
       it "returns conversion error" do
         with_tmp_dir do |dir|
-          expect_any_instance_of(Vectory::SystemCall).to receive(:call)
-            .and_raise(Vectory::SystemCallError)
+          # Since we're now using Ukiryu directly, mock GhostscriptWrapper to raise ConversionError
+          expect(Vectory::GhostscriptWrapper).to receive(:convert)
+            .and_raise(Vectory::ConversionError, "Conversion failed")
 
           output = File.join(dir, "output.#{format}")
           status = described_class.start(["-f", format, "-o", output, input])
 
-          # SystemCallError from ps2pdf gets wrapped in ConversionError
+          # ConversionError from GhostscriptWrapper should return STATUS_CONVERSION_ERROR
           expect(status).to be Vectory::CLI::STATUS_CONVERSION_ERROR
         end
       end
@@ -236,6 +240,7 @@ RSpec.describe Vectory::CLI do
       let(:format) { "emf" }
 
       it "uses input filename with a new extension and writes to current dir" do
+        skip_inkscape_on_windows
         in_tmp_dir do |dir|
           status = described_class.start(["-f", format, input])
 

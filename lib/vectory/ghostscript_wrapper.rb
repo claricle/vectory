@@ -2,18 +2,18 @@
 
 require "tempfile"
 require "fileutils"
-require_relative "errors"
-require_relative "system_call"
-require_relative "platform"
+require "ukiryu"
 
 module Vectory
   # GhostscriptWrapper converts PS and EPS files to PDF using Ghostscript
+  #
+  # Uses Ukiryu for platform-adaptive command execution.
   class GhostscriptWrapper
     SUPPORTED_INPUT_FORMATS = %w[ps eps].freeze
 
     class << self
       def available?
-        ghostscript_path
+        ghostscript_tool
         true
       rescue GhostscriptNotFoundError
         false
@@ -22,9 +22,8 @@ module Vectory
       def version
         return nil unless available?
 
-        cmd = [ghostscript_path, "--version"]
-        call = SystemCall.new(cmd).call
-        call.stdout.strip
+        tool = ghostscript_tool
+        tool.version
       rescue StandardError
         nil
       end
@@ -49,15 +48,22 @@ module Vectory
           # Close output file so GhostScript can write to it
           output_file.close
 
-          cmd = build_command(input_file.path, output_file.path,
-                              eps_crop: eps_crop)
+          # Get the tool and execute
+          tool = ghostscript_tool
+          params = build_convert_params(input_file.path, output_file.path,
+                                        eps_crop: eps_crop)
 
-          call = nil
-          begin
-            call = SystemCall.new(cmd).call
-          rescue SystemCallError => e
+          result = tool.execute(:convert,
+                                execution_timeout: Configuration.instance.timeout,
+                                **params)
+
+          unless result.success?
             raise ConversionError,
-                  "GhostScript conversion failed: #{e.message}"
+                  "GhostScript conversion failed. " \
+                  "Command: #{result.command}, " \
+                  "Exit status: #{result.status}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
           end
 
           unless File.exist?(output_file.path)
@@ -71,9 +77,9 @@ module Vectory
           if output_content.size < 100
             raise ConversionError,
                   "GhostScript created invalid PDF (#{output_content.size} bytes). " \
-                  "Command: #{cmd.join(' ')}, " \
-                  "stdout: '#{call&.stdout&.strip}', " \
-                  "stderr: '#{call&.stderr&.strip}'"
+                  "Command: #{result.command}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
           end
 
           output_content
@@ -86,74 +92,91 @@ module Vectory
         end
       end
 
+      # Convert PDF content to PostScript
+      #
+      # This is useful as a fallback when Inkscape's PDF import fails.
+      # Ghostscript can reliably convert PDF to EPS, and Inkscape can then
+      # import the EPS file.
+      #
+      # @param pdf_content [String] the PDF content to convert
+      # @return [String] the EPS content
+      # @raise [Vectory::ConversionError] if conversion fails
+      # @raise [Vectory::GhostscriptNotFoundError] if Ghostscript is not available
+      def pdf_to_eps(pdf_content)
+        raise GhostscriptNotFoundError unless available?
+
+        input_file = Tempfile.new(["pdf_input", ".pdf"])
+        output_file = Tempfile.new(["eps_output", ".eps"])
+
+        begin
+          input_file.binmode
+          input_file.write(pdf_content)
+          input_file.flush
+          input_file.close
+          output_file.close
+
+          tool = ghostscript_tool
+          params = {
+            inputs: [input_file.path],
+            device: :eps2write,
+            output: output_file.path,
+            batch: true,
+            no_pause: true,
+            quiet: true,
+          }
+
+          result = tool.execute(:convert,
+                                execution_timeout: Configuration.instance.timeout,
+                                **params)
+
+          unless result.success?
+            raise ConversionError,
+                  "GhostScript PDF to EPS conversion failed. " \
+                  "Command: #{result.command}, " \
+                  "Exit status: #{result.status}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
+          end
+
+          unless File.exist?(output_file.path)
+            raise ConversionError,
+                  "GhostScript did not create output file: #{output_file.path}"
+          end
+
+          File.binread(output_file.path)
+        ensure
+          input_file.close unless input_file.closed?
+          input_file.unlink
+          output_file.close unless output_file.closed?
+          output_file.unlink
+        end
+      end
+
       private
 
-      def ghostscript_path
-        # First try common installation paths specific to each platform
-        if Platform.windows?
-          # Check common Windows installation directories first
-          common_windows_paths = [
-            "C:/Program Files/gs/gs*/bin/gswin64c.exe",
-            "C:/Program Files (x86)/gs/gs*/bin/gswin32c.exe",
-          ]
-
-          common_windows_paths.each do |pattern|
-            Dir.glob(pattern).sort.reverse.each do |path|
-              return path if File.executable?(path)
-            end
-          end
-
-          # Then try PATH for Windows executables
-          ["gswin64c.exe", "gswin32c.exe", "gs"].each do |cmd|
-            path = find_in_path(cmd)
-            return path if path
-          end
-        else
-          # On Unix-like systems, check PATH
-          path = find_in_path("gs")
-          return path if path
-        end
-
-        raise GhostscriptNotFoundError
+      # Get the Ghostscript tool from Ukiryu
+      def ghostscript_tool
+        Ukiryu::Tool.get("ghostscript")
+      rescue Ukiryu::Errors::ToolNotFoundError => e
+        # Tool not found - raise the original GhostscriptNotFoundError
+        raise GhostscriptNotFoundError, "Ghostscript not available: #{e.message}"
       end
 
-      def find_in_path(cmd)
-        # If command already has an extension, try it as-is first
-        if File.extname(cmd) != ""
-          Platform.executable_search_paths.each do |path|
-            exe = File.join(path, cmd)
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
+      # Build convert parameters for Ukiryu
+      def build_convert_params(input_path, output_path, options = {})
+        params = {
+          inputs: [input_path],
+          device: :pdfwrite,
+          output: output_path,
+          batch: true,
+          no_pause: true,
+          quiet: true,
+        }
 
-        # Try with PATHEXT extensions
-        exts = ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-        Platform.executable_search_paths.each do |path|
-          exts.each do |ext|
-            exe = File.join(path, "#{cmd}#{ext}")
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
-        nil
-      end
+        # Add EPS crop option
+        params[:eps_crop] = true if options[:eps_crop]
 
-      def build_command(input_path, output_path, options = {})
-        cmd_parts = []
-        cmd_parts << ghostscript_path
-        cmd_parts << "-sDEVICE=pdfwrite"
-        cmd_parts << "-dNOPAUSE"
-        cmd_parts << "-dBATCH"
-        cmd_parts << "-dSAFER"
-        # Use separate arguments for output file to ensure proper path handling
-        cmd_parts << "-sOutputFile=#{output_path}"
-        cmd_parts << "-dEPSCrop" if options[:eps_crop]
-        cmd_parts << "-dAutoRotatePages=/None"
-        cmd_parts << "-dQUIET"
-        # Use -f to explicitly specify input file
-        cmd_parts << "-f"
-        cmd_parts << input_path
-
-        cmd_parts
+        params
       end
     end
   end

@@ -15,5 +15,7 @@ permissions:
 jobs:
   rake:
     uses: metanorma/ci/.github/workflows/inkscape-rake.yml@main
+    with:
+      private-fonts: 'false'
     secrets:
       pat_token: ${{ secrets.CLARICLE_CI_PAT_TOKEN }}

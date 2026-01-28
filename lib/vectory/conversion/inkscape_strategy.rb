@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "../inkscape_wrapper"
-require_relative "strategy"
-
 module Vectory
   module Conversion
     # Inkscape-based conversion strategy
