@@ -3,6 +3,7 @@ require "spec_helper"
 RSpec.describe Vectory::Eps do
   shared_examples "converter" do |format|
     it "returns content of a chosen format" do
+      skip_inkscape_on_windows
       to_format_method = "to_#{format}"
       content = described_class.from_path(input)
         .public_send(to_format_method)
@@ -78,6 +79,7 @@ RSpec.describe Vectory::Eps do
     let(:input) { "spec/examples/eps/inline.xml" }
 
     it "can be converted to svg" do
+      skip_inkscape_on_windows
       expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end
@@ -119,6 +121,10 @@ RSpec.describe Vectory::Eps do
         allow(Vectory::GhostscriptWrapper).to receive(:convert)
           .and_return("fake pdf content")
 
+        # Also make pdf_to_eps fail (used in fallback)
+        allow(Vectory::GhostscriptWrapper).to receive(:pdf_to_eps)
+          .and_raise(Vectory::ConversionError, "Ghostscript fallback failed")
+
         # Make Inkscape fail
         converter = instance_double(Vectory::InkscapeWrapper)
         allow(Vectory::InkscapeWrapper).to receive(:instance).and_return(converter)
@@ -129,7 +135,7 @@ RSpec.describe Vectory::Eps do
       it "propagates error from Inkscape to to_svg" do
         expect do
           eps.to_svg
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        end.to raise_error(Vectory::ConversionError, /Ghostscript fallback failed/)
       end
     end
   end

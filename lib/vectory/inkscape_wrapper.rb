@@ -2,87 +2,102 @@
 
 require "singleton"
 require "tmpdir"
-require_relative "system_call"
-require_relative "platform"
+require "ukiryu"
 
 module Vectory
+  # InkscapeWrapper using Ukiryu for platform-adaptive command execution
+  #
+  # This class provides backward compatibility with the original InkscapeWrapper
+  # while using Ukiryu under the hood for shell detection, escaping, and execution.
   class InkscapeWrapper
     include Singleton
 
-    def self.convert(content:, input_format:, output_format:, output_class:,
+    class << self
+      def convert(content:, input_format:, output_format:, output_class:,
 plain: false)
-      instance.convert(
-        content: content,
-        input_format: input_format,
-        output_format: output_format,
-        output_class: output_class,
-        plain: plain,
-      )
+        instance.convert(
+          content: content,
+          input_format: input_format,
+          output_format: output_format,
+          output_class: output_class,
+          plain: plain,
+        )
+      end
     end
 
     def convert(content:, input_format:, output_format:, output_class:,
 plain: false)
-      with_temp_files(content, input_format,
-                      output_format) do |input_path, output_path|
-        exe = inkscape_path_or_raise_error
-        exe = external_path(exe)
-        input_path = external_path(input_path)
-        output_path = external_path(output_path)
+      with_temp_files(content, input_format, output_format) do |input_path, output_path|
+        # Get the tool
+        tool = get_inkscape_tool
 
-        cmd = build_command(exe, input_path, output_path, output_format, plain)
-        # Pass environment to disable display on non-Windows systems
-        env = headless_environment
-        call = SystemCall.new(cmd, env: env).call
+        # Build parameters
+        params = build_export_params(input_path, output_path, output_format, plain)
 
-        actual_output = find_output(input_path, output_format)
-        raise_conversion_error(call) unless actual_output
+        # Execute export command
+        result = tool.execute(:export,
+                              execution_timeout: Configuration.instance.timeout,
+                              **params)
 
-        output_class.from_path(actual_output)
+        raise_conversion_error(result) unless result.success?
+
+        # Check if output file exists at specified path
+        unless File.exist?(output_path)
+          # Raise error with stderr details if output file not found
+          # This handles cases where Inkscape returns exit code 0 but fails to create output
+          raise Vectory::ConversionError,
+                "Output file not found. " \
+                "Expected: #{output_path}\n" \
+                "Command: '#{result.command}',\n" \
+                "Exit status: '#{result.status}',\n" \
+                "stdout: '#{result.stdout.strip}',\n" \
+                "stderr: '#{result.stderr.strip}'."
+        end
+
+        output_class.from_path(output_path)
       end
     end
 
     def height(content, format)
-      query_integer(content, format, "--query-height")
+      query_integer(content, format, :height)
     end
 
     def width(content, format)
-      query_integer(content, format, "--query-width")
+      query_integer(content, format, :width)
     end
 
     private
 
-    def inkscape_path_or_raise_error
-      inkscape_path or raise(InkscapeNotFoundError,
-                             "Inkscape missing in PATH, unable to " \
-                             "convert image. Aborting.")
+    # Get the Inkscape tool from Ukiryu
+    def get_inkscape_tool
+      Ukiryu::Tool.get("inkscape")
+    rescue Ukiryu::Errors::ToolNotFoundError => e
+      # Tool not found - raise the original InkscapeNotFoundError
+      raise InkscapeNotFoundError, "Inkscape not available: #{e.message}"
     end
 
-    def inkscape_path
-      @inkscape_path ||= find_inkscape
+    # Build export parameters for Ukiryu
+    def build_export_params(input_path, output_path, output_format, plain)
+      params = {
+        inputs: [input_path],
+        output: output_path,
+      }
+
+      # Add format if specified (different from output extension)
+      # Inkscape can detect format from output extension in modern versions
+      # But we can be explicit
+      params[:format] = output_format.to_sym if output_format
+
+      # Add plain SVG flag
+      params[:plain] = true if plain && output_format == :svg
+
+      # Note: PDF import via Inkscape on macOS may have compatibility issues
+      # The pages option can specify which page to import, but may not work on all platforms
+
+      params
     end
 
-    def find_inkscape
-      cmds.each do |cmd|
-        extensions.each do |ext|
-          Platform.executable_search_paths.each do |path|
-            exe = File.join(path, "#{cmd}#{ext}")
-
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
-      end
-
-      nil
-    end
-
-    def cmds
-      ["inkscapecom", "inkscape"]
-    end
-
-    def extensions
-      ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-    end
-
+    # Find the output file (Inkscape may create it with different name)
     def find_output(source_path, output_extension)
       basenames = [File.basename(source_path, ".*"),
                    File.basename(source_path)]
@@ -94,77 +109,49 @@ plain: false)
       paths.find { |p| File.exist?(p) }
     end
 
-    def raise_conversion_error(call)
+    # Raise conversion error with details
+    def raise_conversion_error(result)
       raise Vectory::ConversionError,
             "Could not convert with Inkscape. " \
-            "Inkscape cmd: '#{call.cmd}',\n" \
-            "status: '#{call.status}',\n" \
-            "stdout: '#{call.stdout.strip}',\n" \
-            "stderr: '#{call.stderr.strip}'."
+            "Command: '#{result.command}',\n" \
+            "Exit status: '#{result.status}',\n" \
+            "stdout: '#{result.stdout.strip}',\n" \
+            "stderr: '#{result.stderr.strip}'."
     end
 
-    def build_command(exe, input_path, output_path, output_format, plain)
-      # Modern Inkscape (1.0+) uses --export-filename
-      # Older versions use --export-<format>-file or --export-type
-      if inkscape_version_modern?
-        cmd = "#{exe} --export-filename=#{output_path}"
-        cmd += " --export-plain-svg" if plain && output_format == :svg
-        # For PDF input, specify which page to use (avoid interactive prompt)
-        cmd += " --export-page=1" if input_path.end_with?(".pdf")
-      else
-        # Legacy Inkscape (0.x) uses --export-type
-        cmd = "#{exe} --export-type=#{output_format}"
-        cmd += " --export-plain-svg" if plain && output_format == :svg
-      end
-      cmd += " #{input_path}"
-      cmd
+    # Query integer value from Inkscape
+    #
+    # @param content [String] the file content
+    # @param format [String] the file format
+    # @param param_key [Symbol] the query parameter key (:width, :height, :x, :y)
+    # @return [Integer] the query result as an integer
+    def query_integer(content, format, param_key)
+      query(content, format, param_key).to_f.round
     end
 
-    def inkscape_version_modern?
-      return @inkscape_version_modern if defined?(@inkscape_version_modern)
-
-      exe = inkscape_path
-      return @inkscape_version_modern = true unless exe # Default to modern
-
-      version_output = `#{external_path(exe)} --version 2>&1`
-      version_match = version_output.match(/Inkscape (\d+)\./)
-
-      @inkscape_version_modern = if version_match
-                                   version_match[1].to_i >= 1
-                                 else
-                                   true # Default to modern if we can't detect
-                                 end
-    end
-
-    def with_temp_files(content, input_format, output_format)
-      Dir.mktmpdir do |dir|
-        input_path = File.join(dir, "image.#{input_format}")
-        output_path = File.join(dir, "image.#{output_format}")
-        File.binwrite(input_path, content)
-
-        yield input_path, output_path
-      end
-    end
-
-    def query_integer(content, format, options)
-      query(content, format, options).to_f.round
-    end
-
-    def query(content, format, options)
-      exe = inkscape_path_or_raise_error
+    # Query Inkscape for information
+    #
+    # @param content [String] the file content
+    # @param format [String] the file format
+    # @param param_key [Symbol] the query parameter key (:width, :height, :x, :y)
+    # @return [String] the query result
+    def query(content, format, param_key)
+      tool = get_inkscape_tool
+      raise InkscapeNotFoundError, "Inkscape not available" unless tool
 
       with_temp_file(content, format) do |path|
-        cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
+        params = { input: path, param_key => true }
 
-        # Pass environment to disable display on non-Windows systems
-        env = headless_environment
-        call = SystemCall.new(cmd, env: env).call
-        raise_query_error(call) if call.stdout.empty?
+        result = tool.execute(:query,
+                              execution_timeout: Configuration.instance.timeout,
+                              **params)
+        raise_query_error(result) if result.stdout.empty?
 
-        call.stdout
+        result.stdout
       end
     end
 
+    # Create temp file with content
     def with_temp_file(content, extension)
       Dir.mktmpdir do |dir|
         path = File.join(dir, "image.#{extension}")
@@ -174,20 +161,54 @@ plain: false)
       end
     end
 
-    def raise_query_error(call)
-      raise Vectory::InkscapeQueryError,
-            "Could not query with Inkscape. " \
-            "Inkscape cmd: '#{call.cmd}',\n" \
-            "status: '#{call.status}',\n" \
-            "stdout: '#{call.stdout.strip}',\n" \
-            "stderr: '#{call.stderr.strip}'."
+    # Create temp files for input and output
+    def with_temp_files(content, input_format, output_format)
+      Dir.mktmpdir do |dir|
+        input_path = File.join(dir, "image.#{input_format}")
+        output_path = File.join(dir, "image.#{output_format}")
+        File.binwrite(input_path, content)
+
+        begin
+          yield input_path, output_path
+        ensure
+          # On Windows, aggressively clean up temp files to avoid ENOTEMPTY errors
+          # caused by Inkscape leaving behind lock files or hanging processes
+          cleanup_temp_dir(dir) if Platform.windows?
+        end
+      end
     end
 
-    # Returns environment variables for headless operation
-    # On non-Windows systems, disable DISPLAY to prevent X11/GDK initialization
-    def headless_environment
-      # On macOS/Linux, disable DISPLAY to prevent Gdk/X11 warnings
-      Platform.windows? ? {} : { "DISPLAY" => "" }
+    # Aggressively clean up temp directory on Windows
+    # Handles cases where Inkscape leaves behind files or processes
+    def cleanup_temp_dir(dir)
+      # Give processes a moment to release file handles
+      sleep(0.2)
+
+      # Try to remove all files in the directory
+      Dir.glob(File.join(dir, "**", "*")).reverse_each do |file|
+        File.delete(file) if File.file?(file)
+      rescue Errno::EACCES, Errno::ENOENT
+        # File may be locked or already deleted, ignore
+      end
+
+      # Try to remove subdirectories
+      Dir.glob(File.join(dir, "**", "*")).reverse_each do |path|
+        Dir.rmdir(path) if File.directory?(path)
+      rescue Errno::EACCES, Errno::ENOENT, Errno::ENOTEMPTY
+        # Directory may be locked or not empty, ignore
+      end
+    rescue StandardError
+      # Best effort cleanup, don't raise
+    end
+
+    # Raise query error with details
+    def raise_query_error(result)
+      raise Vectory::InkscapeQueryError,
+            "Could not query with Inkscape. " \
+            "Command: '#{result.command}',\n" \
+            "Exit status: '#{result.status}',\n" \
+            "stdout: '#{result.stdout.strip}',\n" \
+            "stderr: '#{result.stderr.strip}'."
     end
 
     # Format paths for command execution on current platform
