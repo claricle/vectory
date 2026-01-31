@@ -1,6 +1,5 @@
 require "thor"
-require_relative "../vectory"
-require_relative "file_magic"
+require "vectory"
 
 module Vectory
   class CLI < Thor

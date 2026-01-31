@@ -3,7 +3,6 @@
 require "singleton"
 require "tmpdir"
 require "ukiryu"
-require_relative "errors"
 
 module Vectory
   # InkscapeWrapper using Ukiryu for platform-adaptive command execution

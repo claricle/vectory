@@ -3,8 +3,6 @@
 require "tempfile"
 require "fileutils"
 require "ukiryu"
-require_relative "errors"
-require_relative "platform"
 
 module Vectory
   # GhostscriptWrapper converts PS and EPS files to PDF using Ghostscript
