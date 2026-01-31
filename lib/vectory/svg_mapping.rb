@@ -1,6 +1,3 @@
-require_relative "svg"
-require_relative "svg_document"
-
 module Vectory
   class SvgMapping
     class Namespace

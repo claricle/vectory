@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "vector"
-require_relative "inkscape_wrapper"
-
 module Vectory
   class Pdf < Vector
     attr_accessor :original_height, :original_width

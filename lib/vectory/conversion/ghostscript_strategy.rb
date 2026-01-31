@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "../ghostscript_wrapper"
-require_relative "strategy"
-
 module Vectory
   module Conversion
     # Ghostscript-based conversion strategy
