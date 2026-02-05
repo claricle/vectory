@@ -339,7 +339,7 @@ rescue Vectory::ConversionError => e
 end
 ----
 
-=== Dimension Query
+=== Dimension query
 
 [source,ruby]
 ----
@@ -348,7 +348,89 @@ width, height = eps.dimensions
 puts "Dimensions: #{width}x#{height}"
 ----
 
-## See Also
+== SVG mapping
+
+Integrates SVG content into XML documents with ID disambiguation for multi-document scenarios.
+
+=== Vectory::SvgMapping
+
+Processes XML documents containing `<svgmap>` elements, extracting and integrating SVG content.
+
+[source,ruby]
+----
+# Basic usage
+xml_string = Vectory::SvgMapping.from_path("doc.xml").to_xml
+
+# With ID suffix for cross-document uniqueness
+mapping = Vectory::SvgMapping.new(doc, "", id_suffix: "_ISO_17301-1_2016")
+xml_string = mapping.call.to_xml
+----
+
+**Factory methods**:
+
+* `Vectory::SvgMapping.from_path(path)` - Load from file path
+* `Vectory::SvgMapping.from_xml(xml)` - Load from XML string
+* `Vectory::SvgMapping.new(doc, local_directory, id_suffix: nil)` - Direct instantiation
+
+**Parameters**:
+
+* `doc` - Nokogiri XML Document containing svgmap elements
+* `local_directory` - Directory for resolving relative file paths
+* `id_suffix` - Optional suffix for cross-document ID uniqueness (e.g., "_ISO_17301-1_2016")
+
+**Methods**:
+
+* `#call` - Process all svgmap elements, returns processed document
+* `#to_xml` - Process and return XML string
+
+=== Vectory::SvgDocument
+
+Represents an SVG document and handles ID suffixing for uniqueness.
+
+[source,ruby]
+----
+# Create from SVG content
+svg_doc = Vectory::SvgDocument.new(svg_content)
+
+# Apply both ID suffix and index suffix
+svg_doc.namespace(index, links, xpath_to_remove, id_suffix: "_ISO_17301-1_2016")
+result = svg_doc.content
+----
+
+**Constructor**:
+
+* `Vectory::SvgDocument.new(content)` - Create from SVG XML string
+
+**Methods**:
+
+* `namespace(index_suffix, links, xpath_to_remove, id_suffix: nil)` - Apply transformations
+** `index_suffix` - Position-based suffix (0, 1, 2...) formatted as 9-digit zero-padded
+** `links` - Hash mapping hrefs to targets
+** `xpath_to_remove` - XPath for elements to remove (processing instructions)
+** `id_suffix` - Optional identity-based suffix for cross-document uniqueness
+
+* `content` - Returns processed SVG as XML string
+* `remap_links(map)` - Remap internal links
+* `apply_id_suffix(id_suffix)` - Apply ID suffix
+* `apply_index_suffix(index)` - Apply index suffix
+
+=== ID Suffixing
+
+SVG IDs are suffixed in two stages:
+
+[source]
+----
+# Stage 1: ID suffix (cross-document uniqueness)
+fig1 → fig1_ISO_17301-1_2016
+
+# Stage 2: Index suffix (multi-svgmap uniqueness)
+fig1_ISO_17301-1_2016 → fig1_ISO_17301-1_2016_000000000
+----
+
+* **ID suffix** (`id_suffix` parameter): Derived from document/container identity. Optional.
+* **Index suffix** (`index_suffix` parameter): Zero-padded position (0, 1, 2... → _000000000, _000000001). Automatically applied.
+
+== See Also
 
 * link:../guides/error-handling/[Error Handling Guide] - Common errors and solutions
 * link:../understanding/architecture/[Architecture] - Design patterns

@@ -59,6 +59,99 @@ RSpec.describe Vectory::SvgMapping do
     end
   end
 
+  context "with id_suffix for cross-document uniqueness" do
+    let(:work_dir) { "spec/examples/svg" }
+    let(:id_suffix) { "DOC_1" }
+
+    it "applies both id_suffix and index suffix to SVG IDs" do
+      Dir.chdir(work_dir) do
+        source = described_class.new(
+          Nokogiri::XML(File.read("doc2.xml")),
+          ".", # local_directory should be "." when we're already in the correct dir
+          id_suffix: id_suffix,
+        )
+        content = source.to_xml
+
+        # Final format: <original_id>_<id_suffix>_<index_suffix>
+        # Example: Layer_1_DOC_1_000000000
+        expect(content).to match(/id=['"]Layer_1_DOC_1_00000000[01]['"]/)
+      end
+    end
+
+    it "passes id_suffix through to SVG documents" do
+      Dir.chdir(work_dir) do
+        source = described_class.new(
+          Nokogiri::XML(File.read("doc2.xml")),
+          ".",
+          id_suffix: id_suffix,
+        )
+        content = source.to_xml
+
+        # Check that the ID suffix is applied (in addition to index suffix)
+        # The format should be: <id>_<id_suffix>_<index_suffix>
+        expect(content).to match(/Layer_1_DOC_1_\d{9}/)
+        # And NOT just the index suffix (without the DOC_1 part)
+        expect(content).not_to match(/Layer_1_(?!DOC_1)\d{9}/)
+      end
+    end
+
+    it "updates CSS references with both suffixes" do
+      Dir.chdir(work_dir) do
+        source = described_class.new(
+          Nokogiri::XML(File.read("doc2.xml")),
+          ".",
+          id_suffix: id_suffix,
+        )
+        content = source.to_xml
+
+        # CSS should reference IDs with both suffixes
+        expect(content).to match(/#Layer_1_DOC_1_00000000[01]\b/)
+      end
+    end
+  end
+
+  context "with ISO-style id_suffix" do
+    let(:work_dir) { "spec/examples/svg" }
+    let(:id_suffix) { "ISO_17301-1_2016" }
+
+    it "applies complex ISO identifier as suffix" do
+      Dir.chdir(work_dir) do
+        source = described_class.new(
+          Nokogiri::XML(File.read("doc2.xml")),
+          ".",
+          id_suffix: id_suffix,
+        )
+        content = source.to_xml
+
+        # Final format: <original_id>_<id_suffix>_<index_suffix>
+        expect(content).to match(/id=['"]Layer_1_ISO_17301-1_2016_00000000[01]['"]/)
+      end
+    end
+  end
+
+  context "creating SvgMapping with id_suffix" do
+    let(:xml_content) do
+      <<~XML
+        <svgmap id="test-map">
+          <figure>
+            <image src="test.svg"/>
+          </figure>
+        </svgmap>
+      XML
+    end
+    let(:id_suffix) { "TEST_DOC" }
+
+    it "accepts id_suffix in constructor" do
+      mapping = described_class.new(
+        Nokogiri::XML(xml_content),
+        "",
+        id_suffix: id_suffix,
+      )
+
+      expect(mapping.instance_variable_get(:@id_suffix)).to eq(id_suffix)
+    end
+  end
+
   def strip_image(xml)
     # Handle both self-closing and regular image tags with content
     # Also handle base64-encoded embedded images
