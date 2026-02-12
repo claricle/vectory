@@ -12,6 +12,9 @@ permissions:
   contents: write
   packages: read
 
+env:
+  UKIRYU_REGISTER: ${{ github.workspace }}/ukiryu-register
+
 jobs:
   rake:
     uses: metanorma/ci/.github/workflows/inkscape-rake.yml@main

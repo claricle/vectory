@@ -52,6 +52,15 @@ plain: false)
       # Ensure the ukiryu register is available
       # This triggers the auto-clone mechanism if needed
       def ensure_register_available
+        # First check if UKIRYU_REGISTER is set but directory doesn't exist
+        env_path = ENV["UKIRYU_REGISTER"]
+        if env_path && !Dir.exist?(env_path)
+          # Clone the register to the specified path
+          clone_register_to(env_path)
+          Ukiryu::Register.default_register_path = env_path
+          return
+        end
+
         # Call RegisterAutoManager to get/clone the register
         # This will auto-clone to ~/.ukiryu/register if not present
         register_path = Ukiryu::RegisterAutoManager.register_path
@@ -62,6 +71,19 @@ plain: false)
         # If auto-clone fails, log a warning but continue
         # The tool lookup will fail with a clear error message
         warn "[Vectory] Warning: Failed to setup ukiryu register: #{e.message}"
+      end
+
+      # Clone the ukiryu register to a specific path
+      def clone_register_to(target_path)
+        require "fileutils"
+
+        parent_dir = File.dirname(target_path)
+        FileUtils.mkdir_p(parent_dir) unless Dir.exist?(parent_dir)
+
+        # Use system git to clone (more reliable than ruby git gem on Windows)
+        register_url = "https://github.com/ukiryu/register"
+        system("git clone --depth 1 #{register_url} #{target_path}",
+               exception: true)
       end
     end
 
