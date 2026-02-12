@@ -37,12 +37,31 @@ plain: false)
         # Explicit path takes precedence
         if @registry_path
           Ukiryu::Register.default_register_path = @registry_path
-        elsif ENV["UKIRYU_REGISTRY"]
-          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTRY"]
+        elsif ENV["UKIRYU_REGISTER"]
+          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTER"]
+        else
+          # Ensure register is available (auto-clones if needed)
+          ensure_register_available
         end
-        # Otherwise, let Ukiryu use its built-in search paths
 
         @registry_configured = true
+      end
+
+      private
+
+      # Ensure the ukiryu register is available
+      # This triggers the auto-clone mechanism if needed
+      def ensure_register_available
+        # Call RegisterAutoManager to get/clone the register
+        # This will auto-clone to ~/.ukiryu/register if not present
+        register_path = Ukiryu::RegisterAutoManager.register_path
+        if register_path
+          Ukiryu::Register.default_register_path = register_path
+        end
+      rescue StandardError => e
+        # If auto-clone fails, log a warning but continue
+        # The tool lookup will fail with a clear error message
+        warn "[Vectory] Warning: Failed to setup ukiryu register: #{e.message}"
       end
     end
 
