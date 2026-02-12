@@ -82,8 +82,20 @@ plain: false)
 
         # Use system git to clone (more reliable than ruby git gem on Windows)
         register_url = "https://github.com/ukiryu/register"
-        system("git clone --depth 1 #{register_url} #{target_path}",
-               exception: true)
+
+        # Try different git commands for cross-platform compatibility
+        git_cmds = [
+          "git clone --depth 1 #{register_url} #{target_path}",
+          "git.exe clone --depth 1 #{register_url} #{target_path}",
+        ]
+
+        success = false
+        git_cmds.each do |cmd|
+          success = system(cmd)
+          break if success
+        end
+
+        raise "Failed to clone ukiryu register" unless success
       end
     end
 
