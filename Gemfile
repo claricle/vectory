@@ -5,6 +5,9 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in vectory.gemspec
 gemspec
 
+# Use ukiryu from feature/architecture-refactoring branch for Windows PowerShell fix
+gem "ukiryu", github: "ukiryu/ukiryu", branch: "feature/architecture-refactoring"
+
 gem "canon", "~> 0.1.7"
 gem "openssl", "~> 3.0"
 gem "rake"
