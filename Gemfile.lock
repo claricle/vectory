@@ -98,8 +98,7 @@ GEM
     lutaml-xsd (0.1.0)
     marcel (1.1.0)
     memo_wise (1.13.0)
-    minitest (6.0.1)
-      prism (~> 1.5)
+    minitest (5.27.0)
     moxml (0.1.10)
     nokogiri (1.19.0-aarch64-linux-gnu)
       racc (~> 1.4)
@@ -202,6 +201,7 @@ PLATFORMS
 DEPENDENCIES
   canon (~> 0.1.7)
   connection_pool (< 3.0)
+  minitest (< 6.0)
   openssl (~> 3.0)
   rake
   rspec
