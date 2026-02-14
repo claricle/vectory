@@ -26,23 +26,23 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (7.2.3)
+    activesupport (8.1.2)
       base64
-      benchmark (>= 0.3)
       bigdecimal
       concurrent-ruby (~> 1.0, >= 1.3.1)
       connection_pool (>= 2.2.5)
       drb
       i18n (>= 1.6, < 2)
+      json
       logger (>= 1.4.2)
       minitest (>= 5.1)
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
+      uri (>= 0.13.1)
     addressable (2.8.8)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
     base64 (0.3.0)
-    benchmark (0.5.0)
     bigdecimal (4.0.1)
     canon (0.1.13)
       diff-lcs
@@ -54,7 +54,7 @@ GEM
       thor
       unicode-name
     concurrent-ruby (1.3.6)
-    connection_pool (2.5.5)
+    connection_pool (3.0.2)
     csv (3.3.5)
     diff-lcs (1.6.2)
     drb (2.2.3)
@@ -84,8 +84,9 @@ GEM
       concurrent-ruby (~> 1.0)
     image_size (3.4.0)
     json (2.18.1)
-    json-schema (5.1.0)
+    json-schema (6.1.0)
       addressable (~> 2.8)
+      bigdecimal (>= 3.1, < 5)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     logger (1.7.0)
@@ -97,17 +98,22 @@ GEM
     lutaml-xsd (0.1.0)
     marcel (1.1.0)
     memo_wise (1.13.0)
-    minitest (5.27.0)
+    minitest (6.0.1)
+      prism (~> 1.5)
     moxml (0.1.10)
-    nokogiri (1.17.2-aarch64-linux)
+    nokogiri (1.19.0-aarch64-linux-gnu)
       racc (~> 1.4)
-    nokogiri (1.17.2-arm64-darwin)
+    nokogiri (1.19.0-aarch64-linux-musl)
       racc (~> 1.4)
-    nokogiri (1.17.2-x64-mingw-ucrt)
+    nokogiri (1.19.0-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.17.2-x86_64-darwin)
+    nokogiri (1.19.0-x64-mingw-ucrt)
       racc (~> 1.4)
-    nokogiri (1.17.2-x86_64-linux)
+    nokogiri (1.19.0-x86_64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-musl)
       racc (~> 1.4)
     openssl (3.3.2)
     paint (2.3.0)
@@ -117,7 +123,7 @@ GEM
       racc
     prism (1.9.0)
     process_executer (1.3.0)
-    public_suffix (5.1.1)
+    public_suffix (7.0.2)
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.1)
@@ -178,6 +184,7 @@ GEM
     unicode-name (1.14.0)
       unicode-types (~> 1.11)
     unicode-types (1.11.0)
+    uri (1.1.1)
     versionian (0.1.0)
       singleton (~> 0.2)
 
@@ -193,14 +200,8 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  activesupport (< 8.0)
   canon (~> 0.1.7)
-  connection_pool (< 3.0)
-  json-schema (< 6.0)
-  minitest (< 6.0)
-  nokogiri (< 1.18)
   openssl (~> 3.0)
-  public_suffix (< 6.0)
   rake
   rspec
   rubocop

@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
     f.match(%r{^(bin|spec)/})
   end
   spec.test_files = `git ls-files -- {spec}/*`.split("\n")
-  spec.required_ruby_version = ">= 2.5.0"
+  spec.required_ruby_version = ">= 3.1.0"
 
   spec.add_dependency "base64"
   spec.add_dependency "emf2svg"
