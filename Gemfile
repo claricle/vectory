@@ -15,6 +15,9 @@ gem "connection_pool", "< 3.0"
 # Pin minitest to version compatible with Ruby 3.1
 gem "minitest", "< 6.0"
 
+# Pin activesupport to version compatible with Ruby 3.1
+gem "activesupport", "< 8.0"
+
 gem "canon", "~> 0.1.7"
 gem "openssl", "~> 3.0"
 gem "rake"
