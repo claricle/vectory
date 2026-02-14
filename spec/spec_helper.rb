@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Configure Ukiryu registry path for local development
+# This is needed because we use a local path dependency for ukiryu in the Gemfile
+ENV["UKIRYU_REGISTRY"] ||= File.expand_path("../../../ukiryu/register", __dir__)
+
 require "vectory"
 require "tmpdir"
 require "rspec/matchers"

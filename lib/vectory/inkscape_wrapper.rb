@@ -2,87 +2,181 @@
 
 require "singleton"
 require "tmpdir"
-require_relative "system_call"
-require_relative "platform"
+require "ukiryu"
 
 module Vectory
+  # InkscapeWrapper using Ukiryu for platform-adaptive command execution
+  #
+  # This class provides backward compatibility with the original InkscapeWrapper
+  # while using Ukiryu under the hood for shell detection, escaping, and execution.
   class InkscapeWrapper
     include Singleton
 
-    def self.convert(content:, input_format:, output_format:, output_class:,
+    # Configure Ukiryu registry path
+    @registry_path = nil
+
+    class << self
+      attr_accessor :registry_path
+
+      def convert(content:, input_format:, output_format:, output_class:,
 plain: false)
-      instance.convert(
-        content: content,
-        input_format: input_format,
-        output_format: output_format,
-        output_class: output_class,
-        plain: plain,
-      )
+        configure_registry
+        instance.convert(
+          content: content,
+          input_format: input_format,
+          output_format: output_format,
+          output_class: output_class,
+          plain: plain,
+        )
+      end
+
+      # Configure the Ukiryu registry path
+      def configure_registry
+        return if @registry_configured
+
+        # Explicit path takes precedence
+        if @registry_path
+          Ukiryu::Register.default_register_path = @registry_path
+        elsif ENV["UKIRYU_REGISTER"]
+          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTER"]
+        else
+          # Ensure register is available (auto-clones if needed)
+          ensure_register_available
+        end
+
+        @registry_configured = true
+      end
+
+      private
+
+      # Ensure the ukiryu register is available
+      # This triggers the auto-clone mechanism if needed
+      def ensure_register_available
+        # First check if UKIRYU_REGISTER is set and directory exists
+        env_path = ENV["UKIRYU_REGISTER"]
+        if env_path && Dir.exist?(env_path)
+          Ukiryu::Register.default_register_path = env_path
+          return
+        end
+
+        # Try to use RegisterAutoManager's auto-clone mechanism
+        begin
+          register_path = Ukiryu::RegisterAutoManager.register_path
+          if register_path && Dir.exist?(register_path)
+            Ukiryu::Register.default_register_path = register_path
+            return
+          end
+        rescue StandardError => e
+          # Auto-clone failed, try manual clone
+          warn "[Vectory] RegisterAutoManager failed: #{e.message}"
+        end
+
+        # If we get here, try manual clone to a default location
+        manual_clone_register
+      end
+
+      # Manually clone the register if all else fails
+      def manual_clone_register
+        require "fileutils"
+
+        # Use a consistent location for the register
+        register_path = File.expand_path("~/.ukiryu/register")
+
+        return if Dir.exist?(register_path)
+
+        parent_dir = File.dirname(register_path)
+        FileUtils.mkdir_p(parent_dir) unless Dir.exist?(parent_dir)
+
+        register_url = "https://github.com/ukiryu/register"
+
+        # Try to clone using system git
+        success = system("git clone --depth 1 #{register_url} #{register_path}")
+        success ||= system('"C:\Program Files\Git\bin\git.exe" clone --depth 1 ' \
+                           "#{register_url} #{register_path}")
+
+        if success && Dir.exist?(register_path)
+          Ukiryu::Register.default_register_path = register_path
+        else
+          warn "[Vectory] Warning: Failed to clone ukiryu register"
+        end
+      rescue StandardError => e
+        warn "[Vectory] Warning: Failed to setup ukiryu register: #{e.message}"
+      end
     end
 
     def convert(content:, input_format:, output_format:, output_class:,
 plain: false)
-      with_temp_files(content, input_format,
-                      output_format) do |input_path, output_path|
-        exe = inkscape_path_or_raise_error
-        exe = external_path(exe)
-        input_path = external_path(input_path)
-        output_path = external_path(output_path)
+      with_temp_files(content, input_format, output_format) do |input_path, output_path|
+        # Get the tool
+        tool = get_inkscape_tool
 
-        cmd = build_command(exe, input_path, output_path, output_format, plain)
-        # Pass environment to disable display on non-Windows systems
-        env = headless_environment
-        call = SystemCall.new(cmd, env: env).call
+        # Build parameters
+        params = build_export_params(input_path, output_path, output_format, plain)
 
-        actual_output = find_output(input_path, output_format)
-        raise_conversion_error(call) unless actual_output
+        # Execute export command
+        result = tool.execute(:export,
+                              execution_timeout: Configuration.instance.timeout,
+                              **params)
 
-        output_class.from_path(actual_output)
+        raise_conversion_error(result) unless result.success?
+
+        # Check if output file exists at specified path
+        unless File.exist?(output_path)
+          # Raise error with stderr details if output file not found
+          # This handles cases where Inkscape returns exit code 0 but fails to create output
+          raise Vectory::ConversionError,
+                "Output file not found. " \
+                "Expected: #{output_path}\n" \
+                "Command: '#{result.command}',\n" \
+                "Exit status: '#{result.status}',\n" \
+                "stdout: '#{result.stdout.strip}',\n" \
+                "stderr: '#{result.stderr.strip}'."
+        end
+
+        output_class.from_path(output_path)
       end
     end
 
     def height(content, format)
-      query_integer(content, format, "--query-height")
+      query_integer(content, format, :height)
     end
 
     def width(content, format)
-      query_integer(content, format, "--query-width")
+      query_integer(content, format, :width)
     end
 
     private
 
-    def inkscape_path_or_raise_error
-      inkscape_path or raise(InkscapeNotFoundError,
-                             "Inkscape missing in PATH, unable to " \
-                             "convert image. Aborting.")
+    # Get the Inkscape tool from Ukiryu
+    def get_inkscape_tool
+      Ukiryu::Tool.get("inkscape")
+    rescue Ukiryu::Errors::ToolNotFoundError => e
+      # Tool not found - raise the original InkscapeNotFoundError
+      raise InkscapeNotFoundError, "Inkscape not available: #{e.message}"
     end
 
-    def inkscape_path
-      @inkscape_path ||= find_inkscape
+    # Build export parameters for Ukiryu
+    def build_export_params(input_path, output_path, output_format, plain)
+      params = {
+        inputs: [input_path],
+        output: output_path,
+      }
+
+      # Add format if specified (different from output extension)
+      # Inkscape can detect format from output extension in modern versions
+      # But we can be explicit
+      params[:format] = output_format.to_sym if output_format
+
+      # Add plain SVG flag
+      params[:plain] = true if plain && output_format == :svg
+
+      # Note: PDF import via Inkscape on macOS may have compatibility issues
+      # The pages option can specify which page to import, but may not work on all platforms
+
+      params
     end
 
-    def find_inkscape
-      cmds.each do |cmd|
-        extensions.each do |ext|
-          Platform.executable_search_paths.each do |path|
-            exe = File.join(path, "#{cmd}#{ext}")
-
-            return exe if File.executable?(exe) && !File.directory?(exe)
-          end
-        end
-      end
-
-      nil
-    end
-
-    def cmds
-      ["inkscapecom", "inkscape"]
-    end
-
-    def extensions
-      ENV["PATHEXT"] ? ENV["PATHEXT"].split(";") : [""]
-    end
-
+    # Find the output file (Inkscape may create it with different name)
     def find_output(source_path, output_extension)
       basenames = [File.basename(source_path, ".*"),
                    File.basename(source_path)]
@@ -94,48 +188,59 @@ plain: false)
       paths.find { |p| File.exist?(p) }
     end
 
-    def raise_conversion_error(call)
+    # Raise conversion error with details
+    def raise_conversion_error(result)
       raise Vectory::ConversionError,
             "Could not convert with Inkscape. " \
-            "Inkscape cmd: '#{call.cmd}',\n" \
-            "status: '#{call.status}',\n" \
-            "stdout: '#{call.stdout.strip}',\n" \
-            "stderr: '#{call.stderr.strip}'."
+            "Command: '#{result.command}',\n" \
+            "Exit status: '#{result.status}',\n" \
+            "stdout: '#{result.stdout.strip}',\n" \
+            "stderr: '#{result.stderr.strip}'."
     end
 
-    def build_command(exe, input_path, output_path, output_format, plain)
-      # Modern Inkscape (1.0+) uses --export-filename
-      # Older versions use --export-<format>-file or --export-type
-      if inkscape_version_modern?
-        cmd = "#{exe} --export-filename=#{output_path}"
-        cmd += " --export-plain-svg" if plain && output_format == :svg
-        # For PDF input, specify which page to use (avoid interactive prompt)
-        cmd += " --export-page=1" if input_path.end_with?(".pdf")
-      else
-        # Legacy Inkscape (0.x) uses --export-type
-        cmd = "#{exe} --export-type=#{output_format}"
-        cmd += " --export-plain-svg" if plain && output_format == :svg
+    # Query integer value from Inkscape
+    #
+    # @param content [String] the file content
+    # @param format [String] the file format
+    # @param param_key [Symbol] the query parameter key (:width, :height, :x, :y)
+    # @return [Integer] the query result as an integer
+    def query_integer(content, format, param_key)
+      query(content, format, param_key).to_f.round
+    end
+
+    # Query Inkscape for information
+    #
+    # @param content [String] the file content
+    # @param format [String] the file format
+    # @param param_key [Symbol] the query parameter key (:width, :height, :x, :y)
+    # @return [String] the query result
+    def query(content, format, param_key)
+      tool = get_inkscape_tool
+      raise InkscapeNotFoundError, "Inkscape not available" unless tool
+
+      with_temp_file(content, format) do |path|
+        params = { input: path, param_key => true }
+
+        result = tool.execute(:query,
+                              execution_timeout: Configuration.instance.timeout,
+                              **params)
+        raise_query_error(result) if result.stdout.empty?
+
+        result.stdout
       end
-      cmd += " #{input_path}"
-      cmd
     end
 
-    def inkscape_version_modern?
-      return @inkscape_version_modern if defined?(@inkscape_version_modern)
+    # Create temp file with content
+    def with_temp_file(content, extension)
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "image.#{extension}")
+        File.binwrite(path, content)
 
-      exe = inkscape_path
-      return @inkscape_version_modern = true unless exe # Default to modern
-
-      version_output = `#{external_path(exe)} --version 2>&1`
-      version_match = version_output.match(/Inkscape (\d+)\./)
-
-      @inkscape_version_modern = if version_match
-                                   version_match[1].to_i >= 1
-                                 else
-                                   true # Default to modern if we can't detect
-                                 end
+        yield path
+      end
     end
 
+    # Create temp files for input and output
     def with_temp_files(content, input_format, output_format)
       Dir.mktmpdir do |dir|
         input_path = File.join(dir, "image.#{input_format}")
@@ -146,48 +251,14 @@ plain: false)
       end
     end
 
-    def query_integer(content, format, options)
-      query(content, format, options).to_f.round
-    end
-
-    def query(content, format, options)
-      exe = inkscape_path_or_raise_error
-
-      with_temp_file(content, format) do |path|
-        cmd = "#{external_path(exe)} #{options} #{external_path(path)}"
-
-        # Pass environment to disable display on non-Windows systems
-        env = headless_environment
-        call = SystemCall.new(cmd, env: env).call
-        raise_query_error(call) if call.stdout.empty?
-
-        call.stdout
-      end
-    end
-
-    def with_temp_file(content, extension)
-      Dir.mktmpdir do |dir|
-        path = File.join(dir, "image.#{extension}")
-        File.binwrite(path, content)
-
-        yield path
-      end
-    end
-
-    def raise_query_error(call)
+    # Raise query error with details
+    def raise_query_error(result)
       raise Vectory::InkscapeQueryError,
             "Could not query with Inkscape. " \
-            "Inkscape cmd: '#{call.cmd}',\n" \
-            "status: '#{call.status}',\n" \
-            "stdout: '#{call.stdout.strip}',\n" \
-            "stderr: '#{call.stderr.strip}'."
-    end
-
-    # Returns environment variables for headless operation
-    # On non-Windows systems, disable DISPLAY to prevent X11/GDK initialization
-    def headless_environment
-      # On macOS/Linux, disable DISPLAY to prevent Gdk/X11 warnings
-      Platform.windows? ? {} : { "DISPLAY" => "" }
+            "Command: '#{result.command}',\n" \
+            "Exit status: '#{result.status}',\n" \
+            "stdout: '#{result.stdout.strip}',\n" \
+            "stderr: '#{result.stderr.strip}'."
     end
 
     # Format paths for command execution on current platform
