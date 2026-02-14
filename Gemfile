@@ -18,6 +18,9 @@ gem "minitest", "< 6.0"
 # Pin activesupport to version compatible with Ruby 3.1
 gem "activesupport", "< 8.0"
 
+# Pin public_suffix to version compatible with Ruby 3.1
+gem "public_suffix", "< 6.0"
+
 gem "canon", "~> 0.1.7"
 gem "openssl", "~> 3.0"
 gem "rake"
