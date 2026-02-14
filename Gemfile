@@ -21,6 +21,9 @@ gem "activesupport", "< 8.0"
 # Pin public_suffix to version compatible with Ruby 3.1
 gem "public_suffix", "< 6.0"
 
+# Pin nokogiri to version compatible with Ruby 3.1
+gem "nokogiri", "< 1.18"
+
 gem "canon", "~> 0.1.7"
 gem "openssl", "~> 3.0"
 gem "rake"
