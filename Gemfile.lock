@@ -1,0 +1,209 @@
+GIT
+  remote: https://github.com/ukiryu/ukiryu.git
+  revision: b5e4653e52356f0ab253e2c791d3b431bc16886a
+  ref: b5e4653e52356f0ab253e2c791d3b431bc16886a
+  specs:
+    ukiryu (0.1.7)
+      git (~> 3.0)
+      json-schema
+      lutaml-model (~> 0.7.0)
+      lutaml-xsd (~> 0.1.0)
+      thor
+      versionian (~> 0.1)
+
+PATH
+  remote: .
+  specs:
+    vectory (0.8.2)
+      base64
+      emf2svg
+      image_size (>= 3.2.0)
+      marcel (~> 1.0)
+      nokogiri (~> 1.14)
+      thor (~> 1.0)
+      ukiryu (>= 0.1.6)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activesupport (8.1.2)
+      base64
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.3.1)
+      connection_pool (>= 2.2.5)
+      drb
+      i18n (>= 1.6, < 2)
+      json
+      logger (>= 1.4.2)
+      minitest (>= 5.1)
+      securerandom (>= 0.3)
+      tzinfo (~> 2.0, >= 2.0.5)
+      uri (>= 0.13.1)
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
+    ast (2.4.3)
+    base64 (0.3.0)
+    bigdecimal (4.0.1)
+    canon (0.1.13)
+      diff-lcs
+      json
+      moxml
+      nokogiri
+      paint
+      table_tennis
+      thor
+      unicode-name
+    concurrent-ruby (1.3.6)
+    connection_pool (3.0.2)
+    csv (3.3.5)
+    diff-lcs (1.6.2)
+    drb (2.2.3)
+    emf2svg (1.4.3-aarch64-linux)
+      ffi (~> 1.0)
+    emf2svg (1.4.3-arm64-darwin)
+      ffi (~> 1.0)
+    emf2svg (1.4.3-x86_64-darwin)
+      ffi (~> 1.0)
+    emf2svg (1.4.3-x86_64-linux)
+      ffi (~> 1.0)
+    ffi (1.17.3-aarch64-linux-gnu)
+    ffi (1.17.3-aarch64-linux-musl)
+    ffi (1.17.3-arm64-darwin)
+    ffi (1.17.3-x86_64-darwin)
+    ffi (1.17.3-x86_64-linux-gnu)
+    ffi (1.17.3-x86_64-linux-musl)
+    git (3.1.1)
+      activesupport (>= 5.0)
+      addressable (~> 2.8)
+      process_executer (~> 1.3)
+      rchardet (~> 1.9)
+    i18n (1.14.8)
+      concurrent-ruby (~> 1.0)
+    image_size (3.4.0)
+    json (2.18.1)
+    json-schema (6.1.0)
+      addressable (~> 2.8)
+      bigdecimal (>= 3.1, < 5)
+    language_server-protocol (3.17.0.5)
+    lint_roller (1.1.0)
+    logger (1.7.0)
+    lutaml-model (0.7.7)
+      activesupport
+      moxml (>= 0.1.2)
+      openssl
+      thor
+    lutaml-xsd (0.1.0)
+    marcel (1.1.0)
+    memo_wise (1.13.0)
+    minitest (6.0.1)
+      prism (~> 1.5)
+    moxml (0.1.10)
+    nokogiri (1.19.0-aarch64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.19.0-aarch64-linux-musl)
+      racc (~> 1.4)
+    nokogiri (1.19.0-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-musl)
+      racc (~> 1.4)
+    openssl (3.3.2)
+    paint (2.3.0)
+    parallel (1.27.0)
+    parser (3.3.10.1)
+      ast (~> 2.4.1)
+      racc
+    prism (1.9.0)
+    process_executer (1.3.0)
+    public_suffix (7.0.2)
+    racc (1.8.1)
+    rainbow (3.1.1)
+    rake (13.3.1)
+    rchardet (1.10.0)
+    regexp_parser (2.11.3)
+    rspec (3.13.2)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
+    rspec-core (3.13.6)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.7)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-support (3.13.7)
+    rubocop (1.84.2)
+      json (~> 2.3)
+      language_server-protocol (~> 3.17.0.2)
+      lint_roller (~> 1.1.0)
+      parallel (~> 1.10)
+      parser (>= 3.3.0.2)
+      rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 2.9.3, < 3.0)
+      rubocop-ast (>= 1.49.0, < 2.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (>= 2.4.0, < 4.0)
+    rubocop-ast (1.49.0)
+      parser (>= 3.3.7.2)
+      prism (~> 1.7)
+    rubocop-performance (1.26.1)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.75.0, < 2.0)
+      rubocop-ast (>= 1.47.1, < 2.0)
+    rubocop-rake (0.7.1)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.72.1)
+    rubocop-rspec (3.9.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.81)
+    ruby-progressbar (1.13.0)
+    securerandom (0.4.1)
+    singleton (0.3.0)
+    table_tennis (0.0.7)
+      csv (~> 3.3)
+      ffi (~> 1.17)
+      memo_wise (~> 1.11)
+      paint (~> 2.3)
+      unicode-display_width (~> 3.1)
+    thor (1.5.0)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
+    unicode-display_width (3.2.0)
+      unicode-emoji (~> 4.1)
+    unicode-emoji (4.2.0)
+    unicode-name (1.14.0)
+      unicode-types (~> 1.11)
+    unicode-types (1.11.0)
+    uri (1.1.1)
+    versionian (0.1.0)
+      singleton (~> 0.2)
+
+PLATFORMS
+  aarch64-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux
+  x86_64-linux-gnu
+  x86_64-linux-musl
+
+DEPENDENCIES
+  canon (~> 0.1.7)
+  openssl (~> 3.0)
+  rake
+  rspec
+  rubocop
+  rubocop-performance
+  rubocop-rake
+  rubocop-rspec
+  ukiryu!
+  vectory!
+
+BUNDLED WITH
+   2.6.9
