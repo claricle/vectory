@@ -12,15 +12,9 @@ module Vectory
   class InkscapeWrapper
     include Singleton
 
-    # Configure Ukiryu registry path
-    @registry_path = nil
-
     class << self
-      attr_accessor :registry_path
-
       def convert(content:, input_format:, output_format:, output_class:,
 plain: false)
-        configure_registry
         instance.convert(
           content: content,
           input_format: input_format,
@@ -29,47 +23,6 @@ plain: false)
           plain: plain,
         )
       end
-
-      # Configure the Ukiryu registry path
-      def configure_registry
-        return if @registry_configured
-
-        # Explicit path takes precedence
-        if @registry_path
-          Ukiryu::Register.default_register_path = @registry_path
-        elsif ENV["UKIRYU_REGISTER"]
-          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTER"]
-        else
-          # Ensure register is available (auto-clones if needed)
-          ensure_register_available
-        end
-
-        @registry_configured = true
-      end
-
-      private
-
-      # Ensure the ukiryu register is available
-      # This triggers the auto-clone mechanism if needed
-      def ensure_register_available
-        # First check if UKIRYU_REGISTER is set and directory exists
-        env_path = ENV["UKIRYU_REGISTER"]
-        if env_path && Dir.exist?(env_path)
-          Ukiryu::Register.default_register_path = env_path
-          return
-        end
-
-        # Try to use RegisterAutoManager's auto-clone mechanism
-        begin
-          register_path = Ukiryu::RegisterAutoManager.register_path
-          if register_path && Dir.exist?(register_path)
-            Ukiryu::Register.default_register_path = register_path
-            return
-          end
-        rescue StandardError => e
-          # Auto-clone failed
-          warn "[Vectory] RegisterAutoManager failed: #{e.message}"
-        end
     end
 
     def convert(content:, input_format:, output_format:, output_class:,

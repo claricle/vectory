@@ -11,14 +11,8 @@ module Vectory
   class GhostscriptWrapper
     SUPPORTED_INPUT_FORMATS = %w[ps eps].freeze
 
-    # Configure Ukiryu registry path
-    @registry_path = nil
-
     class << self
-      attr_accessor :registry_path
-
       def available?
-        configure_registry
         ghostscript_tool
         true
       rescue GhostscriptNotFoundError
@@ -35,7 +29,6 @@ module Vectory
       end
 
       def convert(content, options = {})
-        configure_registry
         raise GhostscriptNotFoundError unless available?
 
         eps_crop = options.fetch(:eps_crop, false)
@@ -100,21 +93,6 @@ module Vectory
       end
 
       private
-
-      # Configure the Ukiryu registry path
-      def configure_registry
-        return if @registry_configured
-
-        # Explicit path takes precedence
-        if @registry_path
-          Ukiryu::Register.default_register_path = @registry_path
-        elsif ENV["UKIRYU_REGISTER"]
-          Ukiryu::Register.default_register_path = ENV["UKIRYU_REGISTER"]
-        else
-          # Ensure register is available (auto-clones if needed)
-
-      @registry_configured = true
-      end
 
       # Get the Ghostscript tool from Ukiryu
       def ghostscript_tool
