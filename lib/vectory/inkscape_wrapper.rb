@@ -67,41 +67,9 @@ plain: false)
             return
           end
         rescue StandardError => e
-          # Auto-clone failed, try manual clone
+          # Auto-clone failed
           warn "[Vectory] RegisterAutoManager failed: #{e.message}"
         end
-
-        # If we get here, try manual clone to a default location
-        manual_clone_register
-      end
-
-      # Manually clone the register if all else fails
-      def manual_clone_register
-        require "fileutils"
-
-        # Use a consistent location for the register
-        register_path = File.expand_path("~/.ukiryu/register")
-
-        return if Dir.exist?(register_path)
-
-        parent_dir = File.dirname(register_path)
-        FileUtils.mkdir_p(parent_dir) unless Dir.exist?(parent_dir)
-
-        register_url = "https://github.com/ukiryu/register"
-
-        # Try to clone using system git
-        success = system("git clone --depth 1 #{register_url} #{register_path}")
-        success ||= system('"C:\Program Files\Git\bin\git.exe" clone --depth 1 ' \
-                           "#{register_url} #{register_path}")
-
-        if success && Dir.exist?(register_path)
-          Ukiryu::Register.default_register_path = register_path
-        else
-          warn "[Vectory] Warning: Failed to clone ukiryu register"
-        end
-      rescue StandardError => e
-        warn "[Vectory] Warning: Failed to setup ukiryu register: #{e.message}"
-      end
     end
 
     def convert(content:, input_format:, output_format:, output_class:,
