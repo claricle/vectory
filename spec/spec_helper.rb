@@ -29,6 +29,13 @@ if ENV["CI"]
     puts "[VECTORY DEBUG] Register path: #{register.path}"
     puts "[VECTORY DEBUG] Register source: #{register.source}"
 
+    # Show git info
+    git_dir = File.join(register.path, ".git")
+    if Dir.exist?(git_dir)
+      git_log = `cd "#{register.path}" && git log -1 --oneline 2>&1`.strip
+      puts "[VECTORY DEBUG] Register git commit: #{git_log}"
+    end
+
     # Show ghostscript default/10.0.yaml Windows profile content
     gs_file = File.join(register.path, "tools/ghostscript/default/10.0.yaml")
     if File.exist?(gs_file)
@@ -41,6 +48,22 @@ if ENV["CI"]
       end
     else
       puts "[VECTORY DEBUG] File not found: #{gs_file}"
+    end
+
+    # Show loaded implementation version profiles
+    begin
+      impl_version = register.load_implementation_version("ghostscript", "default", "10.0.yaml")
+      if impl_version && impl_version.execution_profiles
+        puts "[VECTORY DEBUG] Loaded execution_profiles count: #{impl_version.execution_profiles.count}"
+        impl_version.execution_profiles.each do |profile|
+          profile_name = profile[:name] || profile["name"]
+          profile_inherits = profile[:inherits] || profile["inherits"]
+          profile_keys = profile.keys.inspect
+          puts "[VECTORY DEBUG] Profile '#{profile_name}' - inherits: #{profile_inherits.inspect}, keys: #{profile_keys}"
+        end
+      end
+    rescue => e
+      puts "[VECTORY DEBUG] Error loading implementation version: #{e.message}"
     end
   rescue => e
     puts "[VECTORY DEBUG] Error getting register info: #{e.message}"
