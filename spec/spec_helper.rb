@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tmpdir"
+require "fileutils"
 
 # Configure Ukiryu register path
 # On CI, force a fresh clone of the register to get the latest tool definitions
@@ -9,7 +10,10 @@ require "tmpdir"
 if ENV["CI"]
   # Use a unique temp directory to force fresh clone on each CI run
   # This bypasses any caching of ~/.ukiryu/register
-  ENV["UKIRYU_REGISTER"] = File.join(Dir.tmpdir, "ukiryu-register-#{Time.now.to_i}")
+  # Note: The directory must exist for Ukiryu to use it as a clone target
+  register_path = File.join(Dir.tmpdir, "ukiryu-register-#{Time.now.to_i}")
+  FileUtils.mkdir_p(register_path)
+  ENV["UKIRYU_REGISTER"] = register_path
 end
 
 require "vectory"
