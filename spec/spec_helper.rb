@@ -10,87 +10,10 @@ require "fileutils"
 if ENV["CI"]
   # Delete any cached register to force fresh clone
   cached_register = File.expand_path("~/.ukiryu/register")
-  if Dir.exist?(cached_register)
-    puts "[VECTORY DEBUG] Deleting cached register at: #{cached_register}"
-    FileUtils.rm_rf(cached_register)
-    puts "[VECTORY DEBUG] Cached register deleted"
-  end
-
-  # Set UKIRYU_DEBUG to see register cloning
-  ENV["UKIRYU_DEBUG"] = "1"
+  FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
 end
 
 require "vectory"
-
-# Debug: Show register info after loading
-if ENV["CI"]
-  begin
-    register = Ukiryu::Register.default
-    puts "[VECTORY DEBUG] Register path: #{register.path}"
-    puts "[VECTORY DEBUG] Register source: #{register.source}"
-
-    # Show git info
-    git_dir = File.join(register.path, ".git")
-    if Dir.exist?(git_dir)
-      git_log = `cd "#{register.path}" && git log -1 --oneline 2>&1`.strip
-      puts "[VECTORY DEBUG] Register git commit: #{git_log}"
-    end
-
-    # Show ghostscript index.yaml
-    index_file = File.join(register.path, "tools/ghostscript/index.yaml")
-    if File.exist?(index_file)
-      puts "[VECTORY DEBUG] Ghostscript index.yaml content:"
-      puts File.read(index_file).lines.first(20).join
-    end
-
-    # Show ghostscript default/10.0.yaml Windows profile content
-    gs_file = File.join(register.path, "tools/ghostscript/default/10.0.yaml")
-    if File.exist?(gs_file)
-      content = File.read(gs_file)
-      # Extract Windows profile section
-      if content =~ /(- name: windows.*?)(?=\n- name:|\nsmoke_tests:|\n\z)/m
-        windows_section = Regexp.last_match(1)
-        puts "[VECTORY DEBUG] Ghostscript Windows profile from default/10.0.yaml:"
-        puts windows_section.lines.first(15).join
-      end
-    else
-      puts "[VECTORY DEBUG] File not found: #{gs_file}"
-    end
-
-    # Show ghostscript default/9.5.yaml Windows profile content
-    gs_95_file = File.join(register.path, "tools/ghostscript/default/9.5.yaml")
-    if File.exist?(gs_95_file)
-      content = File.read(gs_95_file)
-      # Extract Windows profile section
-      if content =~ /(- name: windows.*?)(?=\n- name:|\nsmoke_tests:|\n\z)/m
-        windows_section = Regexp.last_match(1)
-        puts "[VECTORY DEBUG] Ghostscript Windows profile from default/9.5.yaml:"
-        puts windows_section.lines.first(15).join
-      end
-    else
-      puts "[VECTORY DEBUG] File not found: #{gs_95_file}"
-    end
-
-    # Show loaded implementation version profiles
-    begin
-      impl_version = register.load_implementation_version("ghostscript", "default", "10.0.yaml")
-      if impl_version && impl_version.execution_profiles
-        puts "[VECTORY DEBUG] Loaded from 10.0.yaml - execution_profiles count: #{impl_version.execution_profiles.count}"
-        impl_version.execution_profiles.each do |profile|
-          profile_name = profile[:name] || profile["name"]
-          profile_inherits = profile[:inherits] || profile["inherits"]
-          profile_keys = profile.keys.inspect
-          puts "[VECTORY DEBUG] Profile '#{profile_name}' - inherits: #{profile_inherits.inspect}, keys: #{profile_keys}"
-        end
-      end
-    rescue => e
-      puts "[VECTORY DEBUG] Error loading implementation version: #{e.message}"
-    end
-  rescue => e
-    puts "[VECTORY DEBUG] Error getting register info: #{e.message}"
-  end
-end
-
 require "rspec/matchers"
 require "canon"
 
