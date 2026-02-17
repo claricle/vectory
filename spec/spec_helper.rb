@@ -36,6 +36,13 @@ if ENV["CI"]
       puts "[VECTORY DEBUG] Register git commit: #{git_log}"
     end
 
+    # Show ghostscript index.yaml
+    index_file = File.join(register.path, "tools/ghostscript/index.yaml")
+    if File.exist?(index_file)
+      puts "[VECTORY DEBUG] Ghostscript index.yaml content:"
+      puts File.read(index_file).lines.first(20).join
+    end
+
     # Show ghostscript default/10.0.yaml Windows profile content
     gs_file = File.join(register.path, "tools/ghostscript/default/10.0.yaml")
     if File.exist?(gs_file)
@@ -43,18 +50,32 @@ if ENV["CI"]
       # Extract Windows profile section
       if content =~ /(- name: windows.*?)(?=\n- name:|\nsmoke_tests:|\n\z)/m
         windows_section = Regexp.last_match(1)
-        puts "[VECTORY DEBUG] Ghostscript Windows profile from file:"
+        puts "[VECTORY DEBUG] Ghostscript Windows profile from default/10.0.yaml:"
         puts windows_section.lines.first(15).join
       end
     else
       puts "[VECTORY DEBUG] File not found: #{gs_file}"
     end
 
+    # Show ghostscript default/9.5.yaml Windows profile content
+    gs_95_file = File.join(register.path, "tools/ghostscript/default/9.5.yaml")
+    if File.exist?(gs_95_file)
+      content = File.read(gs_95_file)
+      # Extract Windows profile section
+      if content =~ /(- name: windows.*?)(?=\n- name:|\nsmoke_tests:|\n\z)/m
+        windows_section = Regexp.last_match(1)
+        puts "[VECTORY DEBUG] Ghostscript Windows profile from default/9.5.yaml:"
+        puts windows_section.lines.first(15).join
+      end
+    else
+      puts "[VECTORY DEBUG] File not found: #{gs_95_file}"
+    end
+
     # Show loaded implementation version profiles
     begin
       impl_version = register.load_implementation_version("ghostscript", "default", "10.0.yaml")
       if impl_version && impl_version.execution_profiles
-        puts "[VECTORY DEBUG] Loaded execution_profiles count: #{impl_version.execution_profiles.count}"
+        puts "[VECTORY DEBUG] Loaded from 10.0.yaml - execution_profiles count: #{impl_version.execution_profiles.count}"
         impl_version.execution_profiles.each do |profile|
           profile_name = profile[:name] || profile["name"]
           profile_inherits = profile[:inherits] || profile["inherits"]
