@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 # Configure Ukiryu register path
-# On CI, clear the register cache to get the latest tool definitions with
-# the Windows profile fix (inherits: unix)
+# On CI, force a fresh clone of the register to get the latest tool definitions
+# with the Windows profile fix (inherits: unix)
+# This must be set BEFORE Ukiryu is loaded
 if ENV["CI"]
-  require "fileutils"
-  # Delete cached register to force fresh clone with latest fixes
-  register_cache = File.expand_path("~/.ukiryu/register")
-  FileUtils.rm_rf(register_cache) if Dir.exist?(register_cache)
+  # Use a unique temp directory to force fresh clone on each CI run
+  # This bypasses any caching of ~/.ukiryu/register
+  ENV["UKIRYU_REGISTER"] = File.join(Dir.tmpdir, "ukiryu-register-#{Time.now.to_i}")
 end
 
 require "vectory"
-require "tmpdir"
 require "rspec/matchers"
 require "canon"
 
