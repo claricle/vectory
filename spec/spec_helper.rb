@@ -6,14 +6,11 @@ require "fileutils"
 # Configure Ukiryu register path
 # On CI, force a fresh clone of the register to get the latest tool definitions
 # with the Windows profile fix (inherits: unix)
-# This must be set BEFORE Ukiryu is loaded
+# This must be done BEFORE Ukiryu is loaded
 if ENV["CI"]
-  # Use a unique temp directory to force fresh clone on each CI run
-  # This bypasses any caching of ~/.ukiryu/register
-  # Note: The directory must exist for Ukiryu to use it as a clone target
-  register_path = File.join(Dir.tmpdir, "ukiryu-register-#{Time.now.to_i}")
-  FileUtils.mkdir_p(register_path)
-  ENV["UKIRYU_REGISTER"] = register_path
+  # Delete any cached register to force fresh clone
+  cached_register = File.expand_path("~/.ukiryu/register")
+  FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
 end
 
 require "vectory"
