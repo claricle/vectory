@@ -1,8 +1,14 @@
 # frozen_string_literal: true
 
-# Configure Ukiryu registry path for local development
-# This is needed because we use a local path dependency for ukiryu in the Gemfile
-ENV["UKIRYU_REGISTRY"] ||= File.expand_path("../../../ukiryu/register", __dir__)
+# Configure Ukiryu register path
+# On CI, clear the register cache to get the latest tool definitions with
+# the Windows profile fix (inherits: unix)
+if ENV["CI"]
+  require "fileutils"
+  # Delete cached register to force fresh clone with latest fixes
+  register_cache = File.expand_path("~/.ukiryu/register")
+  FileUtils.rm_rf(register_cache) if Dir.exist?(register_cache)
+end
 
 require "vectory"
 require "tmpdir"
