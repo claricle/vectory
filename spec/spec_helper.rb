@@ -10,10 +10,43 @@ require "fileutils"
 if ENV["CI"]
   # Delete any cached register to force fresh clone
   cached_register = File.expand_path("~/.ukiryu/register")
-  FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
+  if Dir.exist?(cached_register)
+    puts "[VECTORY DEBUG] Deleting cached register at: #{cached_register}"
+    FileUtils.rm_rf(cached_register)
+    puts "[VECTORY DEBUG] Cached register deleted"
+  end
+
+  # Set UKIRYU_DEBUG to see register cloning
+  ENV["UKIRYU_DEBUG"] = "1"
 end
 
 require "vectory"
+
+# Debug: Show register info after loading
+if ENV["CI"]
+  begin
+    register = Ukiryu::Register.default
+    puts "[VECTORY DEBUG] Register path: #{register.path}"
+    puts "[VECTORY DEBUG] Register source: #{register.source}"
+
+    # Show ghostscript default/10.0.yaml Windows profile content
+    gs_file = File.join(register.path, "tools/ghostscript/default/10.0.yaml")
+    if File.exist?(gs_file)
+      content = File.read(gs_file)
+      # Extract Windows profile section
+      if content =~ /(- name: windows.*?)(?=\n- name:|\nsmoke_tests:|\n\z)/m
+        windows_section = Regexp.last_match(1)
+        puts "[VECTORY DEBUG] Ghostscript Windows profile from file:"
+        puts windows_section.lines.first(15).join
+      end
+    else
+      puts "[VECTORY DEBUG] File not found: #{gs_file}"
+    end
+  rescue => e
+    puts "[VECTORY DEBUG] Error getting register info: #{e.message}"
+  end
+end
+
 require "rspec/matchers"
 require "canon"
 
