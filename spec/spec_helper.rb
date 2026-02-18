@@ -13,7 +13,10 @@ if ENV["CI"]
   FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
 
   # Enable Vectory debug output on Windows CI to diagnose issues
-  ENV["VECTORY_DEBUG"] = "true" if Gem.win_platform?
+  # Use RUBY_PLATFORM check since Gem.win_platform? might not be available yet
+  if RUBY_PLATFORM =~ /mswin|mingw|cygwin/
+    ENV["VECTORY_DEBUG"] = "true"
+  end
 end
 
 require "vectory"

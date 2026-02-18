@@ -116,12 +116,16 @@ module Vectory
         plain: true,
       )
     rescue Vectory::ConversionError => e
+      # Always log the error for debugging on CI
+      warn "[VECTORY] PDF → SVG failed: #{e.message[0..100]}" if ENV["CI"]
+      warn "[VECTORY] Checking for 'Output file not found': #{e.message.include?('Output file not found')}" if ENV["CI"]
+
       # Check if this is the "Output file not found" error (Inkscape PDF import bug)
       if e.message.include?("Output file not found")
         # Fall back to PDF → EPS (Ghostscript) → SVG (Inkscape)
-        warn "[VECTORY DEBUG] PDF direct import failed, trying PDF → EPS → SVG fallback" if ENV["VECTORY_DEBUG"]
+        warn "[VECTORY] Attempting fallback: PDF → EPS → SVG" if ENV["VECTORY_DEBUG"] || ENV["CI"]
         eps_content = GhostscriptWrapper.pdf_to_eps(content)
-        warn "[VECTORY DEBUG] PDF → EPS conversion succeeded, now trying EPS → SVG" if ENV["VECTORY_DEBUG"]
+        warn "[VECTORY] PDF → EPS succeeded, now trying EPS → SVG" if ENV["VECTORY_DEBUG"] || ENV["CI"]
         return InkscapeWrapper.convert(
           content: eps_content,
           input_format: :eps,
