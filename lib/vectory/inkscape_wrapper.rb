@@ -168,8 +168,37 @@ plain: false)
         output_path = File.join(dir, "image.#{output_format}")
         File.binwrite(input_path, content)
 
-        yield input_path, output_path
+        begin
+          yield input_path, output_path
+        ensure
+          # On Windows, aggressively clean up temp files to avoid ENOTEMPTY errors
+          # caused by Inkscape leaving behind lock files or hanging processes
+          cleanup_temp_dir(dir) if Platform.windows?
+        end
       end
+    end
+
+    # Aggressively clean up temp directory on Windows
+    # Handles cases where Inkscape leaves behind files or processes
+    def cleanup_temp_dir(dir)
+      # Give processes a moment to release file handles
+      sleep(0.1)
+
+      # Try to remove all files in the directory
+      Dir.glob(File.join(dir, "**", "*")).reverse_each do |file|
+        File.delete(file) if File.file?(file)
+      rescue Errno::EACCES, Errno::ENOENT
+        # File may be locked or already deleted, ignore
+      end
+
+      # Try to remove subdirectories
+      Dir.glob(File.join(dir, "**", "*")).reverse_each do |path|
+        Dir.rmdir(path) if File.directory?(path)
+      rescue Errno::EACCES, Errno::ENOENT, Errno::ENOTEMPTY
+        # Directory may be locked or not empty, ignore
+      end
+    rescue StandardError
+      # Best effort cleanup, don't raise
     end
 
     # Raise query error with details

@@ -6,6 +6,7 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2emf/ref.emf" }
 
     it "returns emf content" do
+      skip_emf_on_windows
       expect(described_class.from_path(input).to_emf.content)
         .to be_emf
     end
@@ -60,6 +61,7 @@ RSpec.describe Vectory::Svg do
     let(:input) { "spec/examples/svg/inline.xml" }
 
     it "can be converted to emf" do
+      skip_emf_on_windows
       expect(described_class.from_node(node).to_emf).to be_a(Vectory::Emf)
     end
   end
