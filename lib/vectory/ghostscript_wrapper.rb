@@ -92,6 +92,66 @@ module Vectory
         end
       end
 
+      # Convert PDF content to PostScript
+      #
+      # This is useful as a fallback when Inkscape's PDF import fails.
+      # Ghostscript can reliably convert PDF to EPS, and Inkscape can then
+      # import the EPS file.
+      #
+      # @param pdf_content [String] the PDF content to convert
+      # @return [String] the EPS content
+      # @raise [Vectory::ConversionError] if conversion fails
+      # @raise [Vectory::GhostscriptNotFoundError] if Ghostscript is not available
+      def pdf_to_eps(pdf_content)
+        raise GhostscriptNotFoundError unless available?
+
+        input_file = Tempfile.new(["pdf_input", ".pdf"])
+        output_file = Tempfile.new(["eps_output", ".eps"])
+
+        begin
+          input_file.binmode
+          input_file.write(pdf_content)
+          input_file.flush
+          input_file.close
+          output_file.close
+
+          tool = ghostscript_tool
+          params = {
+            inputs: [input_file.path],
+            device: :eps2write,
+            output: output_file.path,
+            batch: true,
+            no_pause: true,
+            quiet: true,
+          }
+
+          result = tool.execute(:convert,
+                                execution_timeout: Configuration.instance.timeout,
+                                **params)
+
+          unless result.success?
+            raise ConversionError,
+                  "GhostScript PDF to EPS conversion failed. " \
+                  "Command: #{result.command}, " \
+                  "Exit status: #{result.status}, " \
+                  "stdout: '#{result.stdout.strip}', " \
+                  "stderr: '#{result.stderr.strip}'"
+          end
+
+          unless File.exist?(output_file.path)
+            raise ConversionError,
+                  "GhostScript did not create output file: #{output_file.path}"
+          end
+
+          File.binread(output_file.path)
+        ensure
+          input_file.close unless input_file.closed?
+          input_file.unlink
+          output_file.close unless output_file.closed?
+          output_file.unlink
+        end
+      end
+
       private
 
       # Get the Ghostscript tool from Ukiryu
