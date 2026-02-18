@@ -11,6 +11,9 @@ if ENV["CI"]
   # Delete any cached register to force fresh clone
   cached_register = File.expand_path("~/.ukiryu/register")
   FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
+
+  # Enable Vectory debug output on Windows CI to diagnose issues
+  ENV["VECTORY_DEBUG"] = "true" if Gem.win_platform?
 end
 
 require "vectory"

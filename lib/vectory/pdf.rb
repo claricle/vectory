@@ -35,6 +35,7 @@ module Vectory
     rescue Vectory::ConversionError => e
       if e.message.include?("Output file not found")
         # Fallback: PDF → EPS (Ghostscript) → EPS (Inkscape)
+        warn "[VECTORY DEBUG] PDF direct import failed, trying PDF → EPS → EPS fallback" if ENV["VECTORY_DEBUG"]
         intermediate_eps = GhostscriptWrapper.pdf_to_eps(content)
         return InkscapeWrapper.convert(
           content: intermediate_eps,
@@ -57,6 +58,7 @@ module Vectory
     rescue Vectory::ConversionError => e
       if e.message.include?("Output file not found")
         # Fallback: PDF → EPS (Ghostscript) → PS (Inkscape)
+        warn "[VECTORY DEBUG] PDF direct import failed, trying PDF → EPS → PS fallback" if ENV["VECTORY_DEBUG"]
         intermediate_eps = GhostscriptWrapper.pdf_to_eps(content)
         return InkscapeWrapper.convert(
           content: intermediate_eps,
@@ -79,6 +81,7 @@ module Vectory
     rescue Vectory::ConversionError => e
       if e.message.include?("Output file not found")
         # Fallback: PDF → EPS (Ghostscript) → EMF (Inkscape)
+        warn "[VECTORY DEBUG] PDF direct import failed, trying PDF → EPS → EMF fallback" if ENV["VECTORY_DEBUG"]
         intermediate_eps = GhostscriptWrapper.pdf_to_eps(content)
         return InkscapeWrapper.convert(
           content: intermediate_eps,
@@ -116,7 +119,9 @@ module Vectory
       # Check if this is the "Output file not found" error (Inkscape PDF import bug)
       if e.message.include?("Output file not found")
         # Fall back to PDF → EPS (Ghostscript) → SVG (Inkscape)
+        warn "[VECTORY DEBUG] PDF direct import failed, trying PDF → EPS → SVG fallback" if ENV["VECTORY_DEBUG"]
         eps_content = GhostscriptWrapper.pdf_to_eps(content)
+        warn "[VECTORY DEBUG] PDF → EPS conversion succeeded, now trying EPS → SVG" if ENV["VECTORY_DEBUG"]
         return InkscapeWrapper.convert(
           content: eps_content,
           input_format: :eps,
