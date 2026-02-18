@@ -119,6 +119,10 @@ RSpec.describe Vectory::Eps do
         allow(Vectory::GhostscriptWrapper).to receive(:convert)
           .and_return("fake pdf content")
 
+        # Also make pdf_to_eps fail (used in fallback)
+        allow(Vectory::GhostscriptWrapper).to receive(:pdf_to_eps)
+          .and_raise(Vectory::ConversionError, "Ghostscript fallback failed")
+
         # Make Inkscape fail
         converter = instance_double(Vectory::InkscapeWrapper)
         allow(Vectory::InkscapeWrapper).to receive(:instance).and_return(converter)
@@ -129,7 +133,7 @@ RSpec.describe Vectory::Eps do
       it "propagates error from Inkscape to to_svg" do
         expect do
           eps.to_svg
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
+        end.to raise_error(Vectory::ConversionError, /Ghostscript fallback failed/)
       end
     end
   end

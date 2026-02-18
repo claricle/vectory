@@ -170,7 +170,9 @@ RSpec.describe Vectory::CLI do
 
       it "returns conversion error" do
         with_tmp_dir do |dir|
-          expect(Vectory::InkscapeWrapper.instance).to receive(:convert)
+          # Mock Inkscape to fail - this will be called at least once
+          # (may be called multiple times due to PDF fallback mechanism)
+          allow(Vectory::InkscapeWrapper.instance).to receive(:convert)
             .and_raise(Vectory::ConversionError)
 
           output = File.join(dir, "output.#{format}")
