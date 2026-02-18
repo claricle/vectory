@@ -182,7 +182,7 @@ plain: false)
     # Handles cases where Inkscape leaves behind files or processes
     def cleanup_temp_dir(dir)
       # Give processes a moment to release file handles
-      sleep(0.1)
+      sleep(0.2)
 
       # Try to remove all files in the directory
       Dir.glob(File.join(dir, "**", "*")).reverse_each do |file|

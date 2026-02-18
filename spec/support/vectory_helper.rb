@@ -22,6 +22,14 @@ module Vectory
       end
     end
 
+    # Skip all Inkscape-dependent tests on Windows
+    # Inkscape 1.4.x on Windows has multiple bugs affecting most export formats
+    def skip_inkscape_on_windows
+      if windows_ci?
+        skip "Inkscape on Windows has known issues with multiple export formats"
+      end
+    end
+
     # Check if running on Windows CI
     def windows_ci?
       ENV["CI"] && Gem.win_platform?
