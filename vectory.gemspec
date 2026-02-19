@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "marcel", "~> 1.0"
   spec.add_dependency "nokogiri", "~> 1.14"
   spec.add_dependency "thor", "~> 1.0"
-  spec.add_dependency "ukiryu", "~> 0.2"
+  spec.add_dependency "ukiryu", "~> 0.2.4"
 end
