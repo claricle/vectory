@@ -1,37 +1,13 @@
-# Windows CI Known Issues
+# Windows CI Issues - RESOLVED
 
-## Two Issues Identified
+## Issues Fixed
 
-### 1. Path Separator Issue (FIXED)
+### 1. Path Separator Issue ✅
+**Problem:** Ruby's `File.join` creates mixed separator paths on Windows.
 
-**Problem:** Ruby's `File.join` uses forward slashes (`/`) on all platforms, including Windows. This creates paths with mixed separators:
-```
-C:\Program Files\Inkscape\bin/inkscape.EXE
-```
+**Solution:** Fixed in ukiryu 0.2.2
 
-**Solution:** Fixed in ukiryu PR: https://github.com/ukiryu/ukiryu/pull/6
+### 2. Inkscape PDF Import Issue ✅
+**Problem:** Inkscape 1.4.2 returned exit 0 but didn't create output files.
 
-**Status:** ✅ Fixed - executable paths now show all backslashes: `C:\Program Files\Inkscape\bin\inkscape.EXE`
-
-### 2. Inkscape 1.4.2 PDF Import Issue
-
-**Problem:** Inkscape 1.4.2 on Windows returns exit code 0 but doesn't create output files when importing PDF.
-
-**Solution:** Inkscape 1.4.3 has been released that fixes this issue.
-
-**Status:** ⏳ Pending - CI currently installs Inkscape 1.4.2. Need to update CI to use 1.4.3.
-
-## Current Test Results
-
-| Platform | Status |
-|----------|--------|
-| macOS | ✅ Pass |
-| Ubuntu | ✅ Pass |
-| Windows | ❌ 28 failures (Inkscape 1.4.2 PDF import issue) |
-
-## Next Steps
-
-1. Merge ukiryu PR #6 (path separator fix)
-2. Update CI to install Inkscape 1.4.3 (or later)
-3. Remove test skips once Inkscape is updated
-
+**Solution:** Fixed in Inkscape 1.4.3 (now installed by CI)

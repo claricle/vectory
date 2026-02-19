@@ -14,7 +14,3 @@ gem "rubocop"
 gem "rubocop-performance"
 gem "rubocop-rake"
 gem "rubocop-rspec"
-
-# Use ukiryu PR branch for testing Windows path separator fix
-# https://github.com/ukiryu/ukiryu/pull/6
-gem "ukiryu", github: "ukiryu/ukiryu", branch: "fix/windows-path-separators"
