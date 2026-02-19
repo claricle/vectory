@@ -3,7 +3,6 @@ require "spec_helper"
 RSpec.describe Vectory::Eps do
   shared_examples "converter" do |format|
     it "returns content of a chosen format" do
-      skip_inkscape_on_windows
       to_format_method = "to_#{format}"
       content = described_class.from_path(input)
         .public_send(to_format_method)
@@ -79,7 +78,6 @@ RSpec.describe Vectory::Eps do
     let(:input) { "spec/examples/eps/inline.xml" }
 
     it "can be converted to svg" do
-      skip_inkscape_on_windows
       expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end

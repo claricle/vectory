@@ -6,7 +6,6 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2emf/ref.emf" }
 
     it "returns emf content" do
-      skip_emf_on_windows
       expect(described_class.from_path(input).to_emf.content)
         .to be_emf
     end
@@ -17,7 +16,6 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2eps/ref.eps" }
 
     it "returns eps content" do
-      skip_inkscape_on_windows
       expect(described_class.from_path(input).to_eps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
@@ -28,7 +26,6 @@ RSpec.describe Vectory::Svg do
     let(:reference) { "spec/examples/svg2ps/ref.ps" }
 
     it "returns ps content" do
-      skip_inkscape_on_windows
       expect(described_class.from_path(input).to_ps.content)
         .to be_equivalent_eps_to File.read(reference)
     end
@@ -63,7 +60,6 @@ RSpec.describe Vectory::Svg do
     let(:input) { "spec/examples/svg/inline.xml" }
 
     it "can be converted to emf" do
-      skip_emf_on_windows
       expect(described_class.from_node(node).to_emf).to be_a(Vectory::Emf)
     end
   end

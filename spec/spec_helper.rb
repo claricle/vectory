@@ -14,7 +14,7 @@ if ENV["CI"]
 
   # Enable Vectory debug output on Windows CI to diagnose issues
   # Use RUBY_PLATFORM check since Gem.win_platform? might not be available yet
-  if RUBY_PLATFORM =~ /mswin|mingw|cygwin/
+  if RUBY_PLATFORM.match?(/mswin|mingw|cygwin/)
     ENV["VECTORY_DEBUG"] = "true"
   end
 end

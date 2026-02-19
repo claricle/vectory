@@ -10,7 +10,6 @@ RSpec.describe Vectory::CLI do
   describe "#convert" do
     shared_examples "converter" do |format|
       it "creates file of a chosen format" do
-        skip_inkscape_on_windows
         matcher = case format
                   when "eps", "ps" then "be_eps"
                   when "svg" then "be_svg"
@@ -240,7 +239,6 @@ RSpec.describe Vectory::CLI do
       let(:format) { "emf" }
 
       it "uses input filename with a new extension and writes to current dir" do
-        skip_inkscape_on_windows
         in_tmp_dir do |dir|
           status = described_class.start(["-f", format, input])
 

@@ -9,7 +9,6 @@ RSpec.describe Vectory::Ps do
     # let(:reference) { "spec/examples/ps2eps/ref.eps" }
 
     it "returns eps content" do
-      skip_inkscape_on_windows
       expect(described_class.from_path(input).to_eps.content)
         .to be_eps
       # Commented out due to Cairo version differences between environments
@@ -23,7 +22,6 @@ RSpec.describe Vectory::Ps do
     let(:reference) { "spec/examples/ps2emf/ref.emf" }
 
     it "returns emf content" do
-      skip_inkscape_on_windows
       expect(described_class.from_path(input).to_emf.content)
         .to be_emf
     end
@@ -34,7 +32,6 @@ RSpec.describe Vectory::Ps do
     # let(:reference) { "spec/examples/ps2svg/ref.svg" }
 
     it "returns svg content" do
-      skip_inkscape_on_windows
       expect(described_class.from_path(input).to_svg.content)
         .to be_svg
       # Commented out due to Cairo version differences between environments
@@ -73,7 +70,6 @@ RSpec.describe Vectory::Ps do
     let(:input) { "spec/examples/ps/inline.xml" }
 
     it "can be converted to svg" do
-      skip_inkscape_on_windows
       expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
     end
   end

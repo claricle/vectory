@@ -60,7 +60,7 @@ RSpec.describe Vectory::Pdf do
         svg_output = Vectory::Svg.new("<svg></svg>")
         allow(converter).to receive(:convert)
           .with(
-            hash_including(input_format: :eps, output_format: :svg, plain: true)
+            hash_including(input_format: :eps, output_format: :svg, plain: true),
           )
           .and_return(svg_output)
 
@@ -68,7 +68,7 @@ RSpec.describe Vectory::Pdf do
         eps_output = Vectory::Eps.new("%!PS-Adobe-3.0 EPSF-3.0")
         allow(converter).to receive(:convert)
           .with(
-            hash_including(input_format: :eps, output_format: :eps)
+            hash_including(input_format: :eps, output_format: :eps),
           )
           .and_return(eps_output)
 
@@ -76,7 +76,7 @@ RSpec.describe Vectory::Pdf do
         ps_output = Vectory::Ps.new("%!PS-Adobe-3.0")
         allow(converter).to receive(:convert)
           .with(
-            hash_including(input_format: :eps, output_format: :ps)
+            hash_including(input_format: :eps, output_format: :ps),
           )
           .and_return(ps_output)
 
@@ -84,7 +84,7 @@ RSpec.describe Vectory::Pdf do
         emf_output = Vectory::Emf.new("\x01\x00\x00\x00")
         allow(converter).to receive(:convert)
           .with(
-            hash_including(input_format: :eps, output_format: :emf)
+            hash_including(input_format: :eps, output_format: :emf),
           )
           .and_return(emf_output)
       end

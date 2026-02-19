@@ -66,7 +66,7 @@ module Vectory
         warn "[VECTORY] Attempting fallback: PDF → EPS → #{output_format.upcase}" if fallback_logging_enabled?
         eps_content = GhostscriptWrapper.pdf_to_eps(content)
         warn "[VECTORY] PDF → EPS succeeded, now trying EPS → #{output_format.upcase}" if fallback_logging_enabled?
-        return InkscapeWrapper.convert(
+        InkscapeWrapper.convert(
           content: eps_content,
           input_format: :eps,
           output_format: output_format,
@@ -79,7 +79,7 @@ module Vectory
                            fallback_error
                          else
                            ConversionError.new(
-                             "PDF fallback conversion failed: #{fallback_error.message}"
+                             "PDF fallback conversion failed: #{fallback_error.message}",
                            )
                          end
         warn "[VECTORY] Fallback also failed: #{fallback_error.message[0..100]}" if fallback_logging_enabled?
