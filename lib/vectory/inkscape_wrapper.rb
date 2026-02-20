@@ -81,6 +81,9 @@ plain: false)
       params = {
         inputs: [input_path],
         output: output_path,
+        # Explicitly disable batch_process for headless operation
+        # Inkscape --batch-process flag forces GUI to show, which fails in headless CI
+        batch_process: false,
       }
 
       # Add format if specified (different from output extension)
