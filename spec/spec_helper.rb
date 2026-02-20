@@ -5,10 +5,10 @@ require "fileutils"
 
 # Configure Ukiryu register path
 # On CI, force a fresh clone of the register to get the latest tool definitions
-# with the Windows profile fix (inherits: unix)
+# with the batch_process fix (default: false for headless CI)
 # This must be done BEFORE Ukiryu is loaded
 if ENV["CI"]
-  # Delete any cached register to force fresh clone
+  # Delete any cached register to force fresh clone from GitHub
   cached_register = File.expand_path("~/.ukiryu/register")
   FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
 
@@ -22,6 +22,22 @@ end
 require "vectory"
 require "rspec/matchers"
 require "canon"
+
+# Debug: Log the batch_process default value to verify the register fix is applied
+if ENV["CI"] && RUBY_PLATFORM =~ /mswin|mingw|cygwin/
+  begin
+    inkscape_tool = Ukiryu::Tool.get(:inkscape)
+    export_cmd = inkscape_tool.command_profile.command("export")
+    batch_flag = export_cmd.flags&.find { |f| f.name_sym == :batch_process }
+    if batch_flag
+      puts "[VECTORY DEBUG] Inkscape batch_process default: #{batch_flag.default.inspect}"
+    else
+      puts "[VECTORY DEBUG] WARNING: batch_process flag not found in inkscape export command"
+    end
+  rescue => e
+    puts "[VECTORY DEBUG] Error checking batch_process default: #{e.message}"
+  end
+end
 
 Dir["./spec/support/**/*.rb"].sort.each { |file| require file }
 
