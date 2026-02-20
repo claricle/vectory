@@ -10,7 +10,14 @@ require "fileutils"
 if ENV["CI"]
   # Delete any cached register to force fresh clone from GitHub
   cached_register = File.expand_path("~/.ukiryu/register")
-  FileUtils.rm_rf(cached_register) if Dir.exist?(cached_register)
+  puts "[VECTORY DEBUG] Checking register at: #{cached_register}"
+  puts "[VECTORY DEBUG] Register exists: #{Dir.exist?(cached_register)}"
+
+  if Dir.exist?(cached_register)
+    puts "[VECTORY DEBUG] Deleting cached register..."
+    FileUtils.rm_rf(cached_register)
+    puts "[VECTORY DEBUG] Register deleted. Exists now: #{Dir.exist?(cached_register)}"
+  end
 
   # Enable Vectory debug output on Windows CI to diagnose issues
   # Use RUBY_PLATFORM check since Gem.win_platform? might not be available yet
@@ -27,15 +34,22 @@ require "canon"
 if ENV["CI"] && RUBY_PLATFORM =~ /mswin|mingw|cygwin/
   begin
     inkscape_tool = Ukiryu::Tool.get(:inkscape)
-    export_cmd = inkscape_tool.command_profile.command("export")
-    batch_flag = export_cmd.flags&.find { |f| f.name_sym == :batch_process }
+    # Access the command profile through the tool's profile
+    profile = inkscape_tool.profile
+    export_cmd = profile.commands&.find { |c| c.name == "export" }
+    batch_flag = export_cmd&.flags&.find { |f| f.name_sym == :batch_process }
     if batch_flag
       puts "[VECTORY DEBUG] Inkscape batch_process default: #{batch_flag.default.inspect}"
+      puts "[VECTORY DEBUG] Inkscape batch_process description: #{batch_flag.description.inspect}"
     else
       puts "[VECTORY DEBUG] WARNING: batch_process flag not found in inkscape export command"
     end
+    # Also log where the register is loaded from
+    puts "[VECTORY DEBUG] Register path: #{Ukiryu::Register.default.path}"
+    puts "[VECTORY DEBUG] Register source: #{Ukiryu::Register.default.source}"
   rescue => e
     puts "[VECTORY DEBUG] Error checking batch_process default: #{e.message}"
+    puts "[VECTORY DEBUG] Backtrace: #{e.backtrace.first(5).join("\n")}"
   end
 end
 
