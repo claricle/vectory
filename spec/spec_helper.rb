@@ -30,26 +30,44 @@ require "vectory"
 require "rspec/matchers"
 require "canon"
 
-# Debug: Log the batch_process default value to verify the register fix is applied
+# Debug: Log register information and batch_process default value
 if ENV["CI"] && RUBY_PLATFORM =~ /mswin|mingw|cygwin/
   begin
-    inkscape_tool = Ukiryu::Tool.get(:inkscape)
-    # Access the command profile through the tool's profile
-    profile = inkscape_tool.profile
-    export_cmd = profile.commands&.find { |c| c.name == "export" }
-    batch_flag = export_cmd&.flags&.find { |f| f.name_sym == :batch_process }
-    if batch_flag
-      puts "[VECTORY DEBUG] Inkscape batch_process default: #{batch_flag.default.inspect}"
-      puts "[VECTORY DEBUG] Inkscape batch_process description: #{batch_flag.description.inspect}"
+    # Check register path and source
+    register = Ukiryu::Register.default
+    puts "[VECTORY DEBUG] Register path: #{register.path}"
+    puts "[VECTORY DEBUG] Register source: #{register.source}"
+
+    # Check if the register has the fix by reading the YAML file directly
+    inkscape_yaml = File.join(register.path, "tools", "inkscape", "1.0.yaml")
+    if File.exist?(inkscape_yaml)
+      content = File.read(inkscape_yaml)
+      batch_match = content.match(/name:\s*["']?batch_process["']?\s*\n.*?default:\s*(\w+)/m)
+      if batch_match
+        puts "[VECTORY DEBUG] Inkscape YAML batch_process default: #{batch_match[1]}"
+      else
+        puts "[VECTORY DEBUG] Could not find batch_process in YAML"
+      end
     else
-      puts "[VECTORY DEBUG] WARNING: batch_process flag not found in inkscape export command"
+      puts "[VECTORY DEBUG] Inkscape YAML not found at: #{inkscape_yaml}"
     end
-    # Also log where the register is loaded from
-    puts "[VECTORY DEBUG] Register path: #{Ukiryu::Register.default.path}"
-    puts "[VECTORY DEBUG] Register source: #{Ukiryu::Register.default.source}"
+
+    # Also check the loaded tool definition
+    inkscape_tool = Ukiryu::Tool.get(:inkscape)
+    profile = inkscape_tool.instance_variable_get(:@profile)
+    if profile && profile.respond_to?(:commands) && profile.commands
+      export_cmd = profile.commands.find { |c| c.name == "export" }
+      if export_cmd && export_cmd.respond_to?(:flags) && export_cmd.flags
+        batch_flag = export_cmd.flags.find { |f| f.name_sym == :batch_process }
+        if batch_flag
+          puts "[VECTORY DEBUG] Loaded batch_process default: #{batch_flag.default.inspect}"
+          puts "[VECTORY DEBUG] Loaded batch_process description: #{batch_flag.description.inspect}"
+        end
+      end
+    end
   rescue => e
-    puts "[VECTORY DEBUG] Error checking batch_process default: #{e.message}"
-    puts "[VECTORY DEBUG] Backtrace: #{e.backtrace.first(5).join("\n")}"
+    puts "[VECTORY DEBUG] Error: #{e.class} - #{e.message}"
+    puts "[VECTORY DEBUG] Backtrace: #{e.backtrace.first(3).join("\n")}"
   end
 end
 
