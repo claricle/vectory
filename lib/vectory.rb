@@ -19,11 +19,11 @@ module Vectory
 end
 
 require_relative "vectory/errors"
+require_relative "vectory/version"
 
 # Lazy load: all other internal Vectory dependencies via autoload
 module Vectory
   # Core utilities
-  autoload :Version, "vectory/version"
   autoload :Utils, "vectory/utils"
   autoload :Platform, "vectory/platform"
 
