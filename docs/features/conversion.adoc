@@ -20,11 +20,9 @@ Inkscape handles direct conversions between SVG and other formats:
 
 * **SVG → EPS**: Export SVG to Encapsulated PostScript
 * **SVG → PS**: Export SVG to PostScript
-* **SVG → EMF**: Export SVG to Enhanced Metafile
 * **SVG → PDF**: Export SVG to PDF
 * **EPS → SVG**: Import EPS and export to SVG
 * **PS → SVG**: Import PS and export to SVG
-* **EMF → SVG**: Import EMF and export to SVG
 * **PDF → SVG**: Import PDF and export to SVG
 
 [source,ruby]
@@ -59,6 +57,9 @@ EMF files are converted using the emfsvg gem:
 # EMF to SVG conversion
 emf = Vectory::Emf.from_path("chart.emf")
 svg = emf.to_svg  # Uses emfsvg gem
+
+# SVG to EMF conversion (also emfsvg, no Inkscape needed)
+emf = Vectory::Svg.from_path("chart.svg").to_emf
 ----
 
 == Conversion Matrix
@@ -69,7 +70,7 @@ svg = emf.to_svg  # Uses emfsvg gem
 
 |SVG|EPS|Inkscape
 |SVG|PS|Inkscape
-|SVG|EMF|Inkscape
+|SVG|EMF|emfsvg gem
 |SVG|PDF|Inkscape
 
 |EPS|SVG|Ghostscript + Inkscape (two-step)

@@ -86,12 +86,6 @@ RSpec.describe Vectory::Svg do
           .and_raise(Vectory::ConversionError, "Inkscape failed")
       end
 
-      it "propagates error from to_emf" do
-        expect do
-          svg.to_emf
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
-      end
-
       it "propagates error from to_eps" do
         expect do
           svg.to_eps

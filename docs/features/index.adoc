@@ -99,7 +99,7 @@ This two-step process preserves BoundingBox information from EPS/PS files.
 |Inkscape
 
 |SVG ↔ EMF
-|Inkscape (SVG→EMF), emfsvg (EMF→SVG)
+|emfsvg gem (both directions)
 
 |SVG ↔ PDF
 |Inkscape
@@ -114,7 +114,7 @@ This two-step process preserves BoundingBox information from EPS/PS files.
 |Ghostscript + Inkscape (two-step)
 
 |EMF → SVG
-|emfsvg gem
+|emfsvg gem (SVG → EMF also uses emfsvg)
 |===
 
 See link:conversion/[Conversion Features] for detailed conversion paths and options.
