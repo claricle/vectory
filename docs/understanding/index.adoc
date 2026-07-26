@@ -33,7 +33,7 @@ Direct conversions vs. two-step conversions through PDF.
 link:external-dependencies[**External Dependencies Overview**]::
 Comprehensive guide to all external tools and gems.
 +
-Inkscape, Ghostscript, emf2svg, moxml - their purposes and how Vectory integrates with them.
+Inkscape, Ghostscript, emfsvg, moxml - their purposes and how Vectory integrates with them.
 
 link:inkscape-wrapper[**Inkscape Wrapper**]::
 Singleton pattern implementation for Inkscape integration.
@@ -45,8 +45,8 @@ Ghostscript integration for EPS/PS to PDF conversion.
 +
 BoundingBox preservation, PDF generation, command-line options.
 
-link:emf2svg-integration[**emf2svg Integration**]::
-EMF format support via the emf2svg gem.
+link:emfsvg-integration[**emfsvg Integration**]::
+EMF format support via the emfsvg gem.
 +
 Windows EMF conversion, cross-platform compatibility.
 

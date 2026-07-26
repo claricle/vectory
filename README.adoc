@@ -23,7 +23,7 @@ ____
 
 Vectory relies on the following software to be installed:
 
-* https://github.com/metanorma/emf2svg-ruby[emf2svg-ruby]
+* https://github.com/claricle/emfsvg[emfsvg]
 * https://inkscape.org[Inkscape]
 * https://www.ghostscript.com/[Ghostscript]
 

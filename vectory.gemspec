@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.1.0"
 
   spec.add_dependency "base64"
-  spec.add_dependency "emf2svg"
+  spec.add_dependency "emfsvg", "~> 0.1"
   spec.add_dependency "image_size", ">= 3.2.0"
   spec.add_dependency "marcel", "~> 1.0"
   spec.add_dependency "nokogiri", "~> 1.14"

@@ -90,8 +90,8 @@ RSpec.describe Vectory::CLI do
     end
 
     context "emf to svg" do
-      let(:input)     { "spec/examples/emf2svg/img.emf" }
-      let(:reference) { "spec/examples/emf2svg/ref.svg" }
+      let(:input)     { "spec/examples/emfsvg/img.emf" }
+      let(:reference) { "spec/examples/emfsvg/ref.svg" }
 
       it_behaves_like "converter", "svg"
     end
@@ -149,7 +149,7 @@ RSpec.describe Vectory::CLI do
     end
 
     context "emf to emf (same type)" do
-      let(:input)  { "spec/examples/emf2svg/img.emf" }
+      let(:input)  { "spec/examples/emfsvg/img.emf" }
       let(:format) { "emf" }
 
       it "returns same-format error" do

@@ -13,7 +13,7 @@ This guide covers installing Vectory and its external dependencies on different 
 
 * **Inkscape** - Primary conversion tool for most format conversions
 * **Ghostscript** - EPS/PS to PDF conversion with bounding box preservation
-* **emf2svg** (gem) - EMF format support
+* **emfsvg** (gem) - EMF format support
 
 == Installing the Gem
 
@@ -56,8 +56,8 @@ Vectory requires external tools for vector image conversion. These tools are inv
 |PostScript and PDF interpreter
 |EPS/PS → PDF conversion (bounding box preservation)
 
-|**emf2svg**
-|EMF to SVG converter (Ruby gem)
+|**emfsvg**
+|EMF to SVG converter (Ruby gem, pure Ruby)
 |EMF → SVG conversion
 
 |**moxml**
@@ -140,9 +140,9 @@ gs --version
 # 10.02.0 (or similar)
 ----
 
-=== emf2svg (Ruby Gem)
+=== emfsvg (Ruby Gem)
 
-The `emf2svg` gem is automatically installed with Vectory. It handles:
+The `emfsvg` gem is automatically installed with Vectory. It handles:
 
 * **EMF → SVG**: Converts Windows Enhanced Metafile format to SVG
 * **Windows format support**: Provides EMF format support on all platforms
@@ -196,7 +196,7 @@ To prevent timeouts, Vectory automatically sets `DISPLAY=""` on macOS for headle
 |Ghostscript
 |Install via Homebrew; standard Unix behavior
 
-|emf2svg gem
+|emfsvg gem
 |Works natively on macOS
 |===
 
@@ -219,7 +219,7 @@ Windows has specific considerations for external tools:
 |Ghostscript
 |Install from 32-bit or 64-bit installer; must be in PATH
 
-|emf2svg gem
+|emfsvg gem
 |Works natively on Windows
 |===
 
@@ -237,7 +237,7 @@ Standard Unix behavior applies on Linux distributions.
 |Ghostscript
 |Standard package; may need `gsfonts` for full functionality
 
-|emf2svg gem
+|emfsvg gem
 |Works natively on Linux
 |===
 

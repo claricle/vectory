@@ -94,7 +94,7 @@ Vectory uses a flexible conversion pipeline:
 
 Some conversions are direct:
 * **SVG → EPS/PS/EMF/PDF**: Via Inkscape
-* **EMF → SVG**: Via emf2svg
+* **EMF → SVG**: Via emfsvg
 
 === Two-Step Conversions
 
