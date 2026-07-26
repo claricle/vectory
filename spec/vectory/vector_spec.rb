@@ -11,7 +11,7 @@ RSpec.describe Vectory::Vector do
   end
 
   describe "#write" do
-    let(:image) { Vectory::Emf.from_path("spec/examples/emf2svg/img.emf") }
+    let(:image) { Vectory::Emf.from_path("spec/examples/emfsvg/img.emf") }
 
     context "no arg" do
       it "saves to a temporary directory" do
@@ -49,7 +49,7 @@ RSpec.describe Vectory::Vector do
   end
 
   describe "#path" do
-    let(:image) { Vectory::Emf.from_path("spec/examples/emf2svg/img.emf") }
+    let(:image) { Vectory::Emf.from_path("spec/examples/emfsvg/img.emf") }
 
     context "created from path" do
       it "raises error that it is not written to disk" do
@@ -67,7 +67,7 @@ RSpec.describe Vectory::Vector do
   end
 
   describe "#size" do
-    let(:image) { Vectory::Emf.from_path("spec/examples/emf2svg/img.emf") }
+    let(:image) { Vectory::Emf.from_path("spec/examples/emfsvg/img.emf") }
 
     it "returns content size" do
       expect(image.size).to eq 1060

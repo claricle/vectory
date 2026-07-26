@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "emf2svg"
+require "emfsvg"
 
 module Vectory
   class Emf < Vector
@@ -28,13 +28,7 @@ module Vectory
     end
 
     def to_svg
-      Dir.mktmpdir do |dir|
-        input_path = File.join(dir, "image.emf")
-        File.binwrite(input_path, content)
-
-        svg_content = Emf2svg.from_file(input_path)
-        Svg.from_content(svg_content)
-      end
+      Svg.from_content(Emfsvg.from_bytes(content))
     end
 
     def to_eps

@@ -111,13 +111,13 @@ pdf = eps.to_pdf  # BoundingBox preserved from EPS
 
 == Gem Dependencies
 
-=== emf2svg
+=== emfsvg
 
 **Purpose**: EMF format support
 
-**Version**: ~> 1.0
+**Version**: ~> 0.1
 
-emf2svg provides EMF to SVG conversion without external tool dependencies.
+emfsvg provides EMF to SVG conversion in pure Ruby, with no external tool dependency.
 
 **Integration**:
 
@@ -125,7 +125,7 @@ emf2svg provides EMF to SVG conversion without external tool dependencies.
 ----
 # Automatic conversion
 emf = Vectory::Emf.from_path("chart.emf")
-svg = emf.to_svg  # Uses emf2svg internally
+svg = emf.to_svg  # Uses emfsvg internally
 ----
 
 **Features**:
@@ -295,8 +295,8 @@ Downgrade to Inkscape 1.3.0
 **Ghostscript not found**::
 Install Ghostscript or set `GHOSTSCRIPT_PATH`
 
-**emf2svg conversion fails**::
-Ensure emf2svg gem is installed: `gem install emf2svg`
+**emfsvg conversion fails**::
+Ensure emfsvg gem is installed: `gem install emfsvg`
 
 == See Also
 

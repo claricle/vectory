@@ -44,7 +44,7 @@ Inkscape conversion, quality considerations.
 link:emf-to-svg[**Converting EMF to SVG**]::
 EMF to SVG conversion workflow.
 +
-emf2svg integration, output validation.
+emfsvg integration, output validation.
 
 == Integration Guides
 

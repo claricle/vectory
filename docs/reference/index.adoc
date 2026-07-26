@@ -77,8 +77,8 @@ Ghostscript requirements and usage.
 +
 EPS/PS to PDF conversion, bounding box handling.
 
-link:emf2svg[**emf2svg**]::
-emf2svg gem integration.
+link:emfsvg[**emfsvg**]::
+emfsvg gem integration.
 +
 EMF format support and limitations.
 

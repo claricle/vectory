@@ -73,11 +73,11 @@ Vectory uses different external tools depending on the source and target formats
 
 Inkscape handles direct conversions to and from SVG format.
 
-=== Direct Conversions (via emf2svg)
+=== Direct Conversions (via emfsvg)
 
-* **EMF → SVG** (via emf2svg gem)
+* **EMF → SVG** (via emfsvg gem)
 
-The emf2svg gem provides native EMF to SVG conversion without external tool dependencies.
+The emfsvg gem provides native EMF to SVG conversion in pure Ruby, with no external tool dependency.
 
 === Two-Step Conversions (via Ghostscript + Inkscape)
 
@@ -99,7 +99,7 @@ This two-step process preserves BoundingBox information from EPS/PS files.
 |Inkscape
 
 |SVG ↔ EMF
-|Inkscape (SVG→EMF), emf2svg (EMF→SVG)
+|Inkscape (SVG→EMF), emfsvg (EMF→SVG)
 
 |SVG ↔ PDF
 |Inkscape
@@ -114,7 +114,7 @@ This two-step process preserves BoundingBox information from EPS/PS files.
 |Ghostscript + Inkscape (two-step)
 
 |EMF → SVG
-|emf2svg gem
+|emfsvg gem
 |===
 
 See link:conversion/[Conversion Features] for detailed conversion paths and options.
@@ -133,7 +133,7 @@ Comprehensive guide to all external tools and gems.
 +
 * **Inkscape** - Primary conversion engine for SVG, EPS, PS, EMF, PDF
 * **Ghostscript** - EPS/PS to PDF conversion with BoundingBox preservation
-* **emf2svg** - EMF format support via Ruby gem
+* **emfsvg** - EMF format support via pure-Ruby gem
 * **moxml** - XML/HTML parsing for Metanorma integration
 
 link:timeout-handling/[**Timeout and Error Handling**]::

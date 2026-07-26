@@ -2,8 +2,8 @@ require "spec_helper"
 
 RSpec.describe Vectory::Emf do
   describe "#to_svg" do
-    let(:input)     { "spec/examples/emf2svg/img.emf" }
-    let(:reference) { "spec/examples/emf2svg/ref.svg" }
+    let(:input)     { "spec/examples/emfsvg/img.emf" }
+    let(:reference) { "spec/examples/emfsvg/ref.svg" }
 
     it "returns svg content" do
       expect(described_class.from_path(input).to_svg.content)

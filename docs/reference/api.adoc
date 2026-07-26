@@ -102,7 +102,7 @@ emf = Vectory::Emf.from_path("chart.emf")
 svg = emf.to_svg
 ----
 
-Uses the emf2svg gem for conversion.
+Uses the emfsvg gem for conversion.
 
 === Vectory::Pdf
 

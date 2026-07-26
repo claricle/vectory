@@ -20,7 +20,7 @@ Vectory helps you:
 
 * **Convert** between vector image formats (EPS, PS, EMF, SVG, PDF)
 * **Preserve** document metadata and bounding boxes
-* **Leverage** external tools (Inkscape, Ghostscript, emf2svg) for reliable conversions
+* **Leverage** external tools (Inkscape, Ghostscript) and the emfsvg gem for reliable conversions
 * **Process** images from files, content, or data URIs
 * **Query** image dimensions without full rendering
 
@@ -125,9 +125,9 @@ Vectory requires external tools for vector image conversion:
 
 === Ruby Gems (installed automatically)
 
-* **emf2svg** (~> 1.0)
+* **emfsvg** (~> 0.1)
 ** for EMF → SVG conversion
-** provides Windows EMF format support
+** pure-Ruby; provides Windows EMF format support
 
 * **moxml** (~> 0.5)
 ** for XML/HTML parsing (Metanorma integration)
