@@ -113,8 +113,8 @@ Some conversions are direct:
 
 [source,text]
 ----
-SVG → Inkscape → EPS/PS/EMF/PDF
-EMF → emfsvg → SVG
+SVG → Inkscape → EPS/PS/PDF
+SVG ↔ emfsvg ↔ EMF
 ----
 
 === Two-Step Conversions

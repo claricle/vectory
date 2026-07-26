@@ -32,12 +32,7 @@ module Vectory
     end
 
     def to_emf
-      InkscapeWrapper.convert(
-        content: content,
-        input_format: :svg,
-        output_format: :emf,
-        output_class: Emf,
-      )
+      Emf.from_content(Emfsvg.from_svg(content))
     end
 
     def to_eps

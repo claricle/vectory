@@ -93,8 +93,8 @@ Vectory uses a flexible conversion pipeline:
 === Direct Conversions
 
 Some conversions are direct:
-* **SVG → EPS/PS/EMF/PDF**: Via Inkscape
-* **EMF → SVG**: Via emfsvg
+* **SVG → EPS/PS/PDF**: Via Inkscape
+* **SVG ↔ EMF**: Via emfsvg (both directions, pure Ruby)
 
 === Two-Step Conversions
 
