@@ -21,14 +21,12 @@ ____
 
 === Prerequisites
 
-Vectory relies on the following software to be installed:
+Vectory ships as a pure-Ruby gem. Format support is provided by these Ruby gems (installed automatically):
 
-* https://github.com/claricle/emfsvg[emfsvg]
-* https://inkscape.org[Inkscape]
-* https://www.ghostscript.com/[Ghostscript]
+* https://github.com/claricle/emfsvg[emfsvg] (EMF <-> SVG)
+* https://github.com/claricle/postsvg[postsvg] (PS/EPS <-> SVG)
 
-NOTE: Inkscape 1.3.1+ does not work properly with EPS/PS on Windows. To avoid
-this issue, the 1.3.0 version of Inkscape can be used.
+No external binaries are required.
 
 
 === Gem install

@@ -2,7 +2,6 @@
 
 # External dependencies
 require "logger"
-require "ukiryu"
 
 # Define base error class and additional error classes
 # (used in class bodies like cli.rb, so can't be autoloaded)
@@ -25,14 +24,6 @@ require_relative "vectory/version"
 module Vectory
   # Core utilities
   autoload :Utils, "vectory/utils"
-  autoload :Platform, "vectory/platform"
-
-  # Wrappers
-  autoload :GhostscriptWrapper, "vectory/ghostscript_wrapper"
-  autoload :InkscapeWrapper, "vectory/inkscape_wrapper"
-
-  # Conversion system
-  autoload :Conversion, "vectory/conversion"
 
   # Format classes
   autoload :Configuration, "vectory/configuration"
@@ -40,7 +31,6 @@ module Vectory
   autoload :ImageResize, "vectory/image_resize"
   autoload :Datauri, "vectory/datauri"
   autoload :Vector, "vectory/vector"
-  autoload :Pdf, "vectory/pdf"
   autoload :Eps, "vectory/eps"
   autoload :Ps, "vectory/ps"
   autoload :Emf, "vectory/emf"

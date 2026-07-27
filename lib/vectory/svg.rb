@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "nokogiri"
+require "postsvg"
 
 module Vectory
   class Svg < Vector
@@ -36,52 +37,42 @@ module Vectory
     end
 
     def to_eps
-      InkscapeWrapper.convert(
-        content: content,
-        input_format: :svg,
-        output_format: :eps,
-        output_class: Eps,
-      )
+      Eps.from_content(Postsvg.to_eps(content))
     end
 
     def to_ps
-      InkscapeWrapper.convert(
-        content: content,
-        input_format: :svg,
-        output_format: :ps,
-        output_class: Ps,
-      )
+      Ps.from_content(Postsvg.to_ps(content))
     end
 
     def height
-      # Try to read height from SVG attributes first
-      doc = Nokogiri::XML(content)
-      svg_element = doc.at_xpath("//svg:svg",
-                                 "svg" => SVG_NS) || doc.at_xpath("//svg")
-
-      if svg_element && svg_element["height"]
-        svg_element["height"].to_f.round
-      else
-        # Fall back to Inkscape query if no height attribute
-        super
-      end
+      dim_from_attr("height") || dim_from_viewbox(3) || super
     end
 
     def width
-      # Try to read width from SVG attributes first
-      doc = Nokogiri::XML(content)
-      svg_element = doc.at_xpath("//svg:svg",
-                                 "svg" => SVG_NS) || doc.at_xpath("//svg")
-
-      if svg_element && svg_element["width"]
-        svg_element["width"].to_f.round
-      else
-        # Fall back to Inkscape query if no width attribute
-        super
-      end
+      dim_from_attr("width") || dim_from_viewbox(2) || super
     end
 
     private
+
+    def svg_root
+      doc = Nokogiri::XML(content)
+      doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
+    end
+
+    def dim_from_attr(name)
+      value = svg_root&.[](name)
+      value&.to_f&.round
+    end
+
+    def dim_from_viewbox(index)
+      vb = svg_root&.[]("viewBox")
+      return nil unless vb
+
+      parts = vb.split
+      return nil unless parts.length == 4
+
+      parts[index].to_f.round
+    end
 
     def content=(content)
       # non-root node inserts the xml tag which breaks markup when placed in

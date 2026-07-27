@@ -22,27 +22,15 @@ module Vectory
     end
 
     def to_eps
-      to_pdf.to_eps
+      to_svg.to_eps
     end
 
     def to_emf
-      to_pdf.to_emf
+      to_svg.to_emf
     end
 
     def to_svg
       Svg.from_content(Postsvg.convert(content))
-    end
-
-    def to_pdf
-      pdf_content = GhostscriptWrapper.convert(content, eps_crop: false)
-      pdf = Pdf.new(pdf_content)
-      # Pass original BoundingBox dimensions to preserve them in conversions
-      bbox = parse_bounding_box
-      if bbox
-        pdf.original_width = bbox[:urx] - bbox[:llx]
-        pdf.original_height = bbox[:ury] - bbox[:lly]
-      end
-      pdf
     end
 
     def height

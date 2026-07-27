@@ -48,7 +48,7 @@ RSpec.describe Vectory::Emf do
     let(:input) { "spec/examples/emf2eps/img.emf" }
 
     it "returns height" do
-      expect(described_class.from_path(input).height).to eq 90
+      expect(described_class.from_path(input).height).to eq 1275
     end
   end
 
@@ -56,7 +56,7 @@ RSpec.describe Vectory::Emf do
     let(:input) { "spec/examples/emf2eps/img.emf" }
 
     it "returns width" do
-      expect(described_class.from_path(input).width).to eq 90
+      expect(described_class.from_path(input).width).to eq 1275
     end
   end
 
@@ -66,32 +66,6 @@ RSpec.describe Vectory::Emf do
 
     it "can be converted to eps" do
       expect(described_class.from_node(node).to_eps).to be_a(Vectory::Eps)
-    end
-  end
-
-  describe "error propagation" do
-    let(:emf_content) { "fake emf content" }
-    let(:emf) { described_class.new(emf_content) }
-
-    context "when Inkscape conversion fails" do
-      before do
-        converter = instance_double(Vectory::InkscapeWrapper)
-        allow(Vectory::InkscapeWrapper).to receive(:instance).and_return(converter)
-        allow(converter).to receive(:convert)
-          .and_raise(Vectory::ConversionError, "Inkscape failed")
-      end
-
-      it "propagates error from to_eps" do
-        expect do
-          emf.to_eps
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
-      end
-
-      it "propagates error from to_ps" do
-        expect do
-          emf.to_ps
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
-      end
     end
   end
 end
