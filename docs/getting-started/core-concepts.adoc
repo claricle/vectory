@@ -95,11 +95,12 @@ Vectory uses a flexible conversion pipeline:
 Some conversions are direct:
 * **SVG → EPS/PS/PDF**: Via Inkscape
 * **SVG ↔ EMF**: Via emfsvg (both directions, pure Ruby)
+* **EPS → SVG** and **PS → SVG**: Via postsvg (pure Ruby)
 
 === Two-Step Conversions
 
 Other conversions use an intermediate PDF format:
-* **EPS/PS → PDF → SVG**: Via Ghostscript + Inkscape
+* **EPS/PS → PDF → {PS,EMF}**: Via Ghostscript + Inkscape
 
 This two-step conversion ensures:
 * BoundingBox preservation from EPS/PS

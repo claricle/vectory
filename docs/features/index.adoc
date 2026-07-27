@@ -68,23 +68,30 @@ Vectory uses different external tools depending on the source and target formats
 
 === Direct Conversions (via Inkscape)
 
-* **SVG → EPS/PS/EMF/PDF** (via Inkscape export)
-* **EPS/PS/EMF/PDF → SVG** (via Inkscape import)
+* **SVG → EPS/PS/PDF** (via Inkscape export)
+* **PDF → SVG** (via Inkscape import)
 
 Inkscape handles direct conversions to and from SVG format.
 
 === Direct Conversions (via emfsvg)
 
-* **EMF → SVG** (via emfsvg gem)
+* **SVG ↔ EMF** (via emfsvg gem, both directions)
 
-The emfsvg gem provides native EMF to SVG conversion in pure Ruby, with no external tool dependency.
+The emfsvg gem provides bidirectional EMF ↔ SVG conversion in pure Ruby, with no external tool dependency.
+
+=== Direct Conversions (via postsvg)
+
+* **EPS → SVG** (via postsvg gem)
+* **PS → SVG** (via postsvg gem)
+
+The postsvg gem converts PS/EPS to SVG in pure Ruby, with no external tool dependency.
 
 === Two-Step Conversions (via Ghostscript + Inkscape)
 
-* **EPS → PDF → SVG** (Ghostscript for EPS→PDF, Inkscape for PDF→SVG)
-* **PS → PDF → SVG** (Ghostscript for PS→PDF, Inkscape for PDF→SVG)
+* **EPS → PDF → SVG** (legacy path; replaced by postsvg for `Eps#to_svg`)
+* **PS → PDF → SVG** (legacy path; replaced by postsvg for `Ps#to_svg`)
 
-This two-step process preserves BoundingBox information from EPS/PS files.
+EPS/PS → PDF and EPS/PS → PS/EMF (via PDF intermediate) still go through Ghostscript.
 
 === Conversion Tool Matrix
 

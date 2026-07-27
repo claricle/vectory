@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "postsvg"
+
 module Vectory
   class Ps < Vector
     def self.default_extension
@@ -28,7 +30,7 @@ module Vectory
     end
 
     def to_svg
-      to_pdf.to_svg
+      Svg.from_content(Postsvg.convert(content))
     end
 
     def to_pdf
