@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "emf"
 require "emfsvg"
 
 module Vectory
@@ -32,21 +33,33 @@ module Vectory
     end
 
     def to_eps
-      InkscapeWrapper.convert(
-        content: content,
-        input_format: :emf,
-        output_format: :eps,
-        output_class: Eps,
-      )
+      to_svg.to_eps
     end
 
     def to_ps
-      InkscapeWrapper.convert(
-        content: content,
-        input_format: :emf,
-        output_format: :ps,
-        output_class: Ps,
-      )
+      to_svg.to_ps
+    end
+
+    def height
+      bounds = parse_header_bounds
+      return super unless bounds
+
+      bounds.bottom - bounds.top
+    end
+
+    def width
+      bounds = parse_header_bounds
+      return super unless bounds
+
+      bounds.right - bounds.left
+    end
+
+    private
+
+    def parse_header_bounds
+      ::Emf.parse(content).header.bounds
+    rescue StandardError
+      nil
     end
   end
 end

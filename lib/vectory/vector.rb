@@ -46,11 +46,15 @@ module Vectory
     end
 
     def height
-      InkscapeWrapper.instance.height(content, self.class.default_extension)
+      raise Vectory::NotImplementedError,
+            "#height should be implemented in a subclass when no intrinsic " \
+            "dimension source is available."
     end
 
     def width
-      InkscapeWrapper.instance.width(content, self.class.default_extension)
+      raise Vectory::NotImplementedError,
+            "#width should be implemented in a subclass when no intrinsic " \
+            "dimension source is available."
     end
 
     def to_uri

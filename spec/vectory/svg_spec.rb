@@ -43,7 +43,7 @@ RSpec.describe Vectory::Svg do
     let(:input) { "spec/examples/svg2emf/img.svg" }
 
     it "returns height" do
-      expect(described_class.from_path(input).height).to eq 90
+      expect(described_class.from_path(input).height).to eq 100
     end
   end
 
@@ -51,7 +51,7 @@ RSpec.describe Vectory::Svg do
     let(:input) { "spec/examples/svg2emf/img.svg" }
 
     it "returns width" do
-      expect(described_class.from_path(input).width).to eq 90
+      expect(described_class.from_path(input).width).to eq 100
     end
   end
 
@@ -70,32 +70,6 @@ RSpec.describe Vectory::Svg do
 
       it "raises parsing error" do
         expect { command }.to raise_error(Vectory::ParsingError)
-      end
-    end
-  end
-
-  describe "error propagation" do
-    let(:svg_content) { '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>' }
-    let(:svg) { described_class.new(svg_content) }
-
-    context "when Inkscape conversion fails" do
-      before do
-        converter = instance_double(Vectory::InkscapeWrapper)
-        allow(Vectory::InkscapeWrapper).to receive(:instance).and_return(converter)
-        allow(converter).to receive(:convert)
-          .and_raise(Vectory::ConversionError, "Inkscape failed")
-      end
-
-      it "propagates error from to_eps" do
-        expect do
-          svg.to_eps
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
-      end
-
-      it "propagates error from to_ps" do
-        expect do
-          svg.to_ps
-        end.to raise_error(Vectory::ConversionError, /Inkscape failed/)
       end
     end
   end

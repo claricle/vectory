@@ -164,8 +164,8 @@ RSpec.describe Vectory::Datauri do
       let(:input) { "spec/examples/emf2eps/img.emf.datauri" }
 
       it "returns height and width" do
-        expect(described_class.from_path(input).height).to eq 90
-        expect(described_class.from_path(input).width).to eq 90
+        expect(described_class.from_path(input).height).to eq 1275
+        expect(described_class.from_path(input).width).to eq 1275
       end
     end
 
@@ -173,8 +173,8 @@ RSpec.describe Vectory::Datauri do
       let(:input) { "spec/examples/svg2emf/img.svg.datauri" }
 
       it "returns height and width" do
-        expect(described_class.from_path(input).height).to eq 90
-        expect(described_class.from_path(input).width).to eq 90
+        expect(described_class.from_path(input).height).to eq 100
+        expect(described_class.from_path(input).width).to eq 100
       end
     end
   end

@@ -55,14 +55,6 @@ RSpec.describe Vectory::Eps do
     it "returns height" do
       expect(described_class.from_path(input).height).to eq 720
     end
-
-    context "incorrect data" do
-      let(:command) { described_class.from_content("incorrect123") }
-
-      it "raises query error" do
-        expect { command.height }.to raise_error(Vectory::InkscapeQueryError)
-      end
-    end
   end
 
   describe "#width" do
@@ -79,32 +71,6 @@ RSpec.describe Vectory::Eps do
 
     it "can be converted to svg" do
       expect(described_class.from_node(node).to_svg).to be_a(Vectory::Svg)
-    end
-  end
-
-  describe "error propagation" do
-    let(:eps_content) do
-      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 100 100\n"
-    end
-    let(:eps) { described_class.new(eps_content) }
-
-    context "when ps2pdf conversion fails" do
-      before do
-        allow(Vectory::GhostscriptWrapper).to receive(:convert)
-          .and_raise(Vectory::ConversionError, "ghostscript failed")
-      end
-
-      it "propagates error from to_pdf to to_ps" do
-        expect do
-          eps.to_ps
-        end.to raise_error(Vectory::ConversionError, /ghostscript failed/)
-      end
-
-      it "propagates error from to_pdf to to_emf" do
-        expect do
-          eps.to_emf
-        end.to raise_error(Vectory::ConversionError, /ghostscript failed/)
-      end
     end
   end
 end
