@@ -32,21 +32,22 @@ svg_to_eps = Vectory::Svg.from_path("diagram.svg").to_eps
 eps_to_svg = Vectory::Eps.from_path("diagram.eps").to_svg
 ----
 
-=== Two-Step Conversions (EPS/PS → SVG)
+=== Direct Conversions (via postsvg)
 
-EPS and PS files are converted to SVG through a PDF intermediate:
-
-1. **EPS/PS → PDF** (via Ghostscript): Preserves BoundingBox information
-2. **PDF → SVG** (via Inkscape): Converts PDF to SVG
+EPS and PS files are converted to SVG directly by the postsvg gem (pure Ruby, no Ghostscript or Inkscape):
 
 [source,ruby]
 ----
-# Two-step conversion (automatic)
 eps = Vectory::Eps.from_path("diagram.eps")
-svg = eps.to_svg  # Internally: EPS → PDF → SVG
+svg = eps.to_svg  # Uses postsvg directly
+
+ps = Vectory::Ps.from_path("diagram.ps")
+svg = ps.to_svg   # Also postsvg
 ----
 
-This two-step process ensures accurate dimension preservation from EPS/PS files.
+postsvg reads the `%%BoundingBox` DSC comment to size the viewBox. Limitations: text/font rendering, image embedding, gradients/patterns, CMYK, and PS Level 2/3 advanced operators are not yet supported by postsvg upstream — EPS/PS files using those features will silently degrade.
+
+=== Two-Step Conversions (EPS/PS → PDF/PS/EMF)
 
 === EMF Conversions (via emfsvg)
 
@@ -73,11 +74,11 @@ emf = Vectory::Svg.from_path("chart.svg").to_emf
 |SVG|EMF|emfsvg gem
 |SVG|PDF|Inkscape
 
-|EPS|SVG|Ghostscript + Inkscape (two-step)
+|EPS|SVG|postsvg gem
 |EPS|PDF|Ghostscript
 |EPS|PS|Via PDF intermediate
 
-|PS|SVG|Ghostscript + Inkscape (two-step)
+|PS|SVG|postsvg gem
 |PS|PDF|Ghostscript
 |PS|EPS|Via PDF intermediate
 
