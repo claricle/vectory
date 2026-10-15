@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "nokogiri"
+require "leptris"
 require "postsvg"
 
 module Vectory
@@ -55,7 +55,7 @@ module Vectory
     private
 
     def svg_root
-      doc = Nokogiri::XML(content)
+      doc = Leptris::XML.parse(content)
       doc.at_xpath("//svg:svg", "svg" => SVG_NS) || doc.at_xpath("//svg")
     end
 
@@ -77,7 +77,11 @@ module Vectory
     def content=(content)
       # non-root node inserts the xml tag which breaks markup when placed in
       # another xml document
-      document = Nokogiri::XML(content).root
+      document = begin
+        Leptris::XML.parse(content).root
+      rescue Leptris::XML::ParseError
+        nil
+      end
       unless document
         raise ParsingError, "Could not parse '#{content&.slice(0, 30)}'"
       end

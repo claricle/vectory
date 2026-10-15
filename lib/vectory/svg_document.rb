@@ -1,4 +1,4 @@
-require "nokogiri"
+require "leptris"
 
 module Vectory
   # Represents and processes an SVG document within XML.
@@ -21,14 +21,14 @@ module Vectory
     class << self
       # Updates ID references in CSS style statements within a document.
       #
-      # @param document [Nokogiri::XML::Document] The SVG document
+      # @param document [Leptris::XML::Document] The SVG document
       # @param ids [Array<String>] IDs to update
       # @param suffix [Integer, String] The suffix to apply (integers are zero-padded)
       # @return [void]
       def update_ids_css(document, ids, suffix)
         suffix = suffix.is_a?(Integer) ? sprintf("%09d", suffix) : suffix
         document.xpath(".//m:style", "m" => SVG_NS).each do |s|
-          c = s.children.to_xml
+          c = s.content
           s.children = update_ids_css_string(c, ids, suffix)
         end
         document.xpath(".//*[@style]").each do |s|
@@ -56,7 +56,7 @@ module Vectory
 
       # Updates ID attributes in SVG elements.
       #
-      # @param document [Nokogiri::XML::Document] The SVG document
+      # @param document [Leptris::XML::Document] The SVG document
       # @param ids [Array<String>] IDs to update
       # @param suffix [Integer, String] The suffix to apply (integers are zero-padded)
       # @return [void]
@@ -76,7 +76,7 @@ module Vectory
     #
     # @param content [String] SVG XML content
     def initialize(content)
-      @document = Nokogiri::XML(content)
+      @document = Leptris::XML.parse(content)
     end
 
     # Returns the processed SVG content as XML string.
@@ -183,7 +183,7 @@ module Vectory
     # @param xpath [String] XPath expression for elements to remove
     # @return [self] The document
     def remove_xpath(xpath)
-      @document.xpath(xpath).remove
+      @document.xpath(xpath).each(&:unlink)
 
       self
     end

@@ -7,6 +7,10 @@ module Vectory
   # - Applying ID suffixes for uniqueness in multi-document scenarios
   # - Simplifying svgmap structure for final output
   #
+  # NOTE: this class deliberately stays on Nokogiri: its public contract
+  # accepts the caller's live Nokogiri document and mutates it in place
+  # (metanorma's svgmap_cleanup relies on that).
+  #
   # == ID Suffixing
   #
   # SVG IDs are suffixed in two stages to ensure uniqueness:
