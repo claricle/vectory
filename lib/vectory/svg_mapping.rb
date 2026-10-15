@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+require "leptris"
+
 module Vectory
   # Processes SVG mapping in XML documents.
   #
@@ -7,9 +11,10 @@ module Vectory
   # - Applying ID suffixes for uniqueness in multi-document scenarios
   # - Simplifying svgmap structure for final output
   #
-  # NOTE: this class deliberately stays on Nokogiri: its public contract
-  # accepts the caller's live Nokogiri document and mutates it in place
-  # (metanorma's svgmap_cleanup relies on that).
+  # The document is processed on a leptris tree: pass XML content, or any
+  # document object responding to #to_xml (serialized once on entry).
+  # #call returns the processed Leptris document; callers working on
+  # their own DOM (e.g. Nokogiri) re-serialize and graft the result back.
   #
   # == ID Suffixing
   #
@@ -34,7 +39,7 @@ module Vectory
   class SvgMapping
     # Namespace helper for XML namespace handling
     class Namespace
-      # @param xmldoc [Nokogiri::XML::Document] The XML document
+      # @param xmldoc [Leptris::XML::Document] The XML document
       def initialize(xmldoc)
         @namespace = xmldoc.root.namespace
       end
@@ -65,7 +70,7 @@ module Vectory
     # @param path [String] Path to the XML file
     # @return [Vectory::SvgMapping] New mapping instance
     def self.from_path(path)
-      new(Nokogiri::XML(File.read(path)))
+      new(File.read(path))
     end
 
     # Creates an SvgMapping from an XML string.
@@ -73,25 +78,27 @@ module Vectory
     # @param xml [String] XML content
     # @return [Vectory::SvgMapping] New mapping instance
     def self.from_xml(xml)
-      new(Nokogiri::XML(xml))
+      new(xml)
     end
 
     # Initializes a new SvgMapping processor.
     #
-    # @param doc [Nokogiri::XML::Document] The document containing svgmap elements
+    # @param doc [String, #to_xml] XML content, or a document object
+    #   (serialized once on entry)
     # @param local_directory [String] Directory for resolving relative file paths
     # @param id_suffix [String, nil] Optional suffix derived from document/container
     #   identity. Applied before the index suffix to provide cross-document
     #   uniqueness. Example: "_ISO_17301-1_2016"
     def initialize(doc, local_directory = "", id_suffix: nil)
-      @doc = doc
+      xml = doc.respond_to?(:to_xml) ? doc.to_xml : doc
+      @doc = Leptris::XML.parse(xml)
       @local_directory = local_directory
       @id_suffix = id_suffix
     end
 
     # Processes all svgmap elements in the document.
     #
-    # @return [Nokogiri::XML::Document] The processed document
+    # @return [Leptris::XML::Document] The processed document
     def call
       @namespace = Namespace.new(@doc)
 
@@ -113,7 +120,7 @@ module Vectory
 
     # Processes a single svgmap element.
     #
-    # @param svgmap [Nokogiri::XML::Element] The svgmap element to process
+    # @param svgmap [Leptris::XML::Element] The svgmap element to process
     # @param index [Integer] Position of this svgmap in the document (0-indexed)
     def process_svgmap(svgmap, index)
       image = extract_image_tag(svgmap)
@@ -129,19 +136,19 @@ module Vectory
 
     # Extracts the image element (SVG inline or image with src) from svgmap.
     #
-    # @param svgmap [Nokogiri::XML::Element] The svgmap element
-    # @return [Nokogiri::XML::Element, nil] The image/svg element or nil
+    # @param svgmap [Leptris::XML::Element] The svgmap element
+    # @return [Leptris::XML::Element, nil] The image/svg element or nil
     def extract_image_tag(svgmap)
-      image = svgmap.at(@namespace.ns(".//image"))
+      image = svgmap.at_xpath(@namespace.ns(".//image"))
       return image if image && image["src"] && !image["src"].empty?
 
-      svgmap.at(".//m:svg", "m" => SVG_NS)
+      svgmap.at_xpath(".//m:svg", "m" => SVG_NS)
     end
 
     # Generates processed SVG content for an svgmap.
     #
-    # @param image [Nokogiri::XML::Element] The image/svg element
-    # @param svgmap [Nokogiri::XML::Element] The parent svgmap element
+    # @param image [Leptris::XML::Element] The image/svg element
+    # @param svgmap [Leptris::XML::Element] The parent svgmap element
     # @param index [Integer] Index suffix to apply
     # @return [String, nil] Processed SVG content or nil if invalid
     def generate_content(image, svgmap, index)
@@ -157,7 +164,7 @@ module Vectory
 
     # Builds an SvgDocument from an image element.
     #
-    # @param image [Nokogiri::XML::Element] The image element
+    # @param image [Leptris::XML::Element] The image element
     # @return [Vectory::SvgDocument, nil] The SVG document or nil if invalid
     def build_svg_document(image)
       vector = build_vector(image)
@@ -168,7 +175,7 @@ module Vectory
 
     # Builds a Vector from an image element.
     #
-    # @param image [Nokogiri::XML::Element] The image element
+    # @param image [Leptris::XML::Element] The image element
     # @return [Vectory::Vector, nil] The vector or nil if invalid
     def build_vector(image)
       return Vectory::Svg.from_content(image.to_xml) if image.name == "svg"
@@ -186,7 +193,7 @@ module Vectory
 
     # Builds a mapping from target hrefs to their link targets.
     #
-    # @param svgmap [Nokogiri::XML::Element] The svgmap element
+    # @param svgmap [Leptris::XML::Element] The svgmap element
     # @return [Hash{String => String}] Mapping of href to target
     def from_targets_to_links_map(svgmap)
       targets = svgmap.xpath(@namespace.ns("./target"))
@@ -203,13 +210,13 @@ module Vectory
 
     # Extracts link target from a target element.
     #
-    # @param target_tag [Nokogiri::XML::Element] The target element
+    # @param target_tag [Leptris::XML::Element] The target element
     # @return [String, nil] The link target or nil
     def link_target(target_tag)
-      xref = target_tag.at(@namespace.ns("./xref"))
+      xref = target_tag.at_xpath(@namespace.ns("./xref"))
       return "##{xref['target']}" if xref
 
-      link = target_tag.at(@namespace.ns("./link"))
+      link = target_tag.at_xpath(@namespace.ns("./link"))
       return unless link
 
       link["target"]
@@ -218,11 +225,11 @@ module Vectory
     # Simplifies svgmap after processing.
     # Removes svgmap wrapper if no more target elements with eref.
     #
-    # @param svgmap [Nokogiri::XML::Element] The svgmap element
+    # @param svgmap [Leptris::XML::Element] The svgmap element
     def simplify_svgmap(svgmap)
-      return if svgmap.at(@namespace.ns("./target/eref"))
+      return if svgmap.at_xpath(@namespace.ns("./target/eref"))
 
-      svgmap.replace(svgmap.at(@namespace.ns("./figure")))
+      svgmap.replace(svgmap.at_xpath(@namespace.ns("./figure")))
     end
   end
 end
