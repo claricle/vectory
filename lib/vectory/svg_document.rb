@@ -28,7 +28,7 @@ module Vectory
       def update_ids_css(document, ids, suffix)
         suffix = suffix.is_a?(Integer) ? sprintf("%09d", suffix) : suffix
         document.xpath(".//m:style", "m" => SVG_NS).each do |s|
-          c = s.content
+          c = s.children.to_xml
           s.children = update_ids_css_string(c, ids, suffix)
         end
         document.xpath(".//*[@style]").each do |s|
@@ -183,7 +183,7 @@ module Vectory
     # @param xpath [String] XPath expression for elements to remove
     # @return [self] The document
     def remove_xpath(xpath)
-      @document.xpath(xpath).each(&:unlink)
+      @document.xpath(xpath).remove
 
       self
     end
