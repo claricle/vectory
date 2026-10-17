@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "emfsvg", "~> 0.1", ">= 0.1.2"
   spec.add_dependency "image_size", ">= 3.2.0"
   spec.add_dependency "marcel", "~> 1.0"
-  spec.add_dependency "leptris", ">= 1.9.365.1"
+  spec.add_dependency "leptris", ">= 1.9.361.1"
   spec.add_dependency "postsvg", "~> 0.3"
   spec.add_dependency "thor", "~> 1.0"
 end
