@@ -37,6 +37,7 @@ module Vectory
   autoload :Svg, "vectory/svg"
   autoload :SvgMapping, "vectory/svg_mapping"
   autoload :SvgDocument, "vectory/svg_document"
+  autoload :SvgIdDisambiguator, "vectory/svg_id_disambiguator"
   autoload :FileMagic, "vectory/file_magic"
 end
 
