@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<article xmlns:meta="urn:metadata" id="prepared-host" meta:owner="editor" xml:lang="en" data-version="original">
+  <title xmlns="">Prepared host</title>
+  <!--These prepared inline SVGs already crossed the svgmap expansion boundary.-->
+  <figure xmlns="" id="first"><svg xmlns="http://www.w3.org/2000/svg" xmlns:link="http://www.w3.org/1999/xlink" id="shared-root" class="drawing_inject_0 active_inject_0">
+  <style>.drawing_inject_0.active_inject_0 { fill: url(#paint_inject_0); } @media screen { .active_inject_0:is(.drawing_inject_0) { stroke: url(#paint_inject_0); } }</style>
+  <defs>
+    <linearGradient id="paint_inject_0">
+      <stop offset="0%"/>
+    </linearGradient>
+  </defs>
+  <g class="drawing_inject_0 active_inject_0" fill="url(#paint_inject_0)">
+    <use link:href="#shared-root"/>
+    <a href="#shared-root">first</a>
+  </g>
+  <svg id="nested-first" class="drawing_inject_0">
+    <rect class="active_inject_0"/>
+  </svg>
+</svg></figure>
+  <figure xmlns="" id="second"><svg xmlns="http://www.w3.org/2000/svg" xmlns:link="http://www.w3.org/1999/xlink" id="shared-root_inject_1" class="drawing_inject_1 active_inject_1">
+  <style>.drawing_inject_1.active_inject_1 { fill: url(#paint_inject_1); } @media screen { .active_inject_1:is(.drawing_inject_1) { stroke: url(#paint_inject_1); } }</style>
+  <defs>
+    <linearGradient id="paint_inject_1">
+      <stop offset="0%"/>
+    </linearGradient>
+  </defs>
+  <g class="drawing_inject_1 active_inject_1" fill="url(#paint_inject_1)">
+    <use link:href="#shared-root_inject_1"/>
+    <a href="#shared-root_inject_1">second</a>
+  </g>
+</svg></figure>
+  <p xmlns="" id="outside">Unchanged host content.</p>
+</article>

@@ -1,0 +1,6 @@
+<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:link="http://www.w3.org/1999/xlink" id="drawing_inject_1" class="drawing_inject_1 active_inject_1" data-owner="processed">
+  <style>/* .drawing stays */ .drawing_inject_1.active_inject_1:hover { fill: url(#paint_inject_1); content: ".active"; } @media screen { .drawing_inject_1:is(.active_inject_1, :not(.hidden_inject_1)) { stroke: url(#paint_inject_1); } @supports (display: grid) { .active_inject_1 &gt; .drawing_inject_1 { opacity: .5; } } }</style>
+  <defs><linearGradient id="paint_inject_1"><stop offset="0%"/></linearGradient></defs>
+  <g class="drawing_inject_1 active_inject_1" fill="url(#paint_inject_1)" style="stroke: url(#paint_inject_1)"><use link:href="#drawing_inject_1"/><a href="#drawing_inject_1">local</a></g>
+  <svg id="nested" class="drawing_inject_1"><rect class="active_inject_1"/></svg>
+</svg>

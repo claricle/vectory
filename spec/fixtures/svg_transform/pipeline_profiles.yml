@@ -1,0 +1,29 @@
+graft:
+  steps: [graft_into]
+  input: pipeline_inputs/mapped-host.xml
+  host: pipeline_inputs/host.xml
+  options: {}
+  output: pipeline_outputs/graft.xml
+svg_cleanup:
+  steps: [disambiguate, suffix_classes, bind_namespaces]
+  input: pipeline_inputs/selected.svg
+  options:
+    index: 1
+    duplicate_ids: {drawing: 2, paint: 2}
+    namespaces:
+      bind: {link: "http://www.w3.org/1999/xlink"}
+      unbind: [xlink, unused]
+      remap: {"http://www.w3.org/1999/xlink": link}
+  output: pipeline_outputs/svg_cleanup.svg
+graft_then_svg_cleanup:
+  steps: [graft_into, disambiguate, suffix_classes, bind_namespaces]
+  input: pipeline_inputs/selected.svg
+  host: pipeline_inputs/svg-host.svg
+  options:
+    index: 1
+    duplicate_ids: {drawing: 2, paint: 2}
+    namespaces:
+      bind: {link: "http://www.w3.org/1999/xlink"}
+      unbind: [xlink, unused]
+      remap: {"http://www.w3.org/1999/xlink": link}
+  output: pipeline_outputs/graft_then_svg_cleanup.svg
