@@ -1,0 +1,115 @@
+# frozen_string_literal: true
+
+require "spec_helper"
+require "vectory/svg_subtree_graft"
+
+RSpec.describe Vectory::SvgSubtreeGraft do
+  let(:fixture_root) do
+    File.expand_path("../fixtures/svg_transform/subtree_graft", __dir__)
+  end
+  let(:host) { File.read(File.join(fixture_root, case_name, "host.xml")) }
+  let(:processed) { File.read(File.join(fixture_root, case_name, "processed.xml")) }
+  let(:expected) { File.read(File.join(fixture_root, case_name, "expected.xml")) }
+  let(:result) { described_class.replace_root_content(host, processed) }
+  let(:document) { Leptris::XML.parse(result, strict: true) }
+
+  %w[changed metadata mixed namespaces empty repeat].each do |name|
+    context "with #{name} content" do
+      let(:case_name) { name }
+
+      it "matches the complete expected document" do
+        golden = Leptris::XML.parse(expected, strict: true)
+        expect(document.canonicalize(with_comments: true))
+          .to eq(golden.canonicalize(with_comments: true))
+      end
+
+      it "is XML-equivalent when applied repeatedly" do
+        repeated = described_class.replace_root_content(result, processed)
+        expect(Leptris::XML.parse(repeated).canonicalize(with_comments: true))
+          .to eq(document.canonicalize(with_comments: true))
+      end
+    end
+  end
+
+  context "with host metadata" do
+    let(:case_name) { "metadata" }
+
+    it "retains the root attributes and document envelope" do
+      expect(document.root.name).to eq("article")
+      expect(document.root["id"]).to eq("host")
+      expect(document.root["h:flag"]).to eq("yes")
+      expect(result).to include(
+        '<!--before--><?host keep?><!DOCTYPE article>',
+        '</article><!--after--><?tail keep?>',
+      )
+      expect(result).not_to include('id="discard"', "<old")
+    end
+  end
+
+  context "with mixed content" do
+    let(:case_name) { "mixed" }
+
+    it "preserves the ordered node kinds and values" do
+      children = document.root.children
+      expect(children.map { |node| node.class.name.split("::").last })
+        .to eq(%w[Text Comment CDATA ProcessingInstruction Element Text])
+      expect(result).to include("before<!--middle--><![CDATA[a<b & c]]><?graft keep?>")
+      expect(children.last.text).to eq("after")
+    end
+  end
+
+  it "retains an envelope containing markup-like text and whitespace" do
+    prefix = "<?xml version=\"1.0\"?>\n<!--é--><!DOCTYPE host [<!ELEMENT host ANY>]>\n"
+    suffix = " \n<!-- </host> --><?tail </host>?>\n"
+    content = "#{prefix}<host><!--old--><old/></host>#{suffix}"
+    output = described_class.replace_root_content(content, "<svg/>")
+
+    expect(output).to eq("#{prefix}<host/>#{suffix}")
+  end
+
+  context "with conflicting namespaces" do
+    let(:case_name) { "namespaces" }
+
+    it "retains host metadata and grafted expanded names after reparsing" do
+      expect(document.root.name).to eq("host")
+      expect(document.root.namespaces).to eq(Leptris::XML.parse(host).root.namespaces)
+      elements = document.xpath("//*")
+      expect(elements.map { |node| [node.name, node.namespace&.href] })
+        .to eq([
+          ["host", "urn:host"], ["g", "urn:svg"],
+          ["shape", "urn:processed-prefix"], ["plain", nil],
+          ["child", nil], ["other", "urn:processed-prefix"], ["bare", nil],
+        ])
+      expect(elements[1].attribute_nodes.first.namespace_uri).to eq("urn:processed-prefix")
+      expect(elements[2].attribute_nodes.first.namespace_uri)
+        .to eq("http://www.w3.org/1999/xlink")
+    end
+  end
+
+  context "with invalid input" do
+    it "rejects malformed host XML with the stable prefix" do
+      expect { described_class.replace_root_content("<host>", "<svg/>") }
+        .to raise_error(Vectory::ParsingError, /\Ainvalid host_content XML:/)
+    end
+
+    it "rejects malformed processed XML with the stable prefix" do
+      expect { described_class.replace_root_content("<host/>", "<svg>") }
+        .to raise_error(Vectory::ParsingError, /\Ainvalid processed_content XML:/)
+    end
+
+    it "rejects a rootless host with the exact message" do
+      expect { described_class.replace_root_content("<!--host-->", "<svg/>") }
+        .to raise_error(Vectory::ParsingError, "host_content has no document root")
+    end
+
+    it "rejects rootless processed content with the exact message" do
+      expect { described_class.replace_root_content("<host/>", "<?xml version='1.0'?>") }
+        .to raise_error(Vectory::ParsingError, "processed_content has no document root")
+    end
+
+    it "does not classify malformed rootless content as a missing root" do
+      expect { described_class.replace_root_content("<!--unterminated", "<svg/>") }
+        .to raise_error(Vectory::ParsingError, /\Ainvalid host_content XML:/)
+    end
+  end
+end
