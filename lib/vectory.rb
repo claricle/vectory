@@ -38,6 +38,11 @@ module Vectory
   autoload :SvgMapping, "vectory/svg_mapping"
   autoload :SvgDocument, "vectory/svg_document"
   autoload :SvgIdDisambiguator, "vectory/svg_id_disambiguator"
+  autoload :SvgClassSuffixer, "vectory/svg_class_suffixer"
+  autoload :SvgNamespaceBinding, "vectory/svg_namespace_binding"
+  autoload :SvgSubtreeGraft, "vectory/svg_subtree_graft"
+  autoload :SvgTransform, "vectory/svg_transform"
+  autoload :SvgTransformPipeline, "vectory/svg_transform_pipeline"
   autoload :FileMagic, "vectory/file_magic"
 end
 

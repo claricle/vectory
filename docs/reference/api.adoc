@@ -430,6 +430,78 @@ fig1_ISO_17301-1_2016 → fig1_ISO_17301-1_2016_000000000
 * **ID suffix** (`id_suffix` parameter): Derived from document/container identity. Optional.
 * **Index suffix** (`index_suffix` parameter): Zero-padded position (0, 1, 2... → _000000000, _000000001). Automatically applied.
 
+== Serialized SVG transforms
+
+All methods consume XML strings and return a new XML string. The input DOM is
+never shared with the result. These content transforms do not render PNG images.
+
+* `SvgClassSuffixer.rewrite(content, suffix)` updates XML class lists and CSS class
+  selectors using Crass, including escaped identifiers and nested selector rules.
+  Reapplying the same suffix is idempotent.
+* `SvgNamespaceBinding.rewrite(content, bind: {}, unbind: [], remap: {})` binds
+  prefix-to-URI declarations, unbinds unused prefixes, and remaps URIs to target
+  prefixes. An empty or nil prefix means the default namespace. Expanded names
+  are preserved; default namespaces never qualify unprefixed attributes.
+  Conflicting bindings, used unbinds and identity-changing default remaps raise
+  `ArgumentError`. Malformed, rootless or non-SVG input also raises `ArgumentError`.
+* `SvgSubtreeGraft.replace_root_content(host_content, processed_content)` preserves
+  the host document/root metadata and replaces only the ordered root children,
+  including text, comments, CDATA and processing instructions. Invalid input
+  raises `Vectory::ParsingError`, identifying `host_content` or `processed_content`.
+
+`SvgTransform` factories return named immutable steps:
+
+* `graft_into(host_content:)` validates and captures the host at construction.
+* `disambiguate(index:, duplicate_ids:)` delegates to `SvgIdDisambiguator` with a
+  deeply copied collision map and `_inject_<index>` suffix.
+* `suffix_classes(index:)` uses that same suffix for classes.
+* `bind_namespaces(bind: {}, unbind: [], remap: {})` uses the namespace contract above.
+
+Compose steps with `>>`. `SvgTransformPipeline#steps` exposes stable names and
+deeply frozen option snapshots; `#profile` identifies the executable profile.
+`#call(content)` returns serialized XML. Exactly three profiles can execute:
+
+[cols="1,1,2",options="header"]
+|===
+|Profile |Steps |Scope
+|`graft` |`G` |A complete rooted processed document grafted into the captured host.
+|`svg_cleanup` |`D -> S -> N` |Exactly one selected SVG root, including its nested SVGs.
+|`graft_then_svg_cleanup` |`G -> D -> S -> N` |A captured host whose root is SVG.
+|===
+
+Appending an invalid sequence raises `ArgumentError` containing
+`invalid step sequence`. Calling an incomplete prefix raises `ArgumentError`
+containing `incomplete profile`. A wrong input scope raises `ArgumentError`
+containing `execution-scope mismatch`. Parse errors stop execution and propagate.
+
+=== Standoc migration boundary
+
+Map and graft the complete prepared host once, then process the selected SVGs in
+document order. Preserve the caller's sequential collision map; do not use the
+batch `SvgIdDisambiguator.duplicate_ids` helper for this compatibility flow.
+
+[source,ruby]
+----
+mapped = Vectory::SvgMapping.new(original_host).call.to_xml
+grafted = Vectory::SvgTransform.graft_into(host_content: original_host).call(mapped)
+document = Leptris::XML.parse(grafted)
+collisions = {}
+document.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]").each_with_index do |svg, index|
+  pipeline = Vectory::SvgTransform.disambiguate(index: index, duplicate_ids: collisions) >>
+    Vectory::SvgTransform.suffix_classes(index: index) >>
+    Vectory::SvgTransform.bind_namespaces(bind: { "xlink" => "http://www.w3.org/1999/xlink" })
+  cleaned = pipeline.call(svg.to_xml)
+  Leptris::XML.parse(cleaned).xpath("//*[@id]").each { |node| collisions[node["id"]] = true }
+  svg.replace(cleaned)
+end
+----
+
+Each pipeline retains the collision map as it existed at construction. The first
+repeated root ID remains unchanged; the later one receives its positional suffix.
+Standoc #1298 consumes `SvgIdDisambiguator` and retains its current Crass helpers.
+`SvgClassSuffixer` is the canonical Vectory implementation; later adoption and
+removal of the inline helpers require a separate task after a containing release.
+
 == See Also
 
 * link:../guides/error-handling/[Error Handling Guide] - Common errors and solutions

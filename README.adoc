@@ -410,6 +410,39 @@ gem bump --version minor --tag --push
 ----
 
 
+== Serialized SVG transforms
+
+Vectory exposes immutable transformations of serialized XML strings. Class
+selectors are parsed with Crass (`~> 1.0`, `>= 1.0.7`); class lists and selectors
+use the same positional `_inject_<index>` suffix as ID disambiguation.
+`SvgClassSuffixer` is the canonical Vectory class-suffix implementation.
+
+[source,ruby]
+----
+cleanup = Vectory::SvgTransform.disambiguate(index: 0, duplicate_ids: collisions) >>
+  Vectory::SvgTransform.suffix_classes(index: 0) >>
+  Vectory::SvgTransform.bind_namespaces(bind: { "xlink" => "http://www.w3.org/1999/xlink" })
+result = cleanup.call(svg_xml)
+----
+
+The executable profiles are `graft` (`G`), `svg_cleanup` (`D -> S -> N`),
+and `graft_then_svg_cleanup` (`G -> D -> S -> N`). Other sequences are rejected;
+construction prefixes cannot execute until complete. Cleanup accepts a selected
+SVG root, while a graft can accept a complete host document. Reapplying a profile
+with the same captured inputs is XML-equivalent. Step options are deeply frozen
+snapshots, so later changes to a caller's collision map cannot change a pipeline.
+
+Namespace binding preserves expanded element and attribute names; it is separate
+from the legacy `SvgDocument#namespace` ID/link cleanup. See the API reference for
+safe binding, unbinding and URI-to-prefix remapping.
+
+For multiple embedded SVGs, graft the complete mapped document once, then build a
+fresh cleanup pipeline for each SVG from the current collision map. Merge each
+result's IDs before constructing the next pipeline. Standoc #1298 adopts ID
+disambiguation while retaining its inline Crass helpers; adopting
+`SvgClassSuffixer` is a separate downstream task after a containing release.
+SVG-to-PNG rendering is a separate projection feature.
+
 == Contributing
 
 Bug reports and pull requests are welcome on GitHub at:
