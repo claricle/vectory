@@ -46,5 +46,5 @@ bundle exec ruby -e 'spec = Gem::Specification.load("vectory.gemspec"); dep = sp
 ```
 
 ## Status
-State: todo
-PR: none
+State: implemented; publication, required lint and CI pending
+PR: not yet published (GitHub access unavailable)

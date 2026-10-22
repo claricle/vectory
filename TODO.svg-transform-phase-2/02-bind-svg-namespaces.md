@@ -46,5 +46,5 @@ bundle exec rspec spec/vectory/svg_namespace_binding_contract_spec.rb spec/vecto
 ```
 
 ## Status
-State: todo
-PR: none
+State: implemented; publication, required lint and CI pending
+PR: not yet published (GitHub access unavailable)

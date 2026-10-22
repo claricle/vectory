@@ -3,6 +3,9 @@ source "https://rubygems.org"
 # Jekyll plugins
 gem "jekyll", "~> 3.0"
 gem "just-the-docs", "~> 0.7"
+# Jekyll 3 dependencies require these gems explicitly on recent Ruby versions.
+gem "base64", "~> 0.2"
+gem "bigdecimal", ">= 3.1", "< 5"
 
 # Markdown and AsciiDoc processing
 gem "asciidoctor", "~> 2.0"

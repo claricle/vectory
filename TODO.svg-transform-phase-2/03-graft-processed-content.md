@@ -40,5 +40,5 @@ bundle exec rspec spec/vectory/svg_subtree_graft_spec.rb
 ```
 
 ## Status
-State: todo
-PR: none
+State: implemented; publication, required lint and CI pending
+PR: not yet published (GitHub access unavailable)
