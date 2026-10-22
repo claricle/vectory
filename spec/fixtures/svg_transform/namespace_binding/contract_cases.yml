@@ -1,0 +1,806 @@
+{
+  "status": "accepted",
+  "authorization": "User authorized best judgment via root agent on 2026-10-22 after consumer-policy question; conservative expanded-name preservation selected.",
+  "consumer_source": {
+    "repository": "metanorma/metanorma-standoc",
+    "revision": "594319da774c07afe6dbde073c0ac5cf51348129",
+    "code": "lib/metanorma/cleanup/image.rb:146-185",
+    "fixture": "spec/cleanup/blocks_spec.rb:1032-1108",
+    "finding": "Default SVG namespace and xlink attributes survive cleanup; no existing bind/unbind/remap request. Edge fixtures below extend these consumer shapes to discriminate XML invariants; user authorization selects the policies."
+  },
+  "api": "rewrite(content, bind: {prefix => URI}, unbind: [prefix], remap: {URI => target_prefix})",
+  "rules": {
+    "source_resolution": "URI identity throughout selected serialized SVG, independently of lexical source prefix; nil/empty prefix means default.",
+    "aliases": "Retain existing declarations unless explicitly unbound; repeated requests do not add duplicate declarations.",
+    "redeclarations": "Preserve same-URI declarations and different-URI shadows; remap only matching URI names.",
+    "collisions": "Reject target prefix declared anywhere to another URI, even if unused; ArgumentError /namespace conflict:/.",
+    "default_attributes": "Reject default remap of URI used by any qualified attribute; ArgumentError /default namespace:/.",
+    "default_elements": "Reject default binding/remap that would capture any unqualified element; ArgumentError /default namespace:/.",
+    "unbind": "Remove all declarations of requested prefix only after remap; reject if any element or attribute still uses prefix; ArgumentError /namespace in use:/.",
+    "validation": "String SVG root, well-formed XML with bound QName prefixes, map/array options, ASCII NCName prefixes excluding xml-prefixed reserved names, nonempty whitespace-free URI strings excluding the reserved XML and xmlns URIs; ArgumentError /invalid namespace request:/ or /invalid SVG:/.",
+    "normalized_keys": "nil and empty-string prefixes identify the same default binding; conflicting normalized targets reject with ArgumentError /namespace conflict:/.",
+    "parser_caveat": "Leptris strict parsing accepts unbound prefixed names, so the primitive explicitly rejects them before rewriting.",
+    "scope": "One serialized SVG root only; all namespace declarations outside requested changes retained.",
+    "repeat": "URI-qualified identity makes repeat remap and removed-unbind requests no-ops."
+  },
+  "cases": {
+    "attribute_prefix_to_default": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              "p",
+              "http://www.w3.org/2000/svg"
+            ]
+          ],
+          "in_scope": {
+            "xmlns:p": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [
+            [
+              "http://www.w3.org/2000/svg",
+              "label",
+              "a"
+            ],
+            [
+              null,
+              "id",
+              "gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns:p": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><p:svg xmlns:p=\"http://www.w3.org/2000/svg\"><p:g p:label=\"a\" id=\"gradient1\"/></p:svg>",
+      "operation": {
+        "remap": {
+          "http://www.w3.org/2000/svg": ""
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "error": {
+        "class": "ArgumentError",
+        "pattern": "default namespace:"
+      }
+    },
+    "default_svg": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [
+            [
+              null,
+              "version",
+              "1.1"
+            ]
+          ],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [
+            [
+              null,
+              "id",
+              "gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "text"
+          ],
+          "attributes": [],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><g id=\"gradient1\"><!--keep--><?probe keep?><text><![CDATA[a < b]]></text></g></svg>",
+      "operation": {
+        "bind": {
+          "extra": "urn:extra"
+        }
+      },
+      "consumer_need": "Preserve Standoc SVG and attribute expanded names.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "different_uri_shadow": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              "p",
+              "urn:two"
+            ]
+          ],
+          "in_scope": {
+            "xmlns:p": "urn:two",
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "urn:two",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:two",
+              "label",
+              "b"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns:p": "urn:two",
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\"><p:item/><g xmlns:p=\"urn:two\"><p:item p:label=\"b\"/></g></svg>",
+      "operation": {
+        "remap": {
+          "urn:one": "q"
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "element_prefix_to_default": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              "p",
+              "http://www.w3.org/2000/svg"
+            ]
+          ],
+          "in_scope": {
+            "xmlns:p": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [
+            [
+              null,
+              "id",
+              "gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns:p": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><p:svg xmlns:p=\"http://www.w3.org/2000/svg\"><p:g id=\"gradient1\"/></p:svg>",
+      "operation": {
+        "remap": {
+          "http://www.w3.org/2000/svg": ""
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "same_uri_redeclaration": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              "p",
+              "urn:one"
+            ]
+          ],
+          "in_scope": {
+            "xmlns:p": "urn:one",
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:one",
+              "label",
+              "a"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns:p": "urn:one",
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\"><g xmlns:p=\"urn:one\"><p:item p:label=\"a\"/></g></svg>",
+      "operation": {
+        "remap": {
+          "urn:one": "q"
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "target_different_uri": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ],
+            [
+              "q",
+              "urn:two"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:two"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:two",
+              "label",
+              "b"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:two"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\" xmlns:q=\"urn:two\"><p:item q:label=\"b\"/></svg>",
+      "operation": {
+        "remap": {
+          "urn:one": "q"
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "error": {
+        "class": "ArgumentError",
+        "pattern": "namespace conflict:"
+      }
+    },
+    "target_same_uri": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ],
+            [
+              "q",
+              "urn:one"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:one"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:one",
+              "label",
+              "a"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:one"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\" xmlns:q=\"urn:one\"><p:item q:label=\"a\"/></svg>",
+      "operation": {
+        "remap": {
+          "urn:one": "q"
+        }
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "unused_binding": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "unused",
+              "urn:unused"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:unused": "urn:unused"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [
+            [
+              null,
+              "id",
+              "gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:unused": "urn:unused"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:unused=\"urn:unused\"><g id=\"gradient1\"/></svg>",
+      "operation": {
+        "unbind": [
+          "unused"
+        ]
+      },
+      "consumer_need": "Synthetic scope/policy discriminator extending Standoc SVG namespace shape.",
+      "outcome": "preserve expanded names; apply declaration/QName operation"
+    },
+    "xlink_used": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "xlink",
+              "http://www.w3.org/1999/xlink"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:xlink": "http://www.w3.org/1999/xlink"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "stop"
+          ],
+          "attributes": [
+            [
+              null,
+              "offset",
+              "0%"
+            ],
+            [
+              "http://www.w3.org/1999/xlink",
+              "href",
+              "#gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:xlink": "http://www.w3.org/1999/xlink"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><stop offset=\"0%\" xlink:href=\"#gradient1\"/></svg>",
+      "operation": {
+        "unbind": [
+          "xlink"
+        ]
+      },
+      "consumer_need": "Preserve Standoc SVG and attribute expanded names.",
+      "error": {
+        "class": "ArgumentError",
+        "pattern": "namespace in use:"
+      }
+    },
+    "remap_and_unbind": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "xlink",
+              "http://www.w3.org/1999/xlink"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:xlink": "http://www.w3.org/1999/xlink"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "stop"
+          ],
+          "attributes": [
+            [
+              null,
+              "offset",
+              "0%"
+            ],
+            [
+              "http://www.w3.org/1999/xlink",
+              "href",
+              "#gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:xlink": "http://www.w3.org/1999/xlink"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><stop offset=\"0%\" xlink:href=\"#gradient1\"/></svg>",
+      "operation": {
+        "remap": {
+          "http://www.w3.org/1999/xlink": "link"
+        },
+        "unbind": [
+          "xlink"
+        ]
+      },
+      "consumer_need": "Synthetic policy discriminator based on namespace identities in consumer SVG.",
+      "outcome": "preserve expanded names; apply requested declarations"
+    },
+    "used_default_unbind": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [
+            [
+              null,
+              "version",
+              "1.1"
+            ]
+          ],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "g"
+          ],
+          "attributes": [
+            [
+              null,
+              "id",
+              "gradient1"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        },
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "text"
+          ],
+          "attributes": [],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><g id=\"gradient1\"><!--keep--><?probe keep?><text><![CDATA[a < b]]></text></g></svg>",
+      "operation": {
+        "unbind": [
+          ""
+        ]
+      },
+      "consumer_need": "Synthetic policy discriminator based on namespace identities in consumer SVG.",
+      "outcome": "preserve expanded names; apply requested declarations",
+      "error": {
+        "class": "ArgumentError",
+        "pattern": "namespace in use:"
+      }
+    },
+    "bind_target_same_uri": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ],
+            [
+              "q",
+              "urn:one"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:one"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:one",
+              "label",
+              "a"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:one"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\" xmlns:q=\"urn:one\"><p:item q:label=\"a\"/></svg>",
+      "operation": {
+        "bind": {
+          "q": "urn:one"
+        }
+      },
+      "consumer_need": "Synthetic policy discriminator based on namespace identities in consumer SVG.",
+      "outcome": "preserve expanded names; apply requested declarations"
+    },
+    "bind_target_different_uri": {
+      "parsed": [
+        {
+          "name": [
+            "http://www.w3.org/2000/svg",
+            "svg"
+          ],
+          "attributes": [],
+          "declarations": [
+            [
+              null,
+              "http://www.w3.org/2000/svg"
+            ],
+            [
+              "p",
+              "urn:one"
+            ],
+            [
+              "q",
+              "urn:two"
+            ]
+          ],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:two"
+          }
+        },
+        {
+          "name": [
+            "urn:one",
+            "item"
+          ],
+          "attributes": [
+            [
+              "urn:two",
+              "label",
+              "b"
+            ]
+          ],
+          "declarations": [],
+          "in_scope": {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "xmlns:p": "urn:one",
+            "xmlns:q": "urn:two"
+          }
+        }
+      ],
+      "serialization": "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:p=\"urn:one\" xmlns:q=\"urn:two\"><p:item q:label=\"b\"/></svg>",
+      "operation": {
+        "bind": {
+          "q": "urn:one"
+        }
+      },
+      "consumer_need": "Synthetic policy discriminator based on namespace identities in consumer SVG.",
+      "outcome": "preserve expanded names; apply requested declarations",
+      "error": {
+        "class": "ArgumentError",
+        "pattern": "namespace conflict:"
+      }
+    }
+  }
+}
