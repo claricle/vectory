@@ -1,0 +1,7 @@
+<article xmlns:meta="urn:metadata" id="prepared-host" meta:owner="editor" xml:lang="en" data-version="original">
+  <title>Prepared host</title>
+  <!--These prepared inline SVGs already crossed the svgmap expansion boundary.-->
+  <figure id="first"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:unused="urn:unused" id="shared-root" class="drawing active"><style>.drawing.active { fill: url(#paint); } @media screen { .active:is(.drawing) { stroke: url(#paint); } }</style><defs><linearGradient id="paint"><stop offset="0%"/></linearGradient></defs><g class="drawing active" fill="url(#paint)"><use xlink:href="#shared-root"/><a href="#shared-root">first</a></g><svg id="nested-first" class="drawing"><rect class="active"/></svg></svg></figure>
+  <figure id="second"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:unused="urn:unused" id="shared-root" class="drawing active"><style>.drawing.active { fill: url(#paint); } @media screen { .active:is(.drawing) { stroke: url(#paint); } }</style><defs><linearGradient id="paint"><stop offset="0%"/></linearGradient></defs><g class="drawing active" fill="url(#paint)"><use xlink:href="#shared-root"/><a href="#shared-root">second</a></g></svg></figure>
+  <p id="outside">Unchanged host content.</p>
+</article>

@@ -15,13 +15,11 @@ module Vectory
   class NotWrittenToDiskError < Error; end
 
   class ParsingError < Error; end
-end
 
-require_relative "vectory/errors"
-require_relative "vectory/version"
+  require_relative "vectory/errors"
+  require_relative "vectory/version"
 
-# Lazy load: all other internal Vectory dependencies via autoload
-module Vectory
+  # Lazy load: all other internal Vectory dependencies via autoload
   # Core utilities
   autoload :Utils, "vectory/utils"
 
@@ -38,11 +36,14 @@ module Vectory
   autoload :SvgMapping, "vectory/svg_mapping"
   autoload :SvgDocument, "vectory/svg_document"
   autoload :SvgIdDisambiguator, "vectory/svg_id_disambiguator"
+  autoload :SvgClassSuffixer, "vectory/svg_class_suffixer"
+  autoload :SvgNamespaceBinding, "vectory/svg_namespace_binding"
+  autoload :SvgSubtreeGraft, "vectory/svg_subtree_graft"
+  autoload :SvgTransform, "vectory/svg_transform"
+  autoload :SvgTransformPipeline, "vectory/svg_transform_pipeline"
   autoload :FileMagic, "vectory/file_magic"
-end
 
-# Define additional module methods
-module Vectory
+  # Define additional module methods
   def self.ui
     @ui ||= Logger.new($stdout).tap do |logger|
       logger.level = ENV["VECTORY_LOG"] || Logger::WARN

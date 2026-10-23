@@ -51,5 +51,5 @@ bundle exec rspec spec/vectory/svg_id_disambiguator_spec.rb spec/vectory/svg_tra
 ```
 
 ## Status
-State: todo
-PR: none
+State: implemented; publication, required lint and CI pending
+PR: not yet published (GitHub access unavailable)

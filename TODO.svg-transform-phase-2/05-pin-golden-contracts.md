@@ -57,5 +57,5 @@ git diff --check
 ```
 
 ## Status
-State: todo
-PR: none
+State: implemented; publication, required lint and CI pending; downstream adoption-task URL pending
+PR: not yet published (GitHub access unavailable)
