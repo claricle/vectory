@@ -4,12 +4,8 @@ require "spec_helper"
 require "vectory/svg_subtree_graft"
 
 RSpec.describe Vectory::SvgSubtreeGraft do
-  let(:fixture_root) do
-    File.expand_path("../fixtures/svg_transform/subtree_graft", __dir__)
-  end
-  let(:host) { File.read(File.join(fixture_root, case_name, "host.xml")) }
-  let(:processed) { File.read(File.join(fixture_root, case_name, "processed.xml")) }
-  let(:expected) { File.read(File.join(fixture_root, case_name, "expected.xml")) }
+  let(:host) { transform_fixture("subtree_graft/#{case_name}/host.xml") }
+  let(:processed) { transform_fixture("subtree_graft/#{case_name}/processed.xml") }
   let(:result) { described_class.replace_root_content(host, processed) }
   let(:document) { Leptris::XML.parse(result, strict: true) }
 
@@ -18,7 +14,7 @@ RSpec.describe Vectory::SvgSubtreeGraft do
       let(:case_name) { name }
 
       it "matches the complete expected document" do
-        golden = Leptris::XML.parse(expected, strict: true)
+        golden = Leptris::XML.parse(transform_fixture("subtree_graft/#{case_name}/expected.xml"), strict: true)
         expect(document.canonicalize(with_comments: true))
           .to eq(golden.canonicalize(with_comments: true))
       end
@@ -39,8 +35,8 @@ RSpec.describe Vectory::SvgSubtreeGraft do
       expect(document.root["id"]).to eq("host")
       expect(document.root["h:flag"]).to eq("yes")
       expect(result).to include(
-        '<!--before--><?host keep?><!DOCTYPE article>',
-        '</article><!--after--><?tail keep?>',
+        "<!--before--><?host keep?><!DOCTYPE article>",
+        "</article><!--after--><?tail keep?>",
       )
       expect(result).not_to include('id="discard"', "<old")
     end
@@ -76,10 +72,10 @@ RSpec.describe Vectory::SvgSubtreeGraft do
       elements = document.xpath("//*")
       expect(elements.map { |node| [node.name, node.namespace&.href] })
         .to eq([
-          ["host", "urn:host"], ["g", "urn:svg"],
-          ["shape", "urn:processed-prefix"], ["plain", nil],
-          ["child", nil], ["other", "urn:processed-prefix"], ["bare", nil],
-        ])
+                 ["host", "urn:host"], ["g", "urn:svg"],
+                 ["shape", "urn:processed-prefix"], ["plain", nil],
+                 ["child", nil], ["other", "urn:processed-prefix"], ["bare", nil]
+               ])
       expect(elements[1].attribute_nodes.first.namespace_uri).to eq("urn:processed-prefix")
       expect(elements[2].attribute_nodes.first.namespace_uri)
         .to eq("http://www.w3.org/1999/xlink")

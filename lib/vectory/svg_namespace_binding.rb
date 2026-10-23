@@ -16,48 +16,69 @@ module Vectory
         raise ArgumentError, "invalid namespace request: expected maps and an array"
       end
 
-      @bind = {}
-      bind.each do |prefix, uri|
-        prefix = normalize_prefix(prefix)
-        uri = validate_uri(uri)
-        if @bind.key?(prefix) && @bind[prefix] != uri
-          raise ArgumentError, "namespace conflict: incompatible requested bindings"
-        end
-
-        @bind[prefix] = uri
-      end
-      @unbind = unbind.map { |prefix| normalize_prefix(prefix) }.uniq
-      @remap = remap.to_h { |uri, prefix| [validate_uri(uri), normalize_prefix(prefix)] }
+      normalize_options(bind, unbind, remap)
       @document = parse(content)
       @elements = @document.xpath("//*")
       validate_names
     end
 
     def rewrite
-      targets = @bind.dup
-      @remap.each do |uri, prefix|
-        if targets.key?(prefix) && targets[prefix] != uri
-          raise ArgumentError, "namespace conflict: incompatible requested bindings"
-        end
-
-        targets[prefix] = uri
-      end
+      targets = requested_targets
       targets.each { |prefix, uri| preflight_target(prefix, uri) }
       preflight_unbind
-      targets.each do |prefix, uri|
-        @document.root.add_namespace_definition(prefix, uri) unless
-          @document.root.namespaces[declaration_name(prefix)] == uri
-      end
+      targets.each { |prefix, uri| bind_target(prefix, uri) }
       @elements.each { |element| remap_element(element) }
-      @elements.each do |element|
-        element.namespace_definitions.each do |namespace|
-          element.remove_namespace_definition(namespace.prefix) if @unbind.include?(namespace.prefix)
-        end
-      end
+      unbind_namespaces
       @document.to_xml
     end
 
     private
+
+    def normalize_options(bind, unbind, remap)
+      @bind = normalize_bindings(bind)
+      @unbind = unbind.map { |prefix| normalize_prefix(prefix) }.uniq
+      @remap = remap.to_h { |uri, prefix| [validate_uri(uri), normalize_prefix(prefix)] }
+    end
+
+    def normalize_bindings(bind)
+      bindings = {}
+      bind.each do |prefix, uri|
+        prefix = normalize_prefix(prefix)
+        uri = validate_uri(uri)
+        add_target(bindings, prefix, uri)
+      end
+      bindings
+    end
+
+    def requested_targets
+      targets = @bind.dup
+      @remap.each { |uri, prefix| add_target(targets, prefix, uri) }
+      targets
+    end
+
+    def add_target(targets, prefix, uri)
+      if targets.key?(prefix) && targets[prefix] != uri
+        raise ArgumentError, "namespace conflict: incompatible requested bindings"
+      end
+
+      targets[prefix] = uri
+    end
+
+    def bind_target(prefix, uri)
+      @document.root.add_namespace_definition(prefix, uri) unless
+        @document.root.namespaces[declaration_name(prefix)] == uri
+    end
+
+    def unbind_element(element)
+      element.namespace_definitions.each do |namespace|
+        element.remove_namespace_definition(namespace.prefix) if @unbind.include?(namespace.prefix)
+      end
+    end
+
+    def unbind_namespaces
+      # Descendants still need their inherited source bindings during remapping.
+      @elements.each { |element| unbind_element(element) }
+    end
 
     def normalize_prefix(prefix)
       return nil if prefix.nil? || prefix == ""
@@ -101,15 +122,24 @@ module Vectory
           raise ArgumentError, "invalid SVG: unbound element prefix"
         end
 
-        element.attribute_nodes.each do |attr|
-          if attr.name.include?(":") && !attr.namespace_uri
-            raise ArgumentError, "invalid SVG: unbound attribute prefix"
-          end
+        validate_attributes(element)
+      end
+    end
+
+    def validate_attributes(element)
+      element.attribute_nodes.each do |attr|
+        if attr.name.include?(":") && !attr.namespace_uri
+          raise ArgumentError, "invalid SVG: unbound attribute prefix"
         end
       end
     end
 
     def preflight_target(prefix, uri)
+      preflight_declarations(prefix, uri)
+      preflight_default(uri) unless prefix
+    end
+
+    def preflight_declarations(prefix, uri)
       @elements.each do |element|
         element.namespace_definitions.each do |namespace|
           if namespace.prefix == prefix && namespace.href != uri
@@ -117,15 +147,24 @@ module Vectory
           end
         end
       end
-      return if prefix
+    end
 
+    def preflight_default(uri)
       if @elements.any? { |element| !element.namespace&.href }
         raise ArgumentError, "default namespace: would qualify unqualified elements"
       end
-      return unless @remap[uri].nil? && @remap.key?(uri)
-      return unless @elements.any? { |element| element.attribute_nodes.any? { |attr| attr.namespace_uri == uri } }
+      return unless remapped_to_default?(uri)
+      return unless attributes_use_uri?(uri)
 
       raise ArgumentError, "default namespace: attributes require an explicit prefix"
+    end
+
+    def remapped_to_default?(uri)
+      @remap[uri].nil? && @remap.key?(uri)
+    end
+
+    def attributes_use_uri?(uri)
+      @elements.any? { |element| element.attribute_nodes.any? { |attr| attr.namespace_uri == uri } }
     end
 
     def preflight_unbind
@@ -134,27 +173,46 @@ module Vectory
           raise ArgumentError, "namespace conflict: target also requested for unbind"
         end
 
-        @elements.each do |element|
-          namespace = element.namespace
-          used = namespace && namespace.prefix == prefix && !@remap.key?(namespace.href)
-          used ||= element.attribute_nodes.any? do |attr|
-            attr.namespace_uri && attr.name.split(":")[0...-1].join(":") == prefix &&
-              !@remap.key?(attr.namespace_uri)
-          end
-          raise ArgumentError, "namespace in use: cannot remove requested prefix" if used
-        end
+        preflight_prefix_usage(prefix)
+      end
+    end
+
+    def preflight_prefix_usage(prefix)
+      @elements.each do |element|
+        used = element_uses_prefix?(element, prefix) || attributes_use_prefix?(element, prefix)
+        raise ArgumentError, "namespace in use: cannot remove requested prefix" if used
+      end
+    end
+
+    def element_uses_prefix?(element, prefix)
+      namespace = element.namespace
+      namespace && namespace.prefix == prefix && !@remap.key?(namespace.href)
+    end
+
+    def attributes_use_prefix?(element, prefix)
+      element.attribute_nodes.any? do |attr|
+        attr.namespace_uri && attr.name.split(":")[0...-1].join(":") == prefix &&
+          !@remap.key?(attr.namespace_uri)
       end
     end
 
     def remap_element(element)
       # Snapshot before changing names: native namespace resolution is lexical.
       namespace = element.namespace
-      attributes = element.attribute_nodes.map do |attr|
-        [attr, attr.namespace_uri, attr.name.split(":").last, attr.value]
-      end
+      attributes = attribute_snapshot(element)
       if namespace && @remap.key?(namespace.href)
         element.name = qualified_name(@remap[namespace.href], element.name)
       end
+      remap_attributes(element, attributes)
+    end
+
+    def attribute_snapshot(element)
+      element.attribute_nodes.map do |attr|
+        [attr, attr.namespace_uri, attr.name.split(":").last, attr.value]
+      end
+    end
+
+    def remap_attributes(element, attributes)
       attributes.each do |attr, uri, local, value|
         next unless @remap.key?(uri)
 

@@ -3,16 +3,18 @@
 require "spec_helper"
 require "yaml"
 
-RSpec.describe "SVG namespace parser contract" do
-  fixtures = File.expand_path("../fixtures/svg_transform/namespace_binding", __dir__)
-  contract = YAML.safe_load_file(File.join(fixtures, "contract_cases.yml"))
+RSpec.describe Vectory::SvgNamespaceBinding do
+  let(:fixtures) { File.expand_path("../fixtures/svg_transform/namespace_binding", __dir__) }
+
+  contract = YAML.safe_load_file(File.expand_path("../fixtures/svg_transform/namespace_binding/contract_cases.yml", __dir__))
+  phases = %w[parsed reparsed]
 
   contract.fetch("cases").each do |id, entry|
     context id do
       let(:input) { File.read(File.join(fixtures, "#{id}.svg")) }
       let(:document) { Leptris::XML.parse(input, strict: true) }
 
-      ["parsed", "reparsed"].each do |phase|
+      phases.each do |phase|
         it "records #{phase} expanded names and declaration scopes" do
           doc = phase == "parsed" ? document : Leptris::XML.parse(document.to_xml, strict: true)
           snapshot = doc.xpath("//*").map do |node|

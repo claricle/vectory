@@ -3,12 +3,10 @@
 require "spec_helper"
 
 RSpec.describe Vectory::SvgTransformPipeline do
-  let(:factory) { Vectory::SvgTransform }
   let(:collisions) { { "shape" => 2, "metadata" => ["original"] } }
-  let(:disambiguate) { factory.disambiguate(index: 1, duplicate_ids: collisions) }
-  let(:classes) { factory.suffix_classes(index: 1) }
-  let(:namespaces) { factory.bind_namespaces(bind: { "xlink" => "http://www.w3.org/1999/xlink" }) }
-  let(:cleanup) { disambiguate >> classes >> namespaces }
+  let(:disambiguate) { Vectory::SvgTransform.disambiguate(index: 1, duplicate_ids: collisions) }
+  let(:namespaces) { Vectory::SvgTransform.bind_namespaces(bind: { "xlink" => "http://www.w3.org/1999/xlink" }) }
+  let(:cleanup) { disambiguate >> Vectory::SvgTransform.suffix_classes(index: 1) >> namespaces }
   let(:svg) do
     '<svg xmlns="http://www.w3.org/2000/svg" id="shape"><style>.label { fill: red }</style><g class="label"/></svg>'
   end
@@ -31,7 +29,7 @@ RSpec.describe Vectory::SvgTransformPipeline do
   end
 
   it "builds new values without extending the original prefix" do
-    prefix = disambiguate >> classes
+    prefix = disambiguate >> Vectory::SvgTransform.suffix_classes(index: 1)
     pipeline = prefix >> namespaces
     expect(prefix.steps.size).to eq(2)
     expect(pipeline.steps.size).to eq(3)
@@ -41,14 +39,16 @@ RSpec.describe Vectory::SvgTransformPipeline do
 
   it "rejects incomplete prefixes before parsing input" do
     expect { disambiguate.call("broken XML") }.to raise_error(ArgumentError, /incomplete profile/)
-    expect { (disambiguate >> classes).call("broken XML") }.to raise_error(ArgumentError, /incomplete profile/)
+    expect { (disambiguate >> Vectory::SvgTransform.suffix_classes(index: 1)).call("broken XML") }
+      .to raise_error(ArgumentError, /incomplete profile/)
   end
 
   it "rejects skipped, duplicate, reversed and non-leading graft steps on append" do
-    graft = factory.graft_into(host_content: "<svg/>")
+    graft = Vectory::SvgTransform.graft_into(host_content: "<svg/>")
     expect { disambiguate >> namespaces }.to raise_error(ArgumentError, /invalid step sequence/)
     expect { disambiguate >> disambiguate }.to raise_error(ArgumentError, /invalid step sequence/)
-    expect { classes >> disambiguate }.to raise_error(ArgumentError, /invalid step sequence/)
+    expect { Vectory::SvgTransform.suffix_classes(index: 1) >> disambiguate }
+      .to raise_error(ArgumentError, /invalid step sequence/)
     expect { cleanup >> graft }.to raise_error(ArgumentError, /invalid step sequence/)
   end
 
@@ -58,7 +58,7 @@ RSpec.describe Vectory::SvgTransformPipeline do
   end
 
   it "rejects all-step execution with a complete host capture" do
-    pipeline = factory.graft_into(host_content: "<host><svg/></host>") >> cleanup
+    pipeline = Vectory::SvgTransform.graft_into(host_content: "<host><svg/></host>") >> cleanup
     expect { pipeline.call(svg) }.to raise_error(ArgumentError, /requires an SVG host root/)
   end
 
@@ -73,7 +73,7 @@ RSpec.describe Vectory::SvgTransformPipeline do
 
   it "captures host text independently and preserves host metadata through all steps" do
     host = +'<svg xmlns="http://www.w3.org/2000/svg" data-host="retained"><old/></svg>'
-    graft = factory.graft_into(host_content: host)
+    graft = Vectory::SvgTransform.graft_into(host_content: host)
     host.replace("<changed/>")
     pipeline = graft >> cleanup
     result = Leptris::XML.parse(pipeline.call(svg))
@@ -85,7 +85,7 @@ RSpec.describe Vectory::SvgTransformPipeline do
   end
 
   it "allows a whole-document graft without per-SVG operations" do
-    graft = factory.graft_into(host_content: '<host retained="yes"><old/></host>')
+    graft = Vectory::SvgTransform.graft_into(host_content: '<host retained="yes"><old/></host>')
     result = Leptris::XML.parse(graft.call("<mapped><svg/><svg/></mapped>"))
     expect(result.root.name).to eq("host")
     expect(result.root["retained"]).to eq("yes")
@@ -93,7 +93,7 @@ RSpec.describe Vectory::SvgTransformPipeline do
   end
 
   it "rejects malformed captured hosts when creating a step" do
-    expect { factory.graft_into(host_content: "<svg>") }
+    expect { Vectory::SvgTransform.graft_into(host_content: "<svg>") }
       .to raise_error(Vectory::ParsingError, /invalid host_content XML/)
   end
 

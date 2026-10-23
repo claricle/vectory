@@ -5,8 +5,9 @@ require "yaml"
 require "vectory/svg_namespace_binding"
 
 RSpec.describe Vectory::SvgNamespaceBinding do
-  fixtures = File.expand_path("../fixtures/svg_transform/namespace_binding", __dir__)
-  contract = YAML.safe_load_file(File.join(fixtures, "contract_cases.yml"))
+  let(:fixtures) { File.expand_path("../fixtures/svg_transform/namespace_binding", __dir__) }
+
+  contract = YAML.safe_load_file(File.expand_path("../fixtures/svg_transform/namespace_binding/contract_cases.yml", __dir__))
 
   contract.fetch("cases").each do |id, entry|
     context id do
@@ -17,7 +18,7 @@ RSpec.describe Vectory::SvgNamespaceBinding do
         it "rejects atomically with the selected error contract" do
           original = input.dup
           expect { described_class.rewrite(input, **options) }
-            .to raise_error(ArgumentError, /#{entry.fetch("error").fetch("pattern")}/)
+            .to raise_error(ArgumentError, /#{entry.fetch('error').fetch('pattern')}/)
           expect(input).to eq(original)
         end
       else
@@ -67,7 +68,7 @@ RSpec.describe Vectory::SvgNamespaceBinding do
   it "preserves comments, processing instructions, CDATA and text spelling" do
     source = File.read(File.join(fixtures, "default_svg.svg"))
     output = described_class.rewrite(source, bind: { "extra" => "urn:extra" })
-    expect(output).to include('<!--keep--><?probe keep?><text><![CDATA[a < b]]></text>')
+    expect(output).to include("<!--keep--><?probe keep?><text><![CDATA[a < b]]></text>")
   end
 
   ["", "<svg>", "<host/>", "<svg/><svg/>", "<svg><p:g/></svg>", '<svg p:a="b"/>', nil].each do |invalid|

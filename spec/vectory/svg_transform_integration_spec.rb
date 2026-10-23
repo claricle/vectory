@@ -2,24 +2,22 @@
 
 require "spec_helper"
 
-RSpec.describe "SVG transform contracts" do
-  let(:manifest) { transform_manifest }
-  let(:original) { transform_fixture("consumer_flow/original.xml") }
-  let(:flow) { consumer_flow(original) }
+RSpec.describe Vectory::SvgTransform do
+  let(:flow) { consumer_flow(transform_fixture("consumer_flow/original.xml")) }
 
   it "pins exactly the public executable profiles and their canonical sequences" do
     expected = Vectory::SvgTransformPipeline::PROFILES.transform_keys(&:to_s)
       .transform_values { |steps| steps.map(&:to_s) }
-    expect(manifest.transform_values { |contract| contract.fetch("steps") }).to eq(expected)
-    expect(manifest.keys).to contain_exactly("graft", "svg_cleanup", "graft_then_svg_cleanup")
+    expect(transform_manifest.transform_values { |contract| contract.fetch("steps") }).to eq(expected)
+    expect(transform_manifest.keys).to contain_exactly("graft", "svg_cleanup", "graft_then_svg_cleanup")
   end
 
   %w[graft svg_cleanup graft_then_svg_cleanup].each do |name|
     context "with the #{name} profile" do
-      let(:contract) { manifest.fetch(name) }
+      let(:contract) { transform_manifest.fetch(name) }
       let(:pipeline) { manifest_pipeline(contract) }
       let(:output) { pipeline.call(transform_fixture(contract.fetch("input"))) }
-      let(:document) { Nokogiri::XML(output) { |config| config.strict } }
+      let(:document) { Nokogiri::XML(output, &:strict) }
 
       it "matches its checked-in golden and reparses" do
         expect(pipeline.profile.to_s).to eq(name)
@@ -45,7 +43,7 @@ RSpec.describe "SVG transform contracts" do
           expect(document.at_xpath("//comment()").text).to eq("mapped content")
         end
       else
-        it "retains rewritten references, class lists, nested selectors and final namespaces" do
+        it "retains rewritten references, class lists and final namespaces" do
           expect(document.root["id"]).to eq("drawing_inject_1")
           expect(document.root["class"]).to eq("drawing_inject_1 active_inject_1")
           expect(document.root.namespaces).to include("xmlns:link" => "http://www.w3.org/1999/xlink")
@@ -56,6 +54,9 @@ RSpec.describe "SVG transform contracts" do
           expect(document.at_xpath("//*[local-name()='use']")["link:href"]).to eq("#drawing_inject_1")
           expect(document.at_xpath("//*[local-name()='a']")["href"]).to eq("#drawing_inject_1")
           expect(document.at_xpath("//*[local-name()='rect']")["class"]).to eq("active_inject_1")
+        end
+
+        it "retains nested selectors and non-selector CSS content" do
           css = document.at_xpath("//*[local-name()='style']").text
           expect(css).to include(".drawing_inject_1.active_inject_1:hover", ".drawing_inject_1:is(.active_inject_1, :not(.hidden_inject_1))")
           expect(css).to include("@supports", "url(#paint_inject_1)", 'content: ".active"', "/* .drawing stays */")
@@ -74,6 +75,7 @@ RSpec.describe "SVG transform contracts" do
   end
 
   it "maps the complete host, grafts once, then cleans selected SVGs against its golden" do
+    original = transform_fixture("consumer_flow/original.xml")
     expect(Vectory::SvgMapping).to receive(:new).with(original).and_call_original
     expect(Vectory::SvgSubtreeGraft).to receive(:replace_root_content).once.and_call_original
     expect(flow.fetch(:mapped)).to be_xml_equivalent_to(transform_fixture("consumer_flow/mapped.xml"))
@@ -86,8 +88,8 @@ RSpec.describe "SVG transform contracts" do
     host = transform_fixture("consumer_flow/svgmap-original.xml")
     mapped = Vectory::SvgMapping.new(host).to_xml
     expect(mapped).to be_xml_equivalent_to(transform_fixture("consumer_flow/svgmap-mapped.xml"))
-    pipeline = Vectory::SvgTransform.graft_into(host_content: host)
-    result = Nokogiri::XML(pipeline.call(mapped)) { |config| config.strict }
+    pipeline = described_class.graft_into(host_content: host)
+    result = Nokogiri::XML(pipeline.call(mapped), &:strict)
     expect(result.xpath("//svgmap")).to be_empty
     expect(result.root["id"]).to eq("mapping-host")
     expect(result.root["data-owner"]).to eq("original")
@@ -98,13 +100,18 @@ RSpec.describe "SVG transform contracts" do
   end
 
   it "preserves the first repeated namespaced root and suffixes the later root by position" do
-    mapped = Nokogiri::XML(flow.fetch(:mapped)) { |config| config.strict }
+    mapped = Nokogiri::XML(flow.fetch(:mapped), &:strict)
     expect(mapped.xpath("/article/figure/*[local-name()='svg']").map { |svg| svg["id"] })
       .to eq(%w[shared-root shared-root])
-    document = Nokogiri::XML(flow.fetch(:output)) { |config| config.strict }
+    document = Nokogiri::XML(flow.fetch(:output), &:strict)
     roots = document.xpath("/article/figure/*[local-name()='svg']")
     expect(roots.map { |svg| svg["id"] }).to eq(%w[shared-root shared-root_inject_1])
     expect(roots.map { |svg| svg.namespace.href }.uniq).to eq(["http://www.w3.org/2000/svg"])
+  end
+
+  it "retains each selected SVG's namespaces, classes and references" do
+    document = Nokogiri::XML(flow.fetch(:output), &:strict)
+    roots = document.xpath("/article/figure/*[local-name()='svg']")
     roots.each_with_index do |svg, index|
       expect(svg["class"]).to eq("drawing_inject_#{index} active_inject_#{index}")
       expect(svg.namespaces).to include("xmlns:link" => "http://www.w3.org/1999/xlink")
@@ -114,6 +121,10 @@ RSpec.describe "SVG transform contracts" do
       expect(svg.at_xpath(".//*[local-name()='a']")["href"]).to eq("##{svg['id']}")
       expect(svg.at_xpath(".//*[local-name()='g']")["fill"]).to eq("url(#paint_inject_#{index})")
     end
+  end
+
+  it "retains prepared host metadata and unselected content" do
+    document = Nokogiri::XML(flow.fetch(:output), &:strict)
     expect(document.at_xpath("//*[local-name()='rect']")["class"]).to eq("active_inject_0")
     expect(document.root["id"]).to eq("prepared-host")
     expect(document.root["meta:owner"]).to eq("editor")
@@ -122,7 +133,7 @@ RSpec.describe "SVG transform contracts" do
     expect(document.at_xpath("/article/p").text).to eq("Unchanged host content.")
   end
 
-  it "captures a fresh deeply frozen collision snapshot before each SVG without mutating caller state" do
+  it "captures a fresh deeply frozen collision snapshot before each SVG" do
     first, second = flow.fetch(:records)
     first_snapshot = first.fetch(:pipeline).steps.first.options.fetch(:duplicate_ids)
     second_snapshot = second.fetch(:pipeline).steps.first.options.fetch(:duplicate_ids)
@@ -137,6 +148,12 @@ RSpec.describe "SVG transform contracts" do
       expect(snapshot.fetch("metadata")).to be_frozen
       expect(snapshot.fetch("metadata").first).to be_frozen
     end
+  end
+
+  it "keeps captured collision snapshots independent of later caller mutations" do
+    first, second = flow.fetch(:records)
+    first_snapshot = first.fetch(:pipeline).steps.first.options.fetch(:duplicate_ids)
+    second_snapshot = second.fetch(:pipeline).steps.first.options.fetch(:duplicate_ids)
     flow.fetch(:collisions)["shared-root"] = 99
     flow.fetch(:collisions).fetch("metadata") << "later mutation"
     expect(first_snapshot).to eq("paint" => 1, "metadata" => ["caller-owned"])
@@ -149,7 +166,7 @@ RSpec.describe "SVG transform contracts" do
   end
 
   it "is idempotent when the complete mapping, graft and sequential cleanup are repeated" do
-    repeated = consumer_flow(original, source: flow.fetch(:output))
+    repeated = consumer_flow(transform_fixture("consumer_flow/original.xml"), source: flow.fetch(:output))
     expect(repeated.fetch(:output)).to be_xml_equivalent_to(flow.fetch(:output))
   end
 

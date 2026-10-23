@@ -14,16 +14,12 @@ module Vectory
     attr_reader :steps
 
     def initialize(steps)
-      unless steps.all? { |step| step.is_a?(SvgTransform) }
+      unless steps.all?(SvgTransform)
         raise ArgumentError, "invalid step sequence: expected SVG transforms"
       end
 
       @steps = steps.dup.freeze
-      names = steps.map(&:name)
-      unless !names.empty? && PROFILES.values.any? { |profile| profile.take(names.length) == names }
-        raise ArgumentError, "invalid step sequence: #{names.join(' -> ')}"
-      end
-
+      validate_sequence
       freeze
     end
 
@@ -45,13 +41,17 @@ module Vectory
 
     private
 
+    def validate_sequence
+      names = steps.map(&:name)
+      unless !names.empty? && PROFILES.values.any? { |profile| profile.take(names.length) == names }
+        raise ArgumentError, "invalid step sequence: #{names.join(' -> ')}"
+      end
+    end
+
     def validate_scope(content)
       case profile
       when :svg_cleanup
-        root = Leptris::XML.parse(content, strict: true).root
-        return if root&.name == "svg"
-
-        raise ArgumentError, "execution-scope mismatch: svg_cleanup requires an SVG root"
+        validate_svg_root(content)
       when :graft_then_svg_cleanup
         return if steps.first.options.fetch(:svg_host)
 
@@ -59,6 +59,13 @@ module Vectory
       end
     rescue Leptris::XML::SyntaxError, Leptris::XML::ParseError => e
       raise ParsingError, "invalid content XML: #{e.message}"
+    end
+
+    def validate_svg_root(content)
+      root = Leptris::XML.parse(content, strict: true).root
+      return if root&.name == "svg"
+
+      raise ArgumentError, "execution-scope mismatch: svg_cleanup requires an SVG root"
     end
   end
 end

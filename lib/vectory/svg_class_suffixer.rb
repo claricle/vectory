@@ -17,10 +17,7 @@ module Vectory
       # @param suffix [String] a CSS identifier suffix, e.g. "_inject_0"
       # @return [String] rewritten XML
       def rewrite(content, suffix)
-        doc = Leptris::XML.parse(content)
-        # Recent Leptris versions recover malformed XML by default.
-        raise Leptris::XML::ParseError, doc.errors.first.message if doc.respond_to?(:errors) && !doc.errors.empty?
-
+        doc = parse(content)
         doc.xpath("//*[local-name()='svg']").each do |svg|
           ([svg] + svg.xpath(".//*")).each do |element|
             rewrite_element(element, suffix)
@@ -31,14 +28,16 @@ module Vectory
 
       private
 
+      def parse(content)
+        doc = Leptris::XML.parse(content)
+        # Recent Leptris versions recover malformed XML by default.
+        raise Leptris::XML::ParseError, doc.errors.first.message if doc.respond_to?(:errors) && !doc.errors.empty?
+
+        doc
+      end
+
       def rewrite_element(element, suffix)
-        # Keep attribute reads and writes on Leptris's native attribute layer.
-        attribute = element.attribute_nodes.find { |node| node.name == "class" }
-        if attribute
-          attribute.value = attribute.value.gsub(/[^\t\n\f\r ]+/) do |name|
-            name.end_with?(suffix) ? name : "#{name}#{suffix}"
-          end
-        end
+        rewrite_classes(element, suffix)
         return unless element.name == "style"
 
         css = element.text
@@ -46,17 +45,32 @@ module Vectory
         element.content = rewritten unless rewritten == css
       end
 
+      def rewrite_classes(element, suffix)
+        # Keep attribute reads and writes on Leptris's native attribute layer.
+        attribute = element.attribute_nodes.find { |node| node.name == "class" }
+        if attribute
+          attribute.value = attribute.value.gsub(/[^\t\n\f\r ]+/) do |name|
+            name.end_with?(suffix) ? name : "#{name}#{suffix}"
+          end
+        end
+      end
+
       def rewrite_css(css, suffix)
         changes = {}
         rewrite_rules(Crass.parse(css, preserve_comments: true), suffix, changes)
         # Crass tolerates malformed CSS but stringify may repair or drop it.
         # Token positions use CSS-normalized newlines; map them to the source.
-        offsets = [0]
-        css.scan(/\r\n|./m) { |character| offsets << (offsets.last + character.length) }
+        offsets = source_offsets(css)
         changes.sort.reverse_each do |position, raw|
           css.insert(offsets[position + raw.length - suffix.length], suffix)
         end
         css
+      end
+
+      def source_offsets(css)
+        offsets = [0]
+        css.scan(/\r\n|./m) { |character| offsets << (offsets.last + character.length) }
+        offsets
       end
 
       def rewrite_rules(rules, suffix, changes)
