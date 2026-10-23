@@ -9,13 +9,33 @@ on:
   pull_request:
 
 permissions:
+  actions: read
   contents: write
   packages: read
 
 jobs:
+  svgpng-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Fetch and verify qualified SVGPNG packages
+        env:
+          GH_TOKEN: ${{ secrets.CLARICLE_CI_PAT_TOKEN }}
+        run: python .github/scripts/stage_svgpng.py fetch --output svgpng-cache
+      - uses: actions/upload-artifact@v4
+        with:
+          name: svgpng-qualified-cache
+          path: svgpng-cache/
+          if-no-files-found: error
+          retention-days: 1
+
   rake:
+    needs: svgpng-cache
     uses: metanorma/ci/.github/workflows/generic-rake.yml@main
     with:
+      before-setup-ruby: |
+        GH_TOKEN="${{ github.token }}" gh run download "${{ github.run_id }}" --repo "${{ github.repository }}" --name svgpng-qualified-cache --dir svgpng-cache
+        python .github/scripts/stage_svgpng.py stage --source svgpng-cache --output vendor/cache
       setup-tools: inkscape,ghostscript
       submodules: true
       choco-cache: true
