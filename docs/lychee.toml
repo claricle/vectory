@@ -6,20 +6,11 @@ exclude = [
   'http://localhost:*',
   'http://127.0.0.1:*',
   'file:///*',
-]
-
-# Exclude mailto: links
-exclude = [
+  # Exclude mailto: links
   'mailto:*',
-]
-
-# Exclude version-specific URLs that may break
-exclude = [
+  # Exclude version-specific URLs that may break
   'https://github.com/*/releases/tag/*',  # GitHub release tags
   'https://rubygems.org/gems/*/versions/*',  # RubyGem version history
-]
-
-# Allow certain redirects
-exclude = [
+  # Example domains used in docs
   'https://example.com/*',  # Example domains used in docs
 ]

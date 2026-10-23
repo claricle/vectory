@@ -31,19 +31,27 @@ disambiguator, pipeline, integration, mapping and document specs.
 The production Jekyll build and executable API migration example passed.
 Final implementation review found no demonstrated functional defect.
 
-Required changed-file RuboCop is blocked before inspection: its inherited remote
-configuration is absent from the cache and cannot be fetched in this environment.
-A supplemental default-config diagnostic was not clean and does not replace
-repository lint. The full suite and GitHub Actions have not been reported green.
+Changed-file RuboCop with the actual inherited configuration passes for all 13
+Ruby files. After the lint changes, the seven affected specs pass **168 examples,
+0 failures**. Assertion-heavy examples were split without removing assertions.
+
+Draft PR: https://github.com/claricle/vectory/pull/80. At head `976a69f`, all nine
+Ruby/platform test jobs and the documentation build passed. The link checker
+failed before checking links because `docs/lychee.toml` repeated the `exclude`
+key; those entries are now consolidated and the configuration parses. The final
+test gate failed on repository dispatch with "Resource not accessible by
+integration"; this requires CI credential/configuration resolution. New-head
+CI remains required before merge. The full suite has not been reported green
+for the final head.
 
 ## Remaining acceptance and publication
 
-1. Restore GitHub access, push this implementation branch, and open a PR
-   referencing #77 without automatically closing it. Keep the remote updated.
-2. Run changed-file RuboCop with the actual inherited configuration and resolve
-   applicable findings. Obtain required CI and approvals before merge.
-3. Create or identify **Adopt `Vectory::SvgClassSuffixer` in Standoc** and record
-   its actual URL here. GitHub access prevented this handoff; no URL is fabricated.
+1. Keep draft PR #80 updated with implementation and verification evidence.
+2. Obtain required final-head CI and approvals before merge, including resolving
+   the repository-dispatch credential/configuration failure.
+3. Standoc adoption is tracked at
+   https://github.com/metanorma/metanorma-standoc/issues/1301 and depends on a
+   Vectory release containing #77.
 4. After #77 lands, #76's Vectory adapter must rebase and reconcile
    `vectory.gemspec`, `lib/vectory.rb`, `README.adoc`, and
    `docs/reference/api.adoc`. Keep rendering distinct from content transforms.
