@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.executables   = ["vectory"]
   spec.require_paths = ["lib"]
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
-    f.match(%r{^(bin|spec)/})
+    f.match(%r{^(bin|spec|TODO\.[^/]+)/})
   end
   spec.test_files = `git ls-files -- {spec}/*`.split("\n")
   spec.required_ruby_version = ">= 3.1.0"
