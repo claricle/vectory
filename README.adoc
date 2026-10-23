@@ -9,7 +9,7 @@ image:https://img.shields.io/github/commits-since/metanorma/vectory/latest.svg["
 == Purpose
 
 Vectory is a Ruby gem that performs pairwise vector image conversions for common
-vector image formats (EPS, PS, EMF, SVG).
+vector image formats (EPS, PS, EMF, SVG), with PNG output from each format.
 
 [quote]
 ____
@@ -21,12 +21,27 @@ ____
 
 === Prerequisites
 
-Vectory ships as a pure-Ruby gem. Format support is provided by these Ruby gems (installed automatically):
+Vectory is written in Ruby. Format support is provided by these gems
+(installed automatically):
 
 * https://github.com/claricle/emfsvg[emfsvg] (EMF <-> SVG)
 * https://github.com/claricle/postsvg[postsvg] (PS/EPS <-> SVG)
+* `svgpng ~> 0.1.0` (SVG -> PNG)
 
-No external binaries are required.
+PNG rendering uses the prebuilt native artifact in the platform-specific
+`svgpng` package; it requires no separately installed renderer or compiler.
+The supported native targets are `arm64-darwin`, `x86_64-darwin`,
+`x86_64-linux`, `aarch64-linux`, `x86_64-linux-musl`,
+`aarch64-linux-musl`, and `x64-mingw-ucrt`.
+
+On other platforms, RubyGems selects the same-version `ruby` shell package.
+Existing non-PNG conversions remain available. Requesting PNG raises
+`Vectory::UnsupportedPlatformError` (CLI exit status 5). The renderer is loaded
+only when PNG output is requested.
+
+NOTE: The PNG integration is under development. Its dependency must not be
+released with Vectory until the tested seven native packages and the `ruby`
+shell package are published together.
 
 
 === Gem install
@@ -48,12 +63,49 @@ $ vectory [-o {output-file-name}] -f {format} {input-file-name}
 
 Where,
 
-`format`:: the desired output format (one of: `svg`, `eps`, `ps`, `emf`)
+`format`:: the desired output format (one of: `svg`, `eps`, `ps`, `emf`, `png`)
 `input-file-name`:: file path to the input file
 `output-file-name`:: file path to the desired output file (with the
 file extension) (default: writes to a current directory by the input filename
 with an extension changed to a desired format)
 
+
+=== PNG output
+
+PNG is output-only. SVG, EMF, EPS, and PS inputs can be converted to PNG:
+
+[source,sh]
+----
+vectory -f png -o diagram.png --width 1200 --background '#ffffff' diagram.svg
+vectory -f png --font 'Example Sans=fonts/ExampleSans-Regular.ttf' \
+  --font 'Example Sans=fonts/ExampleSans-Bold.ttf' \
+  --fallback-font 'Example Symbols=fonts/ExampleSymbols.ttf' \
+  --fallback-font 'Example CJK=fonts/ExampleCJK.otf' diagram.emf
+----
+
+`--font FAMILY=PATH` is repeatable. Repeat a family to supply distinct
+style, weight, or stretch faces. `--fallback-font FAMILY=PATH` is also repeatable;
+fallback faces are tried in the order supplied. Fonts are read explicitly from
+these paths; the renderer does not search system fonts. A text-free image needs
+no font options. Font substitution warnings are printed once each to stderr in
+renderer order, separately from the binary output file.
+
+These options are valid only with `-f png`:
+
+`--width PIXELS`, `--height PIXELS`:: Positive integer output dimensions. One
+specified dimension preserves the source aspect ratio. Both dimensions set the
+canvas size, fitting and centering the image without changing its aspect ratio.
+`--scale NUMBER`:: Positive decimal scale applied to intrinsic dimensions.
+Cannot be combined with width or height.
+`--background COLOR`:: `transparent` (the default), `#RRGGBB`, or `#RRGGBBAA`.
+Quote hexadecimal colors in shell commands.
+`--font FAMILY=PATH`, `--fallback-font FAMILY=PATH`:: Explicit font faces and
+ordered fallbacks as described above.
+
+Without size options, the renderer uses the SVG's intrinsic dimensions, then its
+`viewBox`, with a 300 by 150 default. SVG input containing a DOCTYPE declaration
+is rejected before XML parsing. External resources cannot be enabled through a
+CLI option.
 
 === Using the Ruby library
 
@@ -87,6 +139,48 @@ uri = "data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0 ... GRkYiLz4
 
 Vectory::Datauri.new(uri).to_vector.to_emf.to_uri.content
 ----
+
+
+==== Binary PNG results
+
+`to_png` returns a `Vectory::Png` from any supported vector class. Pass explicit
+font and fallback collections, including empty collections for text-free SVG:
+
+[source,ruby]
+----
+svg = Vectory::Svg.from_path("diagram.svg")
+png = svg.to_png(profile: { width: 1200, background: "#ffffff" },
+                 fonts: {}, fallback_fonts: [])
+
+png.content       # binary PNG bytes (ASCII-8BIT)
+png.mime          # "image/png"
+png.width         # output width in pixels
+png.height        # output height in pixels
+png.size          # byte count in memory
+png.warnings      # structured font substitution warnings, in renderer order
+png.write("diagram.png").path
+----
+
+For text, construct faces with the public `Svgpng::FontFace` API. The `fonts`
+hash maps family names to arrays of faces; `fallback_fonts` is an ordered array:
+
+[source,ruby]
+----
+require "svgpng"
+
+face = Svgpng::FontFace.new(bytes: File.binread("fonts/ExampleSans.ttf"),
+                           source_id: "fonts/ExampleSans.ttf")
+symbols = Svgpng::FontFace.new(bytes: File.binread("fonts/ExampleSymbols.ttf"),
+                              source_id: "fonts/ExampleSymbols.ttf")
+png = svg.to_png(profile: { scale: "2" },
+                 fonts: { "Example Sans" => [face] }, fallback_fonts: [symbols])
+----
+
+Profile keys correspond to the CLI options. Width and height are integers;
+scale is a decimal string. PNG results share the image file lifecycle below:
+`path` and `file_size` raise before a write, the first no-argument `write` uses a
+temporary file, and subsequent no-argument writes reuse the written path.
+PNG is not accepted as an input format and has no vector data-URI API.
 
 
 ==== What is supported?
@@ -363,6 +457,12 @@ Vector#size
 Vector#file_size
 Vector#height
 Vector#width
+Png#mime
+Png#size
+Png#file_size
+Png#height
+Png#width
+Png#warnings
 ----
 
 
