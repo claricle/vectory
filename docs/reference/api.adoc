@@ -507,3 +507,112 @@ removal of the inline helpers require a separate task after a containing release
 * link:../guides/error-handling/[Error Handling Guide] - Common errors and solutions
 * link:../understanding/architecture/[Architecture] - Design patterns
 * link:../features/conversion/[Conversion Features] - Conversion details
+
+
+== PNG rendering and conformance
+
+PNG is output-only. Every vector class (`Svg`, `Emf`, `Eps`, `Ps`) exposes
+`to_png(profile: {}, fonts:, fallback_fonts:)`, returning `Vectory::Png`.
+The transform pipeline may produce the final SVG bytes; rendering consumes those
+bytes without depending on transform pipeline classes.
+
+[source,ruby]
+----
+require "vectory"
+require "svgpng"
+
+svg = Vectory::Svg.from_path("diagram.svg")
+face = Svgpng::FontFace.new(bytes: File.binread("fonts/ExampleSans.ttf"),
+                           source_id: "fonts/ExampleSans.ttf")
+fallback = Svgpng::FontFace.new(bytes: File.binread("fonts/ExampleSymbols.ttf"),
+                               source_id: "fonts/ExampleSymbols.ttf")
+png = svg.to_png(profile: { width: 1200, background: "#ffffff" },
+                 fonts: { "Example Sans" => [face] }, fallback_fonts: [fallback])
+png.write("diagram.png")
+png.warnings.each { |warning| warn warning.inspect }
+----
+
+Font families must match normalized byte-derived metadata. Multiple faces per
+family support style, weight, and stretch. A cluster selects an exact-family
+face with full coverage before trying fallback faces in caller order. Missing
+coverage raises `Vectory::FontError`. No system fonts are searched. Text-free
+SVG uses explicit `fonts: {}, fallback_fonts: []`. Ruby exposes ordered structured
+warnings; the CLI emits each substitution once to stderr, naming families,
+style/weight/stretch, and Unicode scalars.
+
+`Png#content` is binary (`ASCII-8BIT`); `#mime` is `image/png`. `#width`, `#height`,
+and `#size` report pixels and byte count. `#warnings` is an immutable collection.
+`#write(path)` writes bytes and returns the image; `#path` and `#file_size` raise
+before writing. The first no-argument `#write` creates a temporary file and later
+calls reuse its path. PNG has no vector data-URI interface and is not accepted
+as conversion input.
+
+[source,sh]
+----
+vectory -f png -o diagram.png --width 1200 --height 800 \
+  --background '#ffffff' --font 'Example Sans=fonts/ExampleSans.ttf' \
+  --fallback-font 'Example Symbols=fonts/ExampleSymbols.ttf' diagram.svg
+vectory -f png --scale 2 --background transparent diagram.svg
+----
+
+All PNG-only CLI flags are `--width`, `--height`, `--scale`, `--background`,
+repeatable `--font FAMILY=PATH`, and repeatable `--fallback-font FAMILY=PATH`.
+Other output formats reject these options. Profile keys are the corresponding
+Ruby symbols: positive integer width/height, positive decimal-string scale,
+and background `transparent`, `#RRGGBB`, or `#RRGGBBAA`. Scale cannot accompany
+width/height. Both dimensions set an aspect-preserving centered canvas; one
+derives the other. Otherwise scale multiplies intrinsic dimensions.
+Intrinsic size uses both root dimensions, derives a missing dimension from a
+positive `viewBox`, uses `viewBox` alone, then defaults to 300 by 150.
+A missing axis without a usable `viewBox` defaults to 300 or 150; percentage
+root lengths use that viewport and absolute units use 96 dpi. Dimensions round
+half up with a one-pixel minimum.
+
+Raw DTD/DOCTYPE declarations are rejected before parsing or entity expansion.
+Same-document fragments and inline `data:` resources are accepted; paths,
+network URLs, other non-inline references, and CSS `@import` are rejected.
+There is no external-resource loader or option to enable one.
+
+Enforceable limits: SVG 16 MiB; 64 faces; 32 MiB per font and 128 MiB total;
+32768 pixels per axis; 64,000,000 pixels; checked row stride and at most
+256 MiB output buffer. A synchronous native render has no safe cancellation;
+use a killable isolated process for wall-clock deadlines.
+
+`RenderProfileError`, `MalformedSvgError`, `FontError`,
+`ForbiddenExternalReferenceError`, and `RenderLimitError` are Vectory conversion
+errors (CLI status 4). `UnsupportedPlatformError`, `RendererLoadError`,
+`NativeRenderError`, `PngEncodingError`, and filesystem `SystemCallError` are
+Vectory system-call errors (CLI status 5). Success is 0; unsupported input/output
+remain 2/3 and same-format vector conversion remains 7.
+
+The seven native packages target `arm64-darwin`, `x86_64-darwin`, `x86_64-linux`,
+`aarch64-linux`, `x86_64-linux-musl`, `aarch64-linux-musl`, and `x64-mingw-ucrt`.
+They require no external renderer/compiler. Other platforms install the
+same-version Ruby shell; requiring Vectory and non-PNG conversions still work,
+but PNG requests raise `Vectory::UnsupportedPlatformError` (status 5).
+Release requires the qualified seven native packages and shell together.
+
+Byte identity requires identical SVG/font inputs, fallback order, profile, and
+qualified renderer/dependency build. See
+https://github.com/claricle/svgpng/blob/main/docs/decisions/svg-to-png.md[svgpng support, provenance, encoder, and release details]
+and https://github.com/claricle/svgpng/blob/main/docs/goldens.md[golden compatibility].
+Conformance does not prove visual fidelity, arbitrary SVG feature support, or
+byte identity across renderer builds.
+
+For development/CI, the tracked Gemfile pins test-only `png_conform` 0.1.4 to
+`653abae0d16d9533a37a5d5eca40896d3b307993`; it is not a runtime dependency.
+The lockfile remains ignored and untracked. After `bundle install`:
+
+[source,ruby]
+----
+require "png_conform"
+require "png_conform/services/validation_orchestrator"
+
+analysis = PngConform::Services::ValidationOrchestrator.validate_file(png.path)
+raise analysis.to_json unless analysis.valid?
+----
+
+`bundle exec png_conform check --format json diagram.png` validates a file from the CLI.
+`bundle exec rspec spec/integration/png_conform_spec.rb` proves direct handoff of
+a real written PNG plus rejection of a corrupted copy with diagnostic errors.
+No conformance adapter is required.

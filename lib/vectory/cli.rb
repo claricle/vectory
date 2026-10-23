@@ -1,5 +1,6 @@
 require "thor"
 require "vectory"
+require_relative "png_options"
 
 module Vectory
   class CLI < Thor
@@ -32,6 +33,7 @@ module Vectory
       PS  = "ps".freeze
       SVG = "svg".freeze
       EMF = "emf".freeze
+      PNG = "png".freeze
 
       def self.all
         constants.map { |x| const_get(x) }
@@ -44,16 +46,25 @@ module Vectory
 
     desc "convert INPUT_FILE_NAME",
          "Perform pairwise vector image conversions for common vector image " \
-         "formats (EPS, PS, EMF, SVG)"
+         "formats (EPS, PS, EMF, SVG) and PNG output"
     option :format,
            aliases: :f,
            required: true,
-           desc: "the desired output format (one of: svg, eps, ps, emf)"
+           desc: "the desired output format (one of: svg, eps, ps, emf, png)"
 
     option :output,
            aliases: :o,
            desc: "file path to the desired output file (with the file " \
                  "extension)"
+    option :font, type: :string, repeatable: true,
+                  desc: "explicit font face FAMILY=PATH (repeatable)"
+    option :fallback_font, type: :string, repeatable: true,
+                           desc: "ordered fallback face FAMILY=PATH (repeatable)"
+    option :width, type: :string, desc: "PNG width in pixels"
+    option :height, type: :string, desc: "PNG height in pixels"
+    option :scale, type: :string, desc: "PNG scale factor"
+    option :background, type: :string,
+                        desc: "PNG background: transparent, #RRGGBB or #RRGGBBAA"
     def convert(file)
       unless supported_format?(options[:format])
         return unsupported_format_error(options[:format])
@@ -68,9 +79,12 @@ module Vectory
         return unsupported_input_format_error
       end
 
+      PngOptions.validate_format!(options)
       object = source_object(file, input_format)
 
       convert_to_format(object, options)
+    rescue Vectory::Error => e
+      handle_vectory_error(e)
     end
     default_task :convert
 
@@ -126,7 +140,9 @@ module Vectory
     def convert_to_format(object, options)
       path = options[:output] || current_dir_path(object.initial_path,
                                                   options[:format])
-      to_format(object, options[:format]).write(path)
+      result = to_format(object, options[:format])
+      result.write(path)
+      print_png_warnings(result.warnings) if options[:format] == "png"
       Vectory.ui.info("Output file was written to #{path}")
 
       STATUS_SUCCESS
@@ -137,15 +153,33 @@ module Vectory
     def handle_vectory_error(exception)
       Vectory.ui.error(exception.message)
 
-      MAP_ERROR_TO_STATUS[exception.class] || raise(exception)
+      match = MAP_ERROR_TO_STATUS.find { |type, _status| exception.is_a?(type) }
+      match ? match.last : raise(exception)
     end
 
     def current_dir_path(input_path, output_format)
       File.join(Dir.pwd, "#{File.basename(input_path, '.*')}.#{output_format}")
     end
 
+    def print_png_warnings(warnings)
+      seen = {}
+      warnings.each do |warning|
+        key = [warning.requested_family, warning.selected_family,
+               warning.style, warning.weight, warning.stretch, warning.scalars]
+        next if seen[key]
+
+        seen[key] = true
+        warn("Font substitution: #{warning.requested_family} -> " \
+             "#{warning.selected_family}; style=#{warning.style}; " \
+             "weight=#{warning.weight}; stretch=#{warning.stretch}; " \
+             "scalars=#{warning.scalars.map { |scalar| format('U+%04X', scalar) }.join(',')}")
+      end
+    end
+
     def to_format(object, format)
       method_name = "to_#{format}"
+      return object.public_send(method_name, **PngOptions.new(options).keywords) if format == "png"
+
       object.public_send(method_name)
     end
   end
