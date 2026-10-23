@@ -148,6 +148,8 @@ font and fallback collections, including empty collections for text-free SVG:
 
 [source,ruby]
 ----
+require "vectory"
+
 svg = Vectory::Svg.from_path("diagram.svg")
 png = svg.to_png(profile: { width: 1200, background: "#ffffff" },
                  fonts: {}, fallback_fonts: [])
@@ -176,11 +178,97 @@ png = svg.to_png(profile: { scale: "2" },
                  fonts: { "Example Sans" => [face] }, fallback_fonts: [symbols])
 ----
 
+Exact font families are matched against the font metadata after normalization;
+a caller-provided family name must match that metadata. Supply separate faces for
+style, weight, and stretch. Each shaped cluster uses an exact-family face with
+coverage first, then the ordered fallback faces. Missing coverage raises
+`Vectory::FontError`; no system font search or implicit substitution occurs.
+Ruby callers receive structured warnings in `png.warnings` and decide how to
+present them; the CLI prints deduplicated substitutions to stderr.
+
 Profile keys correspond to the CLI options. Width and height are integers;
 scale is a decimal string. PNG results share the image file lifecycle below:
 `path` and `file_size` raise before a write, the first no-argument `write` uses a
 temporary file, and subsequent no-argument writes reuse the written path.
 PNG is not accepted as an input format and has no vector data-URI API.
+
+
+==== PNG safety, errors, and conformance
+
+Output sizing applies explicit width/height first; a single dimension derives
+the other from the intrinsic aspect ratio. Otherwise scale multiplies intrinsic
+size; scale and explicit dimensions are mutually exclusive. Intrinsic size uses
+both SVG root dimensions, or derives a missing dimension from a positive
+`viewBox`; with neither dimension it uses the `viewBox`, then 300 by 150.
+Without a usable `viewBox`, a missing root dimension defaults to 300 or 150.
+Percent root lengths use that 300 by 150 viewport; absolute units use 96 dpi.
+Resolved dimensions round half up and clamp to at least one pixel.
+
+The raw SVG byte boundary rejects DTD/DOCTYPE declarations before parsing,
+including declarations whose entities are unused. Only same-document fragments
+and inline `data:` resources are allowed. Relative/absolute paths, network URLs,
+other non-inline references, and CSS `@import` are rejected. There is no resource
+loader or opt-in for external access.
+
+Enforced limits are 16 MiB of SVG, 64 font faces, 32 MiB per font, 128 MiB of
+fonts total, 32768 pixels per output axis, 64,000,000 output pixels, and a
+256 MiB output buffer with checked row-stride arithmetic. These are allocation
+bounds, not a time budget. For a wall-clock deadline, render in a separate,
+killable process; the synchronous native call has no safe in-process cancellation.
+
+[cols="2,3,1",options="header"]
+|===
+|Ruby error |Typical cause |CLI status
+|`Vectory::RenderProfileError` |Invalid size, scale, background, or profile key |4
+|`Vectory::MalformedSvgError` |Malformed SVG/XML |4
+|`Vectory::FontError` |Invalid, duplicate, missing family, or missing glyph face |4
+|`Vectory::ForbiddenExternalReferenceError` |DTD or non-inline reference |4
+|`Vectory::RenderLimitError` |Input, font, dimension, pixel, or buffer bound |4
+|`Vectory::UnsupportedPlatformError`, `Vectory::RendererLoadError`
+|Unsupported platform or unavailable packaged renderer |5
+|`Vectory::NativeRenderError`, `Vectory::PngEncodingError`
+|Native rendering or PNG encoding failure |5
+|`Vectory::SystemCallError` |Unreadable font/input or unwritable output |5
+|===
+
+Success returns CLI status 0. PNG-only options with another output format return
+status 4. Unsupported input/output formats retain statuses 2/3, and conversion
+to the same vector format retains status 7.
+
+Deterministic bytes require the same SVG bytes, font bytes and order, render
+profile, and qualified renderer/dependency build. Conformance validation checks
+PNG structure; it does not establish visual correctness, cross-build byte
+identity, or general support for every SVG construct. Native details belong to
+https://github.com/claricle/svgpng/blob/main/docs/decisions/svg-to-png.md[svgpng's support, provenance, encoder, and release contract]
+and https://github.com/claricle/svgpng/blob/main/docs/goldens.md[golden compatibility documentation].
+
+The test-only `png_conform` dependency is version 0.1.4 at Git commit
+`653abae0d16d9533a37a5d5eca40896d3b307993`. After `bundle install`, validate the
+written file directly (the validator is not a Vectory runtime dependency):
+
+[source,ruby]
+----
+require "png_conform"
+require "png_conform/services/validation_orchestrator"
+
+path = png.write("diagram.png").path
+analysis = PngConform::Services::ValidationOrchestrator.validate_file(path)
+raise analysis.to_json unless analysis.valid?
+----
+
+[source,sh]
+----
+bundle exec rspec spec/integration/png_conform_spec.rb
+bundle exec png_conform check --format json diagram.png
+----
+
+The integration spec validates a real render with explicit font collections and
+a corrupted-file negative control with nonempty diagnostic errors. It tests the
+existing file boundary without an adapter. `Gemfile.lock` remains ignored and
+untracked; the tracked Gemfile's Git ref supplies the validator pin.
+
+The transform pipeline may produce the final SVG bytes; PNG rendering consumes
+those bytes and does not depend on transform pipeline internals.
 
 
 ==== What is supported?
