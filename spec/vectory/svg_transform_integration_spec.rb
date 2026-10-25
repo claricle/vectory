@@ -41,6 +41,28 @@ RSpec.describe Vectory::SvgTransform do
     end
   end
 
+  %w[inline fixture].each do |source|
+    it "executes the documented migration with locally declared namespaces in the #{source} host" do
+      original_host = if source == "fixture"
+                        transform_fixture("consumer_flow/original.xml")
+                      else
+                        '<doc xmlns="urn:d"><svg xmlns="http://www.w3.org/2000/svg" id="r"><g/></svg>' \
+                          '<svg xmlns="http://www.w3.org/2000/svg" id="r"/></doc>'
+                      end
+      example = File.read("docs/reference/api.adoc").split("=== Standoc migration boundary").last
+        .match(/\[source,ruby\]\n----\n(.*?)\n----/m)[1]
+      context = binding
+      eval(example, context, "docs/reference/api.adoc") # rubocop:disable Security/Eval
+      result = Nokogiri::XML(context.local_variable_get(:document).to_xml, &:strict)
+      roots = result.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]")
+      first_id = source == "fixture" ? "shared-root" : "r"
+      expect(roots.map { |svg| svg["id"] }).to eq([first_id, "#{first_id}_inject_1"])
+      expect(roots.map { |svg| svg.namespace.href }.uniq).to eq(["http://www.w3.org/2000/svg"])
+      expect(result.xpath("//*[local-name()='use']/@xlink:href", "xlink" => "http://www.w3.org/1999/xlink").map(&:value))
+        .to eq(source == "fixture" ? ["#shared-root", "#shared-root_inject_1"] : [])
+    end
+  end
+
   it "pins exactly the public executable profiles and their canonical sequences" do
     expected = Vectory::SvgTransformPipeline::PROFILES.transform_keys(&:to_s)
       .transform_values { |steps| steps.map(&:to_s) }

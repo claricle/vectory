@@ -25,6 +25,21 @@ RSpec.describe Vectory::SvgClassSuffixer, :aggregate_failures do
     expect(described_class.rewrite(output, suffix)).to be_xml_equivalent_to(output)
   end
 
+  [
+    [".a{}<!-- c -->.b{}", ".a_inject_0{}<!-- c -->.b_inject_0{}"],
+    [".fo<!-- keep -->o{}", ".fo<!-- keep -->o_inject_0{}"],
+    ['.a{content:"<!-- keep -->.b"}.c{}', '.a_inject_0{content:"<!-- keep -->.b"}.c_inject_0{}'],
+    ["<![CDATA[.a]]><!-- keep -->{}<![CDATA[.b{}]]>", "<![CDATA[.a_inject_0]]><!-- keep -->{}<![CDATA[.b_inject_0{}]]>"],
+  ].each do |css, expected_css|
+    it "preserves XML child nodes while suffixing #{css}" do
+      source = %(<svg xmlns="http://www.w3.org/2000/svg"><style>#{css}</style></svg>)
+      result = described_class.rewrite(source, suffix)
+      style = Nokogiri::XML(result, &:strict).at_xpath("//*[local-name()='style']")
+      expect(style.children.map(&:to_xml).join).to eq(expected_css)
+      expect(described_class.rewrite(result, suffix)).to eq(result)
+    end
+  end
+
   context "with scoped rules" do
     let(:input) do
       "<svg><style>@media screen { @scope (.box:is(.active)) to (.stop) { " \

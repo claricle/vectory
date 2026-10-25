@@ -40,9 +40,31 @@ module Vectory
         rewrite_classes(element, suffix)
         return unless element.name == "style"
 
-        css = element.text
-        rewritten = rewrite_css(css.dup, suffix)
-        element.content = rewritten unless rewritten == css
+        rewrite_style(element, suffix)
+      end
+
+      def rewrite_style(element, suffix)
+        # Parse the complete CSS stream, even when an XML comment or CDATA
+        # boundary splits a token. Apply insertions to the original text nodes
+        # so comments, processing instructions and CDATA remain in place.
+        nodes = element.xpath(".//text()")
+        changes = css_insertions(nodes.map(&:text).join, suffix)
+        offset = 0
+        nodes.each do |node|
+          text = node.text
+          rewrite_style_node(node, text, offset, changes)
+          offset += text.length
+        end
+      end
+
+      def rewrite_style_node(node, text, offset, changes)
+        rewritten = text.dup
+        changes.each do |position, insertion|
+          next unless position > offset && position <= offset + text.length
+
+          rewritten.insert(position - offset, insertion)
+        end
+        node.content = rewritten unless rewritten == text
       end
 
       def rewrite_classes(element, suffix)
@@ -55,17 +77,14 @@ module Vectory
         end
       end
 
-      def rewrite_css(css, suffix)
+      def css_insertions(css, suffix)
         changes = {}
         rules = Crass::Parser.new(css, preserve_comments: true).consume_rules(top_level: true)
         rewrite_rules(rules, suffix, changes)
         # Crass tolerates malformed CSS but stringify may repair or drop it.
         # Token positions use CSS-normalized newlines; map them to the source.
         offsets = source_offsets(css)
-        changes.sort.reverse_each do |position, insertion|
-          css.insert(offsets[position], insertion)
-        end
-        css
+        changes.sort.reverse.map { |position, insertion| [offsets[position], insertion] }
       end
 
       def source_offsets(css)

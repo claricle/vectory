@@ -490,8 +490,11 @@ document = Leptris::XML.parse(grafted)
 collisions = {}
 document.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]").each_with_index do |svg, index|
   # Make inherited namespace bindings explicit before serializing this subtree.
+  declared_prefixes = svg.namespace_definitions.map(&:prefix)
   svg.namespaces.each do |name, uri|
     prefix = name == "xmlns" ? nil : name.delete_prefix("xmlns:")
+    next if declared_prefixes.include?(prefix)
+
     svg.add_namespace_definition(prefix, uri)
   end
   pipeline = Vectory::SvgTransform.disambiguate(index: index, duplicate_ids: collisions) >>
