@@ -45,7 +45,7 @@ module Vectory
     def finalize_graft(output)
       # Cleanup serializers may reorder the envelope. Keep the cleaned root,
       # including its new attributes and bindings, inside the captured envelope.
-      host_content = steps.first.options.fetch(:host_content)
+      host_content = SvgSubtreeGraft.utf8_content(steps.first.options.fetch(:host_content), "host_content")
       host = Leptris::XML.parse(host_content, strict: true)
       prefix = host_content.byteslice(0, host.root.byte_offset)
       tail = host_content[/(?:[ \t\r\n]|<!--(?:(?!-->).)*-->|<\?(?:(?!\?>).)*\?>)*\z/m]

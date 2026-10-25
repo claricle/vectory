@@ -448,6 +448,8 @@ never shared with the result. These content transforms do not render PNG images.
   the host document/root metadata and replaces only the ordered root children,
   including text, comments, CDATA and processing instructions. Invalid input
   raises `Vectory::ParsingError`, identifying `host_content` or `processed_content`.
+  Grafts decode each input's XML encoding and return UTF-8, updating an existing
+  encoding declaration while preserving document content and envelope order.
 
 `SvgTransform` factories return named immutable steps:
 
@@ -487,6 +489,11 @@ grafted = Vectory::SvgTransform.graft_into(host_content: original_host).call(map
 document = Leptris::XML.parse(grafted)
 collisions = {}
 document.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]").each_with_index do |svg, index|
+  # Make inherited namespace bindings explicit before serializing this subtree.
+  svg.namespaces.each do |name, uri|
+    prefix = name == "xmlns" ? nil : name.delete_prefix("xmlns:")
+    svg.add_namespace_definition(prefix, uri)
+  end
   pipeline = Vectory::SvgTransform.disambiguate(index: index, duplicate_ids: collisions) >>
     Vectory::SvgTransform.suffix_classes(index: index) >>
     Vectory::SvgTransform.bind_namespaces(bind: { "xlink" => "http://www.w3.org/1999/xlink" })
@@ -498,6 +505,8 @@ end
 
 Each pipeline retains the collision map as it existed at construction. The first
 repeated root ID remains unchanged; the later one receives its positional suffix.
+The selected SVG must carry its in-scope namespace declarations across the string
+boundary; a declaration inherited from the host is otherwise lost by `to_xml`.
 Standoc #1298 consumes `SvgIdDisambiguator` and retains its current Crass helpers.
 `SvgClassSuffixer` is the canonical Vectory implementation; later adoption and
 removal of the inline helpers require a separate task after a containing release.

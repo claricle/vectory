@@ -64,6 +64,47 @@ RSpec.describe Vectory::SvgClassSuffixer, :aggregate_failures do
     end
   end
 
+  context "with CSS nesting inside style rules" do
+    let(:input) do
+      "<svg><style>.a{fill:red; .b{fill:blue}} .c{ &amp; .d {x:y} color:blue; " \
+        '@media screen { color:red; > .e:is(.f) {content:".g"; .g {x:y}} } ' \
+        '--theme: { .untouched {x:y} }; --value: .untouched; div.h:hover {x:y}}</style><g class="a b c d e f g h"/></svg>'
+    end
+
+    it "rewrites nested selectors while leaving declarations and custom properties intact" do
+      expect(document.xpath("//style").first.text).to eq(
+        ".a_inject_0{fill:red; .b_inject_0{fill:blue}} .c_inject_0{ & .d_inject_0 {x:y} color:blue; " \
+        '@media screen { color:red; > .e_inject_0:is(.f_inject_0) {content:".g"; .g_inject_0 {x:y}} } ' \
+        "--theme: { .untouched {x:y} }; --value: .untouched; div.h_inject_0:hover {x:y}}",
+      )
+      expect(document.xpath("//g").first["class"]).to eq(("a".."h").map { |name| "#{name}#{suffix}" }.join(" "))
+    end
+
+    it "is stable on repeat" do
+      expect(described_class.rewrite(output, suffix)).to be_xml_equivalent_to(output)
+    end
+  end
+
+  context "with a suffix starting with a hex digit" do
+    let(:suffix) { "b" }
+    let(:input) do
+      '<svg><style>.foo\31, .foo\000031, .foo\31 , .foo\\\\31 {x:y}</style>' \
+        '<g class="foo1 foo\\31"/></svg>'
+    end
+
+    it "keeps escaped identifiers semantically equal to the suffixed XML classes" do
+      css = document.xpath("//style").first.text
+      identifiers = Crass.parse(css).first[:selector][:tokens].select { |token| token[:node] == :ident }
+      expect(identifiers.map { |token| token[:value] }).to eq(["foo1b", "foo1b", "foo1b", 'foo\\31b'])
+      expect(document.xpath("//g").first["class"]).to eq('foo1b foo\\31b')
+      expect(css).to eq('.foo\31 b, .foo\000031b, .foo\31 b, .foo\\\\31b {x:y}')
+    end
+
+    it "does not append the suffix again" do
+      expect(described_class.rewrite(output, suffix)).to be_xml_equivalent_to(output)
+    end
+  end
+
   context "with multiple SVGs in a host document" do
     let(:input) do
       '<host class="host"><style>.host { fill: red }</style>' \

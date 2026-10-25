@@ -5,6 +5,42 @@ require "spec_helper"
 RSpec.describe Vectory::SvgTransform do
   let(:flow) { consumer_flow(transform_fixture("consumer_flow/original.xml")) }
 
+  it "executes the documented migration with inherited namespaces and repeated root IDs" do
+    original_host = '<doc xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">' \
+                    '<svg id="r"><use xlink:href="#r"/><g xmlns="urn:foreign"><plain xmlns=""/></g></svg>' \
+                    '<svg id="r"><use xlink:href="#r"/></svg></doc>'
+    reference = File.read("docs/reference/api.adoc")
+    example = reference.split("=== Standoc migration boundary").last[/\[source,ruby\]\n----\n(.*?)\n----/m, 1]
+    context = binding
+    eval(example, context, "docs/reference/api.adoc") # rubocop:disable Security/Eval
+    result = Nokogiri::XML(context.local_variable_get(:document).to_xml, &:strict)
+    roots = result.xpath("/*/*[local-name()='svg']")
+    expect(roots.map { |svg| svg["id"] }).to eq(%w[r r_inject_1])
+    expect(roots.map { |svg| svg.namespace.href }).to eq(["http://www.w3.org/2000/svg"] * 2)
+    expect(result.xpath("//*[local-name()='use']/@xlink:href", "xlink" => "http://www.w3.org/1999/xlink").map(&:value))
+      .to eq(["#r", "#r_inject_1"])
+    expect(result.at_xpath("//*[local-name()='g']").namespace.href).to eq("urn:foreign")
+    expect(result.at_xpath("//*[local-name()='plain']").namespace).to be_nil
+  end
+
+  %w[ISO-8859-1 UTF-16].each do |encoding|
+    it "normalizes a #{encoding} graft envelope throughout G/D/S/N without changing its captured input" do
+      host = %(<?xml version="1.0" encoding="#{encoding}"?><!--été--><svg id="r" class="café"/><!--fin-->).encode(encoding).b
+      graft = described_class.graft_into(host_content: host)
+      pipeline = graft >> described_class.disambiguate(index: 1, duplicate_ids: { "r" => true }) >>
+        described_class.suffix_classes(index: 1) >> described_class.bind_namespaces
+      output = pipeline.call("<svg><text>été 日本語</text></svg>")
+      result = Nokogiri::XML(output, &:strict)
+      expect(graft.options.fetch(:host_content)).to eq(host)
+      expect(output).to start_with('<?xml version="1.0" encoding="UTF-8"?><!--été-->')
+      expect(output).to end_with("<!--fin-->")
+      expect(result.root["id"]).to eq("r_inject_1")
+      expect(result.root["class"]).to eq("café_inject_1")
+      expect(result.at_xpath("//text").text).to eq("été 日本語")
+      expect(pipeline.call(output)).to eq(output)
+    end
+  end
+
   it "pins exactly the public executable profiles and their canonical sequences" do
     expected = Vectory::SvgTransformPipeline::PROFILES.transform_keys(&:to_s)
       .transform_values { |steps| steps.map(&:to_s) }

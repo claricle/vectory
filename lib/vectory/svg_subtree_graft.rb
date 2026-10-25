@@ -5,9 +5,19 @@ require "leptris"
 module Vectory
   # Replaces serialized root content while retaining the host document envelope.
   class SvgSubtreeGraft
+    ENCODING_SIGNATURES = {
+      "\x00\x00\xFE\xFF".b => "UTF-32", "\xFF\xFE\x00\x00".b => "UTF-32",
+      "\xFE\xFF".b => "UTF-16", "\xFF\xFE".b => "UTF-16",
+      "\x00\x00\x00<".b => "UTF-32BE", "<\x00\x00\x00".b => "UTF-32LE",
+      "\x00<\x00?".b => "UTF-16BE", "<\x00?\x00".b => "UTF-16LE"
+    }.freeze
+    private_constant :ENCODING_SIGNATURES
+
     class << self
       # @return [String] the complete host document with processed root children
       def replace_root_content(host_content, processed_content)
+        host_content = utf8_content(host_content, "host_content")
+        processed_content = utf8_content(processed_content, "processed_content")
         host = parse_document(host_content, "host_content")
         processed = parse_document(processed_content, "processed_content")
         # Native node copying/adoption can drop interleaved namespaced attributes.
@@ -17,7 +27,30 @@ module Vectory
         serialize_host(host, host_content)
       end
 
+      # @api private
+      # Leptris consumes UTF-8 bytes without decoding XML encoding declarations.
+      # Normalize a working copy; captured pipeline options retain the original.
+      def utf8_content(content, label)
+        encoding = source_encoding(content)
+        utf8 = content.dup.force_encoding(encoding).encode(Encoding::UTF_8)
+        return utf8 if Encoding.find(encoding) == Encoding::UTF_8
+
+        utf8.sub(/\A(<\?xml[ \t\r\n][^?]*\bencoding\s*=\s*)(["'])[^"']+\2/) do
+          "#{Regexp.last_match(1)}#{Regexp.last_match(2)}UTF-8#{Regexp.last_match(2)}"
+        end
+      rescue EncodingError, ArgumentError => e
+        raise ParsingError, "invalid #{label} XML: #{e.message}"
+      end
+
       private
+
+      def source_encoding(content)
+        bytes = content.b
+        signature = ENCODING_SIGNATURES.find { |prefix, _| bytes.start_with?(prefix) }
+        return signature.last if signature
+
+        bytes[/\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n][^?]*\bencoding\s*=\s*(["'])([^"']+)\1/n, 2] || "UTF-8"
+      end
 
       def serialize_host(host, content)
         # The document serializer moves DOCTYPE before leading comments/PIs.

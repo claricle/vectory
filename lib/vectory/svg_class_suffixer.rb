@@ -57,12 +57,13 @@ module Vectory
 
       def rewrite_css(css, suffix)
         changes = {}
-        rewrite_rules(Crass.parse(css, preserve_comments: true), suffix, changes)
+        rules = Crass::Parser.new(css, preserve_comments: true).consume_rules(top_level: true)
+        rewrite_rules(rules, suffix, changes)
         # Crass tolerates malformed CSS but stringify may repair or drop it.
         # Token positions use CSS-normalized newlines; map them to the source.
         offsets = source_offsets(css)
-        changes.sort.reverse_each do |position, raw|
-          css.insert(offsets[position + raw.length - suffix.length], suffix)
+        changes.sort.reverse_each do |position, insertion|
+          css.insert(offsets[position], insertion)
         end
         css
       end
@@ -76,19 +77,69 @@ module Vectory
       def rewrite_rules(rules, suffix, changes)
         rules.each do |rule|
           case rule[:node]
-          when :style_rule
-            rewrite_selector(rule[:selector][:tokens], suffix, changes)
+          when :qualified_rule
+            rewrite_selector(rule[:prelude], suffix, changes)
+            rewrite_nested_rules(rule[:block], suffix, changes)
           when :at_rule
             rewrite_at_rule(rule, suffix, changes)
           end
         end
       end
 
+      def rewrite_nested_rules(tokens, suffix, changes)
+        # Crass's declaration parser predates CSS nesting and discards nested
+        # rules. Walk its component values, keeping declaration values opaque.
+        parser = Crass::Parser.new(tokens)
+        prelude = []
+        while (token = parser.tokens.consume)
+          case token[:node]
+          when :semicolon
+            prelude.clear
+          when :at_keyword
+            rewrite_nested_at_rule(parser, prelude, suffix, changes)
+          when :simple_block
+            rewrite_nested_block(token, prelude, suffix, changes)
+          else
+            prelude << token
+          end
+        end
+      end
+
+      def rewrite_nested_at_rule(parser, prelude, suffix, changes)
+        if prelude.all? { |token| trivia?(token) }
+          parser.tokens.reconsume
+          rewrite_at_rule(parser.consume_at_rule, suffix, changes)
+          prelude.clear
+        else
+          prelude << parser.tokens.current
+        end
+      end
+
+      def rewrite_nested_block(token, prelude, suffix, changes)
+        if token[:start] == "{" && !custom_property?(prelude)
+          rewrite_selector(prelude, suffix, changes)
+          rewrite_nested_rules(token[:value], suffix, changes)
+          prelude.clear
+        else
+          prelude << token
+        end
+      end
+
+      def trivia?(token)
+        [:comment, :whitespace].include?(token[:node])
+      end
+
+      def custom_property?(tokens)
+        significant = tokens.reject { |token| trivia?(token) }
+        significant.first&.dig(:node) == :ident && significant.first[:value].start_with?("--") &&
+          significant[1]&.dig(:node) == :colon
+      end
+
       def rewrite_at_rule(rule, suffix, changes)
         return unless rule[:block] && RULE_AT_RULES.include?(rule[:name].downcase)
 
         rewrite_scope(rule[:prelude], suffix, changes) if rule[:name].downcase == "scope"
-        rewrite_rules(Crass::Parser.parse_rules(rule[:block]), suffix, changes)
+        rewrite_nested_rules(rule[:block], suffix, changes)
       end
 
       def rewrite_scope(tokens, suffix, changes)
@@ -124,9 +175,11 @@ module Vectory
       def suffix_identifier(token, suffix, changes)
         return if token[:value].end_with?(suffix)
 
-        token[:value] += suffix
-        token[:raw] += suffix
-        changes[token[:pos]] = token[:raw]
+        # A trailing short hex escape can absorb the first suffix character.
+        # Add its optional terminator only when concatenation changes meaning.
+        combined = Crass::Tokenizer.tokenize(token[:raw] + suffix).first
+        insertion = combined[:value] == token[:value] + suffix ? suffix : " #{suffix}"
+        changes[token[:pos] + token[:raw].length] = insertion
       end
     end
   end

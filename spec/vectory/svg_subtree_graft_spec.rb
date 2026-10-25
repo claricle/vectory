@@ -130,4 +130,41 @@ RSpec.describe Vectory::SvgSubtreeGraft do
         .to raise_error(Vectory::ParsingError, /\Ainvalid host_content XML:/)
     end
   end
+
+  %w[ISO-8859-1 UTF-16].each do |encoding|
+    context "with a #{encoding} host" do
+      let(:host) do
+        %(<?xml version="1.0" encoding="#{encoding}"?><!--café--><host label="été"/><!--fin été-->).encode(encoding).b
+      end
+      let(:processed) { "<svg><text>été 日本語</text><!--日本語--><![CDATA[日本語]]></svg>" }
+
+      it "normalizes the encoding while preserving host metadata and the ordered Unicode content" do
+        parsed = Nokogiri::XML(result, &:strict)
+        expect(result).to start_with('<?xml version="1.0" encoding="UTF-8"?><!--café-->')
+        expect(result).to end_with("<!--fin été-->")
+        expect(parsed.root["label"]).to eq("été")
+        expect(parsed.root.children.map(&:content)).to eq(["été 日本語", "日本語", "日本語"])
+        expect(parsed.root.children.map(&:class)).to eq([Nokogiri::XML::Element, Nokogiri::XML::Comment, Nokogiri::XML::CDATA])
+      end
+
+      it "remains stable when the normalized output is grafted again" do
+        expect(described_class.replace_root_content(result, processed)).to eq(result)
+      end
+    end
+  end
+
+  it "decodes processed content independently of the host encoding" do
+    source = '<?xml version="1.0" encoding="ISO-8859-1"?><svg><text>été</text></svg>'.encode("ISO-8859-1").b
+    output = described_class.replace_root_content('<host label="日本語"/>', source)
+    parsed = Nokogiri::XML(output, &:strict)
+    expect(parsed.root["label"]).to eq("日本語")
+    expect(parsed.at_xpath("//text").text).to eq("été")
+  end
+
+  it "does not mistake an xml-stylesheet processing instruction for the XML declaration" do
+    prefix = '<?xml-stylesheet type="text/css" href="café.css" encoding="ISO-8859-1"?>'
+    output = described_class.replace_root_content("#{prefix}<host label='été'/>", "<svg/>")
+    expect(output).to start_with(prefix)
+    expect(Nokogiri::XML(output, &:strict).root["label"]).to eq("été")
+  end
 end
