@@ -25,6 +25,26 @@ RSpec.describe Vectory::SvgClassSuffixer, :aggregate_failures do
     expect(described_class.rewrite(output, suffix)).to be_xml_equivalent_to(output)
   end
 
+  context "with scoped rules" do
+    let(:input) do
+      "<svg><style>@media screen { @scope (.box:is(.active)) to (.stop) { " \
+        '.foo { content: ".box" } } }</style><g class="box active"><path class="foo stop"/></g></svg>'
+    end
+
+    it "suffixes scope roots, limits and nested rules without changing declarations" do
+      expect(document.xpath("//style").first.text).to eq(
+        "@media screen { @scope (.box_inject_0:is(.active_inject_0)) to (.stop_inject_0) { " \
+        '.foo_inject_0 { content: ".box" } } }',
+      )
+      expect(document.xpath("//*[@class]").map { |node| node["class"] })
+        .to eq(["box_inject_0 active_inject_0", "foo_inject_0 stop_inject_0"])
+    end
+
+    it "does not suffix scope selectors again on repeat" do
+      expect(described_class.rewrite(output, suffix)).to be_xml_equivalent_to(output)
+    end
+  end
+
   context "with escaped identifiers" do
     let(:input) { File.read("spec/fixtures/svg_transform/class_suffixer/escaped-input.svg") }
     let(:expected) { File.read("spec/fixtures/svg_transform/class_suffixer/escaped-output.svg") }

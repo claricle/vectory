@@ -13,21 +13,23 @@ module SvgTransformHelpers
   end
 
   def manifest_pipeline(contract)
-    options = contract.fetch("options")
-    steps = contract.fetch("steps").map do |name|
-      case name
-      when "graft_into"
-        Vectory::SvgTransform.graft_into(host_content: transform_fixture(contract.fetch("host")))
-      when "disambiguate"
-        Vectory::SvgTransform.disambiguate(index: options.fetch("index"),
-                                         duplicate_ids: options.fetch("duplicate_ids"))
-      when "suffix_classes"
-        Vectory::SvgTransform.suffix_classes(index: options.fetch("index"))
-      when "bind_namespaces"
-        Vectory::SvgTransform.bind_namespaces(**options.fetch("namespaces").transform_keys(&:to_sym))
-      end
-    end
+    steps = contract.fetch("steps").map { |name| manifest_step(name, contract) }
     Vectory::SvgTransformPipeline.new(steps)
+  end
+
+  def manifest_step(name, contract)
+    options = contract.fetch("options")
+    case name
+    when "graft_into"
+      Vectory::SvgTransform.graft_into(host_content: transform_fixture(contract.fetch("host")))
+    when "disambiguate"
+      Vectory::SvgTransform.disambiguate(index: options.fetch("index"),
+                                         duplicate_ids: options.fetch("duplicate_ids"))
+    when "suffix_classes"
+      Vectory::SvgTransform.suffix_classes(index: options.fetch("index"))
+    when "bind_namespaces"
+      Vectory::SvgTransform.bind_namespaces(**options.fetch("namespaces").transform_keys(&:to_sym))
+    end
   end
 
   def consumer_namespaces
@@ -49,26 +51,34 @@ module SvgTransformHelpers
   def consumer_flow(original, source: original)
     mapped = Vectory::SvgMapping.new(source).to_xml
     graft = Vectory::SvgTransformPipeline.new([
-      Vectory::SvgTransform.graft_into(host_content: original),
-    ])
-    document = Nokogiri::XML(graft.call(mapped)) { |config| config.strict }
+                                                Vectory::SvgTransform.graft_into(host_content: original),
+                                              ])
+    document = Nokogiri::XML(graft.call(mapped), &:strict)
     collisions = { "paint" => 1, "metadata" => ["caller-owned"] }
     records = document.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]")
       .map.with_index do |svg, index|
-        pipeline = consumer_cleanup(index, collisions)
-        before = Marshal.load(Marshal.dump(collisions))
-        input = svg.to_xml
-        output = pipeline.call(input)
-        after = Marshal.load(Marshal.dump(collisions))
-        replacement = Nokogiri::XML(output) { |config| config.strict }.root
-        svg.replace(replacement)
-        replacement.xpath(". | .//*").each do |element|
-          id = element["id"]
-          collisions[id] = collisions.fetch(id, 0) + 1 if id
-        end
-        { pipeline: pipeline, before: before, after: after, input: input, output: output }
+        consumer_record(svg, index, collisions)
       end
     { mapped: mapped, output: document.to_xml, records: records, collisions: collisions, graft: graft }
+  end
+
+  def consumer_record(svg, index, collisions)
+    pipeline = consumer_cleanup(index, collisions)
+    before = Marshal.load(Marshal.dump(collisions))
+    input = svg.to_xml
+    output = pipeline.call(input)
+    after = Marshal.load(Marshal.dump(collisions))
+    replacement = Nokogiri::XML(output, &:strict).root
+    svg.replace(replacement)
+    merge_consumer_ids(replacement, collisions)
+    { pipeline: pipeline, before: before, after: after, input: input, output: output }
+  end
+
+  def merge_consumer_ids(replacement, collisions)
+    replacement.xpath(". | .//*").each do |element|
+      id = element["id"]
+      collisions[id] = collisions.fetch(id, 0) + 1 if id
+    end
   end
 end
 

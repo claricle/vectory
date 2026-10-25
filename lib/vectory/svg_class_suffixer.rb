@@ -79,10 +79,23 @@ module Vectory
           when :style_rule
             rewrite_selector(rule[:selector][:tokens], suffix, changes)
           when :at_rule
-            next unless rule[:block] && RULE_AT_RULES.include?(rule[:name].downcase)
-
-            rewrite_rules(Crass::Parser.parse_rules(rule[:block]), suffix, changes)
+            rewrite_at_rule(rule, suffix, changes)
           end
+        end
+      end
+
+      def rewrite_at_rule(rule, suffix, changes)
+        return unless rule[:block] && RULE_AT_RULES.include?(rule[:name].downcase)
+
+        rewrite_scope(rule[:prelude], suffix, changes) if rule[:name].downcase == "scope"
+        rewrite_rules(Crass::Parser.parse_rules(rule[:block]), suffix, changes)
+      end
+
+      def rewrite_scope(tokens, suffix, changes)
+        tokens.each do |token|
+          next unless token[:node] == :simple_block && token[:start] == "("
+
+          rewrite_selector(token[:value], suffix, changes)
         end
       end
 
