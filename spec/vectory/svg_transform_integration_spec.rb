@@ -182,4 +182,55 @@ RSpec.describe Vectory::SvgTransform do
     expect(outputs.last).to be_xml_equivalent_to(transform_fixture("consumer_flow/batch-second.svg"))
     expect(outputs.map { |svg| Nokogiri::XML(svg).root["id"] }).to eq(%w[shared-root_inject_0 shared-root_inject_1])
   end
+
+  context "with a grafted SVG envelope and namespace remap" do
+    let(:host) do
+      '<?xml version="1.0"?><!-- lead --><!DOCTYPE svg>' \
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" id="host"><title>old</title></svg><!-- trail -->'
+    end
+    let(:graft) { described_class.graft_into(host_content: host) }
+    let(:source) do
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' \
+        '<style>.shape { fill: red }</style><defs><linearGradient id="g"/></defs>' \
+        '<rect id="r" xlink:href="#g" fill="url(#g)" class="shape"/></svg>'
+    end
+    let(:pipeline) do
+      graft >> described_class.disambiguate(index: 2, duplicate_ids: { "g" => 2, "r" => 2 }) >>
+        described_class.suffix_classes(index: 2) >>
+        described_class.bind_namespaces(unbind: ["xlink"], remap: { "http://www.w3.org/1999/xlink" => "xl" })
+    end
+
+    it "retains href and fill through the public graft step" do
+      rect = Nokogiri::XML(graft.call(source), &:strict).at_xpath("//*[local-name()='rect']")
+      expect([rect["xlink:href"], rect["fill"]]).to eq(["#g", "url(#g)"])
+    end
+
+    it "retains and rewrites href and fill through all four steps" do
+      rect = Nokogiri::XML(pipeline.call(source), &:strict).at_xpath("//*[local-name()='rect']")
+      expect([rect["xl:href"], rect["fill"]]).to eq(["#g_inject_2", "url(#g_inject_2)"])
+    end
+
+    it "retains the captured envelope order after cleanup" do
+      output = pipeline.call(source)
+      expect(output).to start_with('<?xml version="1.0"?><!-- lead --><!DOCTYPE svg>')
+      expect(output).to end_with("<!-- trail -->")
+    end
+
+    it "does not add namespace declarations on repeated execution" do
+      first = pipeline.call(source)
+      repeated = pipeline.call(first)
+      expect(repeated).to eq(first)
+    end
+
+    it "preserves descendant namespace shadows and default undeclarations on repeat" do
+      input = source.sub("</svg>", '<g xmlns="urn:foreign"><g xmlns="urn:foreign"><plain xmlns=""/></g></g></svg>')
+      first = pipeline.call(input)
+      names = lambda do |xml|
+        Nokogiri::XML(xml, &:strict).xpath("//*").map { |element| [element.name, element.namespace&.href] }
+      end
+
+      expect(names.call(first)).to eq(names.call(input))
+      expect(pipeline.call(first)).to eq(first)
+    end
+  end
 end

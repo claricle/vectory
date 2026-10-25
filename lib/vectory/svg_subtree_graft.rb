@@ -10,7 +10,9 @@ module Vectory
       def replace_root_content(host_content, processed_content)
         host = parse_document(host_content, "host_content")
         processed = parse_document(processed_content, "processed_content")
-        children = processed.root.children.map { |node| copy_child(node) }
+        # Native node copying/adoption can drop interleaved namespaced attributes.
+        # Reparse serialized children instead of crossing that copy boundary.
+        children = processed.root.children.map { |node| serialize_child(node, host.root.namespaces) }
         host.root.children = children
         serialize_host(host, host_content)
       end
@@ -41,21 +43,21 @@ module Vectory
         raise ParsingError, "#{label} has no document root"
       end
 
-      def copy_child(node)
-        copy = node.dup
-        return copy unless node.element?
+      def serialize_child(node, host_namespaces)
+        seal_namespaces(node, host_namespaces) if node.element?
+        node.to_xml
+      end
 
-        # dup does not retain declarations inherited from the processed root.
-        # Seal the copied subtree's scope before adopting it into the host.
+      def seal_namespaces(node, host_namespaces)
+        # Retain inherited bindings only where the host cannot supply them.
         namespaces = { "xmlns" => "" }.merge(node.namespaces)
-        declared = copy.namespace_definitions.map(&:prefix)
+        declared = node.namespace_definitions.map(&:prefix)
         namespaces.each do |name, uri|
           prefix = name == "xmlns" ? nil : name.delete_prefix("xmlns:")
-          next if declared.include?(prefix)
+          next if declared.include?(prefix) || host_namespaces[name] == uri
 
-          copy.add_namespace_definition(prefix, uri)
+          node.add_namespace_definition(prefix, uri)
         end
-        copy
       end
     end
   end

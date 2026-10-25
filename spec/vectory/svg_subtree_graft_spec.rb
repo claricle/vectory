@@ -82,6 +82,28 @@ RSpec.describe Vectory::SvgSubtreeGraft do
     end
   end
 
+  nesting = [false, true]
+  [
+    'a="1" xlink:href="#g" c="3"',
+    'xlink:href="#g" fill="x"',
+    'fill="x" xlink:href="#g"',
+  ].each do |attributes|
+    nesting.each do |nested|
+      it "retains every attribute in #{attributes} with nested=#{nested}" do
+        rect = "<rect #{attributes}/>"
+        content = nested ? "<g>#{rect}</g>" : rect
+        source = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' \
+                 "#{content}</svg>"
+        output = described_class.replace_root_content('<svg xmlns="http://www.w3.org/2000/svg"/>', source)
+        expected = Nokogiri::XML(source, &:strict).at_xpath("//*[local-name()='rect']")
+        actual = Nokogiri::XML(output, &:strict).at_xpath("//*[local-name()='rect']")
+
+        expect(actual.attribute_nodes.map { |attr| [attr.namespace&.href, attr.name, attr.value] })
+          .to eq(expected.attribute_nodes.map { |attr| [attr.namespace&.href, attr.name, attr.value] })
+      end
+    end
+  end
+
   context "with invalid input" do
     it "rejects malformed host XML with the stable prefix" do
       expect { described_class.replace_root_content("<host>", "<svg/>") }
