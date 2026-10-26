@@ -11,7 +11,10 @@ Gem::Specification.new do |spec|
   spec.summary       = "Pairwise vector image conversions."
   spec.description   = <<~DESCRIPTION
     Vectory performs pairwise vector image conversions for common
-    vector image formats, such as SVG, EMF, EPS and PS.
+    vector image formats, such as SVG, EMF, EPS and PS, with PNG output via
+    svgpng prebuilt native packages on arm64-darwin, x86_64-darwin, x86_64-linux,
+    aarch64-linux, x86_64-linux-musl, aarch64-linux-musl and x64-mingw-ucrt. Its portable
+    shell package preserves installation elsewhere and reports unsupported PNG output.
   DESCRIPTION
 
   spec.homepage      = "https://github.com/metanorma/vectory"
@@ -33,5 +36,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "leptris", ">= 1.9.361.1"
   spec.add_dependency "marcel", "~> 1.0"
   spec.add_dependency "postsvg", "~> 0.3"
+  spec.add_dependency "svgpng", "~> 0.1.0"
   spec.add_dependency "thor", "~> 1.0"
 end
