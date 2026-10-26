@@ -1,0 +1,15 @@
+<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:unused="urn:unused" id="shared-root_inject_0" class="drawing active">
+  <style>.drawing.active { fill: url(#paint_inject_0); } @media screen { .active:is(.drawing) { stroke: url(#paint_inject_0); } }</style>
+  <defs>
+    <linearGradient id="paint_inject_0">
+      <stop offset="0%"/>
+    </linearGradient>
+  </defs>
+  <g class="drawing active" fill="url(#paint_inject_0)">
+    <use xlink:href="#shared-root_inject_0"/>
+    <a href="#shared-root_inject_0">first</a>
+  </g>
+  <svg id="nested-first" class="drawing">
+    <rect class="active"/>
+  </svg>
+</svg>

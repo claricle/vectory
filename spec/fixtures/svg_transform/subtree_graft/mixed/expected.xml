@@ -1,0 +1,1 @@
+<host>before<!--middle--><![CDATA[a<b & c]]><?graft keep?><g xmlns=""><text>label</text></g>after</host>
