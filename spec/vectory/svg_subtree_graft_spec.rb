@@ -82,6 +82,28 @@ RSpec.describe Vectory::SvgSubtreeGraft do
     end
   end
 
+  nesting = [false, true]
+  [
+    'a="1" xlink:href="#g" c="3"',
+    'xlink:href="#g" fill="x"',
+    'fill="x" xlink:href="#g"',
+  ].each do |attributes|
+    nesting.each do |nested|
+      it "retains every attribute in #{attributes} with nested=#{nested}" do
+        rect = "<rect #{attributes}/>"
+        content = nested ? "<g>#{rect}</g>" : rect
+        source = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' \
+                 "#{content}</svg>"
+        output = described_class.replace_root_content('<svg xmlns="http://www.w3.org/2000/svg"/>', source)
+        expected = Nokogiri::XML(source, &:strict).at_xpath("//*[local-name()='rect']")
+        actual = Nokogiri::XML(output, &:strict).at_xpath("//*[local-name()='rect']")
+
+        expect(actual.attribute_nodes.map { |attr| [attr.namespace&.href, attr.name, attr.value] })
+          .to eq(expected.attribute_nodes.map { |attr| [attr.namespace&.href, attr.name, attr.value] })
+      end
+    end
+  end
+
   context "with invalid input" do
     it "rejects malformed host XML with the stable prefix" do
       expect { described_class.replace_root_content("<host>", "<svg/>") }
@@ -107,5 +129,42 @@ RSpec.describe Vectory::SvgSubtreeGraft do
       expect { described_class.replace_root_content("<!--unterminated", "<svg/>") }
         .to raise_error(Vectory::ParsingError, /\Ainvalid host_content XML:/)
     end
+  end
+
+  %w[ISO-8859-1 UTF-16].each do |encoding|
+    context "with a #{encoding} host" do
+      let(:host) do
+        %(<?xml version="1.0" encoding="#{encoding}"?><!--café--><host label="été"/><!--fin été-->).encode(encoding).b
+      end
+      let(:processed) { "<svg><text>été 日本語</text><!--日本語--><![CDATA[日本語]]></svg>" }
+
+      it "normalizes the encoding while preserving host metadata and the ordered Unicode content" do
+        parsed = Nokogiri::XML(result, &:strict)
+        expect(result).to start_with('<?xml version="1.0" encoding="UTF-8"?><!--café-->')
+        expect(result).to end_with("<!--fin été-->")
+        expect(parsed.root["label"]).to eq("été")
+        expect(parsed.root.children.map(&:content)).to eq(["été 日本語", "日本語", "日本語"])
+        expect(parsed.root.children.map(&:class)).to eq([Nokogiri::XML::Element, Nokogiri::XML::Comment, Nokogiri::XML::CDATA])
+      end
+
+      it "remains stable when the normalized output is grafted again" do
+        expect(described_class.replace_root_content(result, processed)).to eq(result)
+      end
+    end
+  end
+
+  it "decodes processed content independently of the host encoding" do
+    source = '<?xml version="1.0" encoding="ISO-8859-1"?><svg><text>été</text></svg>'.encode("ISO-8859-1").b
+    output = described_class.replace_root_content('<host label="日本語"/>', source)
+    parsed = Nokogiri::XML(output, &:strict)
+    expect(parsed.root["label"]).to eq("日本語")
+    expect(parsed.at_xpath("//text").text).to eq("été")
+  end
+
+  it "does not mistake an xml-stylesheet processing instruction for the XML declaration" do
+    prefix = '<?xml-stylesheet type="text/css" href="café.css" encoding="ISO-8859-1"?>'
+    output = described_class.replace_root_content("#{prefix}<host label='été'/>", "<svg/>")
+    expect(output).to start_with(prefix)
+    expect(Nokogiri::XML(output, &:strict).root["label"]).to eq("été")
   end
 end

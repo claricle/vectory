@@ -10,7 +10,7 @@ module Vectory
     class << self
       def graft_into(host_content:)
         host = host_content.dup.freeze
-        root = Leptris::XML.parse(host, strict: true).root
+        root = Leptris::XML.parse(SvgSubtreeGraft.utf8_content(host, "host_content"), strict: true).root
         raise ParsingError, "host_content has no document root" unless root
 
         new(:graft_into, { host_content: host, svg_host: root.name == "svg" })

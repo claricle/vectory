@@ -5,6 +5,64 @@ require "spec_helper"
 RSpec.describe Vectory::SvgTransform do
   let(:flow) { consumer_flow(transform_fixture("consumer_flow/original.xml")) }
 
+  it "executes the documented migration with inherited namespaces and repeated root IDs" do
+    original_host = '<doc xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">' \
+                    '<svg id="r"><use xlink:href="#r"/><g xmlns="urn:foreign"><plain xmlns=""/></g></svg>' \
+                    '<svg id="r"><use xlink:href="#r"/></svg></doc>'
+    reference = File.read("docs/reference/api.adoc")
+    example = reference.split("=== Standoc migration boundary").last[/\[source,ruby\]\n----\n(.*?)\n----/m, 1]
+    context = binding
+    eval(example, context, "docs/reference/api.adoc") # rubocop:disable Security/Eval
+    result = Nokogiri::XML(context.local_variable_get(:document).to_xml, &:strict)
+    roots = result.xpath("/*/*[local-name()='svg']")
+    expect(roots.map { |svg| svg["id"] }).to eq(%w[r r_inject_1])
+    expect(roots.map { |svg| svg.namespace.href }).to eq(["http://www.w3.org/2000/svg"] * 2)
+    expect(result.xpath("//*[local-name()='use']/@xlink:href", "xlink" => "http://www.w3.org/1999/xlink").map(&:value))
+      .to eq(["#r", "#r_inject_1"])
+    expect(result.at_xpath("//*[local-name()='g']").namespace.href).to eq("urn:foreign")
+    expect(result.at_xpath("//*[local-name()='plain']").namespace).to be_nil
+  end
+
+  %w[ISO-8859-1 UTF-16].each do |encoding|
+    it "normalizes a #{encoding} graft envelope throughout G/D/S/N without changing its captured input" do
+      host = %(<?xml version="1.0" encoding="#{encoding}"?><!--été--><svg id="r" class="café"/><!--fin-->).encode(encoding).b
+      graft = described_class.graft_into(host_content: host)
+      pipeline = graft >> described_class.disambiguate(index: 1, duplicate_ids: { "r" => true }) >>
+        described_class.suffix_classes(index: 1) >> described_class.bind_namespaces
+      output = pipeline.call("<svg><text>été 日本語</text></svg>")
+      result = Nokogiri::XML(output, &:strict)
+      expect(graft.options.fetch(:host_content)).to eq(host)
+      expect(output).to start_with('<?xml version="1.0" encoding="UTF-8"?><!--été-->')
+      expect(output).to end_with("<!--fin-->")
+      expect(result.root["id"]).to eq("r_inject_1")
+      expect(result.root["class"]).to eq("café_inject_1")
+      expect(result.at_xpath("//text").text).to eq("été 日本語")
+      expect(pipeline.call(output)).to eq(output)
+    end
+  end
+
+  %w[inline fixture].each do |source|
+    it "executes the documented migration with locally declared namespaces in the #{source} host" do
+      original_host = if source == "fixture"
+                        transform_fixture("consumer_flow/original.xml")
+                      else
+                        '<doc xmlns="urn:d"><svg xmlns="http://www.w3.org/2000/svg" id="r"><g/></svg>' \
+                          '<svg xmlns="http://www.w3.org/2000/svg" id="r"/></doc>'
+                      end
+      example = File.read("docs/reference/api.adoc").split("=== Standoc migration boundary").last
+        .match(/\[source,ruby\]\n----\n(.*?)\n----/m)[1]
+      context = binding
+      eval(example, context, "docs/reference/api.adoc") # rubocop:disable Security/Eval
+      result = Nokogiri::XML(context.local_variable_get(:document).to_xml, &:strict)
+      roots = result.xpath("//*[local-name()='svg' and not(ancestor::*[local-name()='svg'])]")
+      first_id = source == "fixture" ? "shared-root" : "r"
+      expect(roots.map { |svg| svg["id"] }).to eq([first_id, "#{first_id}_inject_1"])
+      expect(roots.map { |svg| svg.namespace.href }.uniq).to eq(["http://www.w3.org/2000/svg"])
+      expect(result.xpath("//*[local-name()='use']/@xlink:href", "xlink" => "http://www.w3.org/1999/xlink").map(&:value))
+        .to eq(source == "fixture" ? ["#shared-root", "#shared-root_inject_1"] : [])
+    end
+  end
+
   it "pins exactly the public executable profiles and their canonical sequences" do
     expected = Vectory::SvgTransformPipeline::PROFILES.transform_keys(&:to_s)
       .transform_values { |steps| steps.map(&:to_s) }
@@ -181,5 +239,56 @@ RSpec.describe Vectory::SvgTransform do
     expect(outputs.first).to be_xml_equivalent_to(transform_fixture("consumer_flow/batch-first.svg"))
     expect(outputs.last).to be_xml_equivalent_to(transform_fixture("consumer_flow/batch-second.svg"))
     expect(outputs.map { |svg| Nokogiri::XML(svg).root["id"] }).to eq(%w[shared-root_inject_0 shared-root_inject_1])
+  end
+
+  context "with a grafted SVG envelope and namespace remap" do
+    let(:host) do
+      '<?xml version="1.0"?><!-- lead --><!DOCTYPE svg>' \
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" id="host"><title>old</title></svg><!-- trail -->'
+    end
+    let(:graft) { described_class.graft_into(host_content: host) }
+    let(:source) do
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' \
+        '<style>.shape { fill: red }</style><defs><linearGradient id="g"/></defs>' \
+        '<rect id="r" xlink:href="#g" fill="url(#g)" class="shape"/></svg>'
+    end
+    let(:pipeline) do
+      graft >> described_class.disambiguate(index: 2, duplicate_ids: { "g" => 2, "r" => 2 }) >>
+        described_class.suffix_classes(index: 2) >>
+        described_class.bind_namespaces(unbind: ["xlink"], remap: { "http://www.w3.org/1999/xlink" => "xl" })
+    end
+
+    it "retains href and fill through the public graft step" do
+      rect = Nokogiri::XML(graft.call(source), &:strict).at_xpath("//*[local-name()='rect']")
+      expect([rect["xlink:href"], rect["fill"]]).to eq(["#g", "url(#g)"])
+    end
+
+    it "retains and rewrites href and fill through all four steps" do
+      rect = Nokogiri::XML(pipeline.call(source), &:strict).at_xpath("//*[local-name()='rect']")
+      expect([rect["xl:href"], rect["fill"]]).to eq(["#g_inject_2", "url(#g_inject_2)"])
+    end
+
+    it "retains the captured envelope order after cleanup" do
+      output = pipeline.call(source)
+      expect(output).to start_with('<?xml version="1.0"?><!-- lead --><!DOCTYPE svg>')
+      expect(output).to end_with("<!-- trail -->")
+    end
+
+    it "does not add namespace declarations on repeated execution" do
+      first = pipeline.call(source)
+      repeated = pipeline.call(first)
+      expect(repeated).to eq(first)
+    end
+
+    it "preserves descendant namespace shadows and default undeclarations on repeat" do
+      input = source.sub("</svg>", '<g xmlns="urn:foreign"><g xmlns="urn:foreign"><plain xmlns=""/></g></g></svg>')
+      first = pipeline.call(input)
+      names = lambda do |xml|
+        Nokogiri::XML(xml, &:strict).xpath("//*").map { |element| [element.name, element.namespace&.href] }
+      end
+
+      expect(names.call(first)).to eq(names.call(input))
+      expect(pipeline.call(first)).to eq(first)
+    end
   end
 end
