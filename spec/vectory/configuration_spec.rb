@@ -35,14 +35,18 @@ RSpec.describe Vectory::Configuration do
       )
     end
 
-    it "keeps explicit false booleans and ignores a null temp_dir" do
+    it "keeps explicit false booleans, numeric strings, and zero values" do
+      described_class.instance.verbose_logging = true
       config = described_class.load_from_file(File.join(fixtures,
                                                         "false_booleans.yml"))
 
-      expect(config.cache_enabled).to be(false)
-      expect(config.verbose_logging).to be(false)
-      expect(config.temp_dir).to be_nil
-      expect(config.timeout).to eq(45)
+      expect(config.to_h).to eq(
+        timeout: "045",
+        cache_ttl: 0,
+        cache_enabled: false,
+        temp_dir: nil,
+        verbose_logging: false,
+      )
     end
 
     it "keeps the previous temp_dir when the file has a null temp_dir" do
