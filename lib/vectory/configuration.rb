@@ -72,8 +72,8 @@ module Vectory
     # @return [self] the configuration instance
     # @raise [Errno::ENOENT] if the file doesn't exist
     def self.load_from_file(path)
-      require "yaml"
-      config_data = YAML.load_file(path)
+      require "yeptris"
+      config_data = Yeptris::Psych.load_file(path)
 
       config = instance
       config.timeout = config_data["timeout"] || config.timeout

@@ -34,4 +34,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "marcel", "~> 1.0"
   spec.add_dependency "postsvg", "~> 0.3"
   spec.add_dependency "thor", "~> 1.0"
+  spec.add_dependency "yeptris", "~> 0.6.56"
 end
