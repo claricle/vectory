@@ -1,0 +1,5 @@
+timeout: 60
+cache_ttl: 900
+cache_enabled: true
+temp_dir: /tmp/vectory
+verbose_logging: true
