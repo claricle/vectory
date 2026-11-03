@@ -63,6 +63,13 @@ RSpec.describe Vectory::Configuration do
       end.to raise_error(NoMethodError)
     end
 
+    it "reads the file through Yeptris::Psych" do
+      path = File.join(fixtures, "full.yml")
+      expect(Yeptris::Psych).to receive(:load_file).with(path).and_call_original
+
+      described_class.load_from_file(path)
+    end
+
     it "raises Errno::ENOENT for a missing path" do
       expect do
         described_class.load_from_file(File.join(fixtures, "missing.yml"))
