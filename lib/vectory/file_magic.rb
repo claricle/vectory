@@ -22,7 +22,7 @@ module Vectory
     end
 
     def detect
-      beginning = File.read(@path, 100, mode: "rb")
+      beginning = header
 
       eps_slice = beginning.byteslice(0, EPS_30_MAGIC.size)
       Vectory.ui.debug("File magic is '#{to_bytes(beginning)}' of '#{@path}'.")
@@ -40,12 +40,17 @@ module Vectory
 
     private
 
+    # File.read returns nil, not "", for an empty file.
+    def header
+      File.read(@path, 100, mode: "rb") || "".b
+    end
+
     def to_bytes(str)
       str.unpack("c*").map { |e| "\\x#{e.to_s(16).rjust(2, '0')}" }.join
     end
 
     def contain_svg_tag?
-      content = File.read(@path, 4096)
+      content = File.read(@path, 4096).to_s
 
       :svg if content.include?("<svg")
     end

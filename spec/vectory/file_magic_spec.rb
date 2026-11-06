@@ -11,6 +11,14 @@ RSpec.describe Vectory::FileMagic do
       "spec/examples/svg2emf/ref.emf" => :emf,
     }
 
+    it "returns nil for an empty file" do
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "empty.svg")
+        File.binwrite(path, "")
+        expect(described_class.detect(path)).to be_nil
+      end
+    end
+
     references.each do |file, format|
       context file do
         it "returns #{format} format" do

@@ -85,6 +85,10 @@ module Vectory
       convert_to_format(object, options)
     rescue Vectory::Error => e
       handle_vectory_error(e)
+    rescue ::SystemCallError, IOError => e
+      # A missing input file or an unwritable output path.
+      Vectory.ui.error(e.message)
+      STATUS_SYSTEM_CALL_ERROR
     end
     default_task :convert
 
