@@ -580,7 +580,8 @@ A missing axis without a usable `viewBox` defaults to 300 or 150; percentage
 root lengths use that viewport and absolute units use 96 dpi. Dimensions round
 half up with a one-pixel minimum.
 
-Raw DTD/DOCTYPE declarations are rejected before parsing or entity expansion.
+DOCTYPE internal subsets are rejected before parsing or entity expansion. A
+plain DOCTYPE is accepted, and its external DTD is never loaded.
 Same-document fragments and inline `data:` resources are accepted; paths,
 network URLs, other non-inline references, and CSS `@import` are rejected.
 There is no external-resource loader or option to enable one.

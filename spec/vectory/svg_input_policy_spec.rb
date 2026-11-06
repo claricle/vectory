@@ -35,10 +35,34 @@ RSpec.describe Vectory::SvgInputPolicy do
     end
   end
 
-  it "rejects external and internal DTD declarations" do
-    ['<!DOCTYPE svg SYSTEM "https://example.com/external.dtd">', "<!DOCTYPE svg>"].each do |dtd|
+  it "rejects internal DTD subsets, which can declare entities" do
+    ['<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x.dtd" [<!ENTITY a "b">]>',
+     "<!DOCTYPE svg[]>", "<!DOCTYPE svg [", '<!DOCTYPE svg SYSTEM "a>b" [<!ENTITY a "b">]>'].each do |dtd|
       expect { described_class.validate!("#{dtd}<svg/>") }
-        .to raise_error(Vectory::ForbiddenExternalReferenceError)
+        .to raise_error(Vectory::ForbiddenExternalReferenceError, "XML DOCTYPE internal subsets are forbidden")
+    end
+  end
+
+  it "accepts a DOCTYPE without an internal subset, as SVG editors write it" do
+    standard = '<?xml version="1.0"?>' \
+               '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" ' \
+               '"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' \
+               '<svg xmlns="http://www.w3.org/2000/svg" width="3" height="2"/>'
+    ["<!DOCTYPE svg><svg/>", "<!DOCTYPE svg SYSTEM 'a[b]>c'><svg/>", standard].each do |source|
+      expect { described_class.validate!(source) }.not_to raise_error
+    end
+    svg = Vectory::Svg.from_content(standard)
+    expect(svg.content).not_to include("DOCTYPE")
+    expect(svg.width).to eq(3)
+  end
+
+  it "never loads the external DTD a DOCTYPE names" do
+    Dir.mktmpdir do |directory|
+      dtd = File.join(directory, "entities.dtd")
+      File.write(dtd, '<!ENTITY secret "LEAKED">')
+      svg = Vectory::Svg.from_content(%(<!DOCTYPE svg SYSTEM "file://#{dtd}">) \
+                                      '<svg xmlns="http://www.w3.org/2000/svg"><text>&secret;</text></svg>')
+      expect(svg.content).not_to include("LEAKED")
     end
   end
 
