@@ -85,7 +85,8 @@ vectory -f png --font 'Example Sans=fonts/ExampleSans-Regular.ttf' \
 
 `--font FAMILY=PATH` is repeatable. Repeat a family to supply distinct
 style, weight, or stretch faces. `--fallback-font FAMILY=PATH` is also repeatable;
-fallback faces are tried in the order supplied. Fonts are read explicitly from
+fallback faces are tried in the order supplied. FAMILY must be the font's own
+family name, for example `Arial` for Arial.ttf. Fonts are read explicitly from
 these paths; the renderer does not search system fonts. A text-free image needs
 no font options. Font substitution warnings are printed once each to stderr in
 renderer order, separately from the binary output file.
@@ -103,9 +104,10 @@ Quote hexadecimal colors in shell commands.
 ordered fallbacks as described above.
 
 Without size options, the renderer uses the SVG's intrinsic dimensions, then its
-`viewBox`, with a 300 by 150 default. SVG input containing a DOCTYPE declaration
-is rejected before XML parsing. External resources cannot be enabled through a
-CLI option.
+`viewBox`, with a 300 by 150 default. A DOCTYPE with an internal `[...]` subset
+is rejected before XML parsing; a plain DOCTYPE, as SVG editors write it, is
+accepted and its external DTD is never loaded. External resources cannot be
+enabled through a CLI option.
 
 === Using the Ruby library
 
@@ -204,8 +206,9 @@ Without a usable `viewBox`, a missing root dimension defaults to 300 or 150.
 Percent root lengths use that 300 by 150 viewport; absolute units use 96 dpi.
 Resolved dimensions round half up and clamp to at least one pixel.
 
-The raw SVG byte boundary rejects DTD/DOCTYPE declarations before parsing,
-including declarations whose entities are unused. Only same-document fragments
+The raw SVG byte boundary rejects DOCTYPE internal subsets before parsing,
+including subsets whose entities are unused. A plain DOCTYPE is accepted and its
+external DTD is never loaded. Only same-document fragments
 and inline `data:` resources are allowed. Relative/absolute paths, network URLs,
 other non-inline references, and CSS `@import` are rejected. There is no resource
 loader or opt-in for external access.
@@ -222,7 +225,7 @@ killable process; the synchronous native call has no safe in-process cancellatio
 |`Vectory::RenderProfileError` |Invalid size, scale, background, or profile key |4
 |`Vectory::MalformedSvgError` |Malformed SVG/XML |4
 |`Vectory::FontError` |Invalid, duplicate, missing family, or missing glyph face |4
-|`Vectory::ForbiddenExternalReferenceError` |DTD or non-inline reference |4
+|`Vectory::ForbiddenExternalReferenceError` |DOCTYPE internal subset or non-inline reference |4
 |`Vectory::RenderLimitError` |Input, font, dimension, pixel, or buffer bound |4
 |`Vectory::UnsupportedPlatformError`, `Vectory::RendererLoadError`
 |Unsupported platform or unavailable packaged renderer |5
