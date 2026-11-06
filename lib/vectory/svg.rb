@@ -32,6 +32,11 @@ module Vectory
       self.content = content
     end
 
+    def to_png(fonts:, fallback_fonts:, profile: {})
+      PngRenderer.render(content, profile: profile, fonts: fonts,
+                                  fallback_fonts: fallback_fonts)
+    end
+
     def to_emf
       Emf.from_content(Emfsvg.from_svg(content))
     end
@@ -75,6 +80,7 @@ module Vectory
     end
 
     def content=(content)
+      SvgInputPolicy.validate!(content)
       # non-root node inserts the xml tag which breaks markup when placed in
       # another xml document
       document = begin

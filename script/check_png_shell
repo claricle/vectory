@@ -1,0 +1,235 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "digest"
+require "fileutils"
+require "json"
+require "open3"
+require "optparse"
+require "rbconfig"
+require "rubygems/package"
+require "tmpdir"
+
+# Uses real packaged gems and Bundler. The selection phase simulates an unsupported
+# platform for svgpng alone; the downstream phase runs on the actual host.
+class PngShellCheck
+  TARGETS = %w[arm64-darwin x86_64-darwin x86_64-linux aarch64-linux
+               x86_64-linux-musl aarch64-linux-musl x64-mingw-ucrt ruby].freeze
+
+  def initialize(options)
+    @options = options
+    @root = File.expand_path("..", __dir__)
+    @bundler = Gem.bin_path("bundler", "bundle")
+  end
+
+  def run
+    shell = File.expand_path(@options.fetch(:shell))
+    verify_package(shell, "ruby", @options.fetch(:sha256))
+    packages = @options[:shell_only] ? [shell] : release_packages(shell)
+    Dir.mktmpdir("vectory-png-shell-") do |directory|
+      check_selection(directory, packages) unless @options[:shell_only]
+      selection_notice if @options[:shell_only]
+      check_downstream(directory, shell)
+    end
+    report_success(shell)
+  end
+
+  private
+
+  def selection_notice
+    puts "SELECTION NOT RUN (--shell-only); unsupported-platform resolution remains unproven"
+  end
+
+  def report_success(shell)
+    puts "PASS real shell downstream; host=#{Gem::Platform.local}; shell_sha256=#{Digest::SHA256.file(shell).hexdigest}"
+  end
+
+  def verify_digest(path, digest)
+    raise "Missing artifact: #{path}" unless File.file?(path)
+    raise "SHA256 mismatch: #{path}" unless Digest::SHA256.file(path).hexdigest == digest
+  end
+
+  def verify_package(path, target, digest)
+    verify_digest(path, digest)
+    spec = Gem::Package.new(path).spec
+    return if spec.name == "svgpng" && spec.version.to_s == "0.1.0" && spec.platform.to_s == target
+
+    raise "Wrong package metadata: #{path} (#{spec.full_name})"
+  end
+
+  def release_packages(shell)
+    directory = File.expand_path(@options.fetch(:release_set))
+    manifest = JSON.parse(File.read(File.join(directory, "checksums.json")))
+    entries = manifest_entries(manifest)
+    entries.map { |entry| release_package(directory, entry, shell) }
+  end
+
+  def manifest_entries(manifest)
+    entries = manifest.fetch("artifacts")
+    unless manifest["schema_version"] == 1 && manifest["version"] == "0.1.0" &&
+        entries.map { |entry| entry.fetch("target") }.sort == TARGETS.sort
+      raise "checksums.json must identify exactly the eight 0.1.0 packages"
+    end
+
+    entries
+  end
+
+  def release_package(directory, entry, shell)
+    target = entry.fetch("target")
+    expected = target == "ruby" ? "svgpng-0.1.0.gem" : "svgpng-0.1.0-#{target}.gem"
+    raise "Unexpected artifact filename" unless entry.fetch("path") == expected
+
+    path = File.join(directory, expected)
+    verify_package(path, target, entry.fetch("sha256"))
+    verify_same_shell(path, shell) if target == "ruby"
+    path
+  end
+
+  def verify_same_shell(path, shell)
+    return if Digest::SHA256.file(path).hexdigest == Digest::SHA256.file(shell).hexdigest
+
+    raise "Downstream shell differs from full-set shell"
+  end
+
+  def bundle_environment(directory)
+    environment = ENV.keys.grep(/\ABUNDLE(?:R)?_/).to_h { |key| [key, nil] }
+    environment.merge("BUNDLE_GEMFILE" => File.join(directory, "Gemfile"),
+                      "BUNDLE_IGNORE_CONFIG" => "true", "BUNDLE_PATH__SYSTEM" => "true", "RUBYOPT" => nil,
+                      "GEM_HOME" => File.join(directory, "gems"),
+                      "GEM_PATH" => [File.join(directory, "gems"), Gem.default_dir].join(File::PATH_SEPARATOR))
+  end
+
+  def prepare_bundle(directory, packages, gemfile)
+    FileUtils.mkdir_p(File.join(directory, "vendor", "cache"))
+    packages.each { |path| FileUtils.cp(path, File.join(directory, "vendor", "cache")) }
+    File.write(File.join(directory, "Gemfile"), gemfile)
+    seed_dependencies(File.join(directory, "gems"))
+    bundle_environment(directory)
+  end
+
+  # Reuse installed dependencies without builds or writes to the caller's gem home.
+  # svgpng is deliberately excluded so Bundler must install the supplied package.
+  def seed_dependencies(home)
+    Gem::Specification.each do |spec|
+      next if spec.name == "svgpng" || spec.name == "vectory" || spec.default_gem?
+
+      link_dependency(home, spec)
+    end
+  end
+
+  def link_dependency(home, spec)
+    FileUtils.mkdir_p([File.join(home, "specifications"), File.join(home, "gems")])
+    File.write(File.join(home, "specifications", "#{spec.full_name}.gemspec"), spec.to_ruby)
+    File.symlink(spec.full_gem_path, File.join(home, "gems", spec.full_name))
+    link_extension(home, spec) unless spec.extensions.empty?
+  end
+
+  def link_extension(home, spec)
+    extension = File.join(home, "extensions", Gem::Platform.local.to_s, Gem.extension_api_version, spec.full_name)
+    FileUtils.mkdir_p(File.dirname(extension))
+    File.symlink(spec.extension_dir, extension)
+  end
+
+  def execute(environment, directory, *arguments, expected: 0)
+    stdout, stderr, result = Open3.capture3(environment, RbConfig.ruby, *arguments, chdir: directory)
+    unless result.exitstatus == expected
+      raise "Command failed (expected #{expected}, got #{result.exitstatus}): #{arguments.join(' ')}\n#{stdout}#{stderr}"
+    end
+
+    [stdout, stderr]
+  end
+
+  def check_selection(directory, packages)
+    location = File.join(directory, "selection")
+    environment = prepare_bundle(location, packages, <<~GEMFILE)
+      source "https://rubygems.org"
+      gem "svgpng", "= 0.1.0"
+    GEMFILE
+    # An isolated Gemfile avoids pretending Vectory's unrelated native dependencies
+    # are installable on this synthetic platform. Bundler still resolves real gems.
+    launcher = <<~RUBY
+      require "rubygems"
+      unsupported = Gem::Platform.new("universal-unsupportedos")
+      Gem::Platform.define_singleton_method(:local) { unsupported }
+      Gem.platforms = [Gem::Platform::RUBY, unsupported]
+      load #{@bundler.inspect}
+    RUBY
+    File.write(File.join(location, "unsupported_bundle.rb"), launcher)
+    execute(environment, location, "unsupported_bundle.rb", "install", "--local", "--no-cache", "--quiet")
+    assert_shell(environment, location)
+    puts "PASS simulated unsupported-platform Bundler selection from eight checksummed packages (not an actual unsupported OS)"
+  end
+
+  def assert_shell(environment, directory)
+    execute(environment, directory, @bundler, "exec", "ruby", "-e", <<~RUBY)
+      require "svgpng"
+      spec = Gem.loaded_specs.fetch("svgpng")
+      abort "Bundler selected a native svgpng package" unless spec.platform.to_s == "ruby"
+      abort "Bundler used an external svgpng installation" unless File.realpath(spec.full_gem_path).start_with?(#{File.realpath(File.join(directory, 'gems', 'gems')).inspect})
+      require "digest"
+      abort "Installed shell checksum mismatch" unless Digest::SHA256.file(spec.cache_file).hexdigest == #{@options.fetch(:sha256).inspect}
+      begin
+        Svgpng.render('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="1"/>',
+                      profile: {}, fonts: {}, fallback_fonts: [])
+        abort "Ruby shell unexpectedly rendered"
+      rescue Svgpng::UnsupportedPlatformError
+        puts "actual shell UnsupportedPlatformError"
+      end
+    RUBY
+  end
+
+  def check_downstream(directory, shell)
+    location = File.join(directory, "downstream")
+    environment = prepare_bundle(location, [shell], <<~GEMFILE)
+      source "https://rubygems.org"
+      gem "vectory", path: #{@root.inspect}
+      gem "svgpng", "= 0.1.0", force_ruby_platform: true
+    GEMFILE
+    execute(environment, location, @bundler, "install", "--local", "--no-cache", "--quiet")
+    assert_shell(environment, location)
+    File.write(File.join(location, "input.eps"), <<~POSTSCRIPT)
+      %!PS-Adobe-3.0 EPSF-3.0
+      %%BoundingBox: 0 0 2 1
+      newpath 0 0 moveto 2 0 lineto 2 1 lineto closepath fill
+      showpage
+    POSTSCRIPT
+    check_conversions(environment, location)
+  end
+
+  def check_conversions(environment, location)
+    cli = File.join(@root, "exe", "vectory")
+    execute(environment, location, @bundler, "exec", "ruby", cli,
+            "convert", "input.eps", "--format", "svg", "--output", "output.svg")
+    svg = File.join(location, "output.svg")
+    raise "Non-PNG conversion produced no SVG" unless File.read(svg).include?("<svg")
+
+    stdout, stderr = execute(environment, location, @bundler, "exec", "ruby", cli,
+                             "convert", "output.svg", "--format", "png", "--output", "output.png", expected: 5)
+    raise "PNG failure did not identify unsupported platform: #{stdout}#{stderr}" unless (stdout + stderr).include?("No packaged SVGPNG renderer")
+    raise "Failed PNG conversion wrote output" if File.exist?(File.join(location, "output.png"))
+
+    puts "PASS actual EPS→SVG conversion; actual SVG→PNG shell failure exits 5 without output"
+  end
+end
+
+options = {}
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: script/check_png_shell --shell GEM --sha256 SHA [--release-set DIR | --shell-only]"
+  opts.on("--shell GEM", "Real svgpng 0.1.0 ruby package") { |value| options[:shell] = value }
+  opts.on("--sha256 SHA", "Expected shell SHA256") { |value| options[:sha256] = value }
+  opts.on("--release-set DIR", "Full eight-package set with checksums.json") { |value| options[:release_set] = value }
+  opts.on("--shell-only", "Run downstream behavior only; selection remains unproven") { options[:shell_only] = true }
+end
+
+begin
+  parser.parse!
+  raise OptionParser::MissingArgument, "--shell and --sha256 are required" unless options[:shell] && options[:sha256]
+  unless options[:shell_only] || options[:release_set]
+    raise OptionParser::MissingArgument, "--release-set required for selection; use --shell-only explicitly for partial evidence"
+  end
+
+  PngShellCheck.new(options).run
+rescue StandardError => e
+  warn "FAIL: #{e.message}"
+  exit 1
+end

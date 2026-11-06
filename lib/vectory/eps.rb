@@ -25,6 +25,10 @@ module Vectory
       to_svg.to_ps
     end
 
+    def to_png(fonts:, fallback_fonts:, profile: {})
+      to_svg.to_png(profile: profile, fonts: fonts, fallback_fonts: fallback_fonts)
+    end
+
     def to_svg
       Svg.from_content(Postsvg.convert(content))
     end
