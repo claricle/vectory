@@ -164,6 +164,40 @@ RSpec.describe Vectory::CLI do
       end
     end
 
+    context "empty input file" do
+      it "returns unsupported-input-format error" do
+        with_tmp_dir do |dir|
+          input = File.join(dir, "empty.svg")
+          File.binwrite(input, "")
+          expect(Vectory.ui).to receive(:error).with(start_with("Could not detect input format."))
+          status = described_class.start(["-f", "eps", "-o", File.join(dir, "o.eps"), input])
+          expect(status).to be Vectory::CLI::STATUS_UNSUPPORTED_INPUT_FORMAT_ERROR
+        end
+      end
+    end
+
+    context "missing input file" do
+      it "returns system-call error naming the file" do
+        with_tmp_dir do |dir|
+          input = File.join(dir, "absent.svg")
+          expect(Vectory.ui).to receive(:error).with(include(input))
+          status = described_class.start(["-f", "eps", "-o", File.join(dir, "o.eps"), input])
+          expect(status).to be Vectory::CLI::STATUS_SYSTEM_CALL_ERROR
+        end
+      end
+    end
+
+    context "output directory does not exist" do
+      it "returns system-call error naming the path" do
+        with_tmp_dir do |dir|
+          output = File.join(dir, "missing", "o.eps")
+          expect(Vectory.ui).to receive(:error).with(include(output))
+          status = described_class.start(["-f", "eps", "-o", output, "spec/examples/svg2emf/img.svg"])
+          expect(status).to be Vectory::CLI::STATUS_SYSTEM_CALL_ERROR
+        end
+      end
+    end
+
     context "no output option (it's not required)" do
       let(:input)  { Vectory.root_path.join("spec/examples/eps2emf/img.eps") }
       let(:format) { "emf" }
