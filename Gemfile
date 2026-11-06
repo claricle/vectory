@@ -16,7 +16,4 @@ gem "rubocop-performance"
 gem "rubocop-rake"
 gem "rubocop-rspec"
 
-gem "png_conform",
-    git: "https://github.com/claricle/png_conform.git",
-    ref: "653abae0d16d9533a37a5d5eca40896d3b307993",
-    group: :test
+gem "png_conform", "~> 0.1.5", group: :test
