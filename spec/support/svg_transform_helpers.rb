@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "yaml"
+require "yeptris"
 require "nokogiri"
 
 module SvgTransformHelpers
@@ -9,7 +9,7 @@ module SvgTransformHelpers
   end
 
   def transform_manifest
-    YAML.safe_load(transform_fixture("pipeline_profiles.yml"))
+    Yeptris::Psych.safe_load(transform_fixture("pipeline_profiles.yml"))
   end
 
   def manifest_pipeline(contract)

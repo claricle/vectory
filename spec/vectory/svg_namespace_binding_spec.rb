@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "yaml"
+require "yeptris"
 require "vectory/svg_namespace_binding"
 
 RSpec.describe Vectory::SvgNamespaceBinding do
   let(:fixtures) { File.expand_path("../fixtures/svg_transform/namespace_binding", __dir__) }
 
-  contract = YAML.safe_load_file(File.expand_path("../fixtures/svg_transform/namespace_binding/contract_cases.yml", __dir__))
+  contract = Yeptris::Psych.safe_load_file(File.expand_path("../fixtures/svg_transform/namespace_binding/contract_cases.yml", __dir__))
 
   contract.fetch("cases").each do |id, entry|
     context id do
