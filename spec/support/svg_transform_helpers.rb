@@ -9,7 +9,7 @@ module SvgTransformHelpers
   end
 
   def transform_manifest
-    Yeptris::Psych.safe_load(transform_fixture("pipeline_profiles.yml"))
+    Yeptris::Psych.safe_load(transform_fixture("pipeline_profiles.yml"), permitted_classes: [])
   end
 
   def manifest_pipeline(contract)
