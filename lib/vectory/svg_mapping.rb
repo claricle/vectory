@@ -90,6 +90,7 @@ module Vectory
     #   identity. Applied before the index suffix to provide cross-document
     #   uniqueness. Example: "_ISO_17301-1_2016"
     def initialize(doc, local_directory = "", id_suffix: nil)
+      @caller_doc = doc unless doc.is_a?(String)
       xml = doc.respond_to?(:to_xml) ? doc.to_xml : doc
       @doc = Leptris::XML.parse(xml)
       @local_directory = local_directory
@@ -106,6 +107,8 @@ module Vectory
         process_svgmap(svgmap, index)
       end
 
+      write_back_to_caller_doc
+
       @doc
     end
 
@@ -117,6 +120,62 @@ module Vectory
     end
 
     private
+
+    # Writes the processed document back into a caller-supplied document
+    # object, restoring the pre-0.13 contract: metanorma-standoc's
+    # svgmap_cleanup passes its live document and relies on SvgMapping to
+    # update it in place (its return value is discarded), so without this
+    # write-back svgmap hotspots keep their unremapped hrefs (issue #84).
+    #
+    # The write-back runs through the caller's own XML library, which is
+    # already loaded in the caller's process; no dependency is added.
+    # Callers on the 0.13 return-value contract are unaffected: #call
+    # still returns the processed Leptris document.
+    #
+    # @return [void]
+    def write_back_to_caller_doc
+      return unless @caller_doc
+
+      reparsed = reparse_for_caller_doc
+      return unless reparsed
+
+      write_back_root(reparsed)
+    end
+
+    # Moves the reparsed document's children under the caller document's
+    # root, the same graft metanorma-standoc applies when it adopts the
+    # return-value contract.
+    #
+    # @param reparsed [Object] The processed XML reparsed by the caller's
+    #   XML library
+    # @return [void]
+    def write_back_root(reparsed)
+      root = caller_doc_root
+      return unless root
+
+      root.children.each(&:remove)
+      reparsed.root.children.each { |n| root << n }
+    end
+
+    # Returns the caller document's root, if its type exposes one.
+    #
+    # @return [Object, nil]
+    def caller_doc_root
+      @caller_doc.respond_to?(:root) ? @caller_doc.root : nil
+    end
+
+    # Reparses the processed XML with the caller's own XML library.
+    #
+    # @return [Object, nil] The reparsed document, or nil if the caller's
+    #   document object is of an unrecognized type
+    def reparse_for_caller_doc
+      if defined?(Moxml::Node) && @caller_doc.is_a?(Moxml::Node)
+        Moxml.new.parse(@doc.to_xml)
+      elsif defined?(Nokogiri::XML::Node) &&
+          @caller_doc.is_a?(Nokogiri::XML::Node)
+        Nokogiri::XML(@doc.to_xml)
+      end
+    end
 
     # Processes a single svgmap element.
     #
