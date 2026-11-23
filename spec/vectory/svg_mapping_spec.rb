@@ -129,6 +129,36 @@ RSpec.describe Vectory::SvgMapping do
     end
   end
 
+  context "with a caller-owned document (svgmap hotspots, issue #84)" do
+    # Regression: since 0.13.0 SvgMapping processes the caller's document
+    # on its own leptris tree but never wrote the result back, so
+    # metanorma-standoc's svgmap_cleanup -- which passes its live document
+    # and discards the return value -- stopped seeing hotspot links
+    # replaced with their targets: the hotspot kept href="1" and linked
+    # nowhere in the rendered HTML.
+    let(:work_dir) { "spec/examples/svg" }
+
+    it "replaces hotspot links with their targets in the caller's document" do
+      Dir.chdir(work_dir) do
+        doc = Nokogiri::XML(File.read("hotspot.xml"))
+        described_class.new(doc, ".").call
+
+        content = doc.to_xml
+        expect(content).to include(%(<a href="#target">))
+        expect(content).not_to include(%(href="1"))
+      end
+    end
+
+    it "still returns the processed document" do
+      Dir.chdir(work_dir) do
+        doc = Nokogiri::XML(File.read("hotspot.xml"))
+        result = described_class.new(doc, ".").call
+
+        expect(result.to_xml).to include(%(<a href="#target">))
+      end
+    end
+  end
+
   context "creating SvgMapping with id_suffix" do
     let(:xml_content) do
       <<~XML
