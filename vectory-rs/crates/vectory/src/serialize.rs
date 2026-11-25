@@ -53,10 +53,17 @@ fn write_element(out: &mut String, element: &Element, profile: Profile) {
         // so xmlns/xmlns:* always precede other attributes (probe-verified
         // on leptris), at every element, not just the root.
         Profile::RubyXml => {
-            for attribute in element.attributes.iter().filter(|a| a.is_namespace_declaration()) {
+            for attribute in element
+                .attributes
+                .iter()
+                .filter(|a| a.is_namespace_declaration())
+            {
                 write_attribute(out, attribute, profile);
             }
-            for attribute in element.attributes.iter().filter(|a| !a.is_namespace_declaration())
+            for attribute in element
+                .attributes
+                .iter()
+                .filter(|a| !a.is_namespace_declaration())
             {
                 write_attribute(out, attribute, profile);
             }

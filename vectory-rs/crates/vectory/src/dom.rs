@@ -72,7 +72,10 @@ pub enum Node {
     Comment(String),
     /// A processing instruction; `content` is everything between the target
     /// and `?>` (including its leading space when present).
-    ProcessingInstruction { target: String, content: String },
+    ProcessingInstruction {
+        target: String,
+        content: String,
+    },
     /// The XML declaration; `raw` is the verbatim declaration content
     /// (everything between `<?` and `?>`).
     Declaration(XmlDeclaration),

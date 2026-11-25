@@ -92,14 +92,18 @@ pub fn decode(content: &str) -> Result<Document, Error> {
                 if root.is_some() || !stack.is_empty() {
                     return Err(Error::Xml("DOCTYPE after the root element".to_string()));
                 }
-                prolog.push(Node::DocType(normalize_eols(&doctype.xml10_content()).into_owned()));
+                prolog.push(Node::DocType(
+                    normalize_eols(&doctype.xml10_content()).into_owned(),
+                ));
             }
             Event::Eof => break,
         }
     }
 
     if !stack.is_empty() {
-        return Err(Error::Xml("unclosed element(s) at end of input".to_string()));
+        return Err(Error::Xml(
+            "unclosed element(s) at end of input".to_string(),
+        ));
     }
     let root = root.ok_or(Error::NoRoot)?;
     check_epilog(&epilog)?;
