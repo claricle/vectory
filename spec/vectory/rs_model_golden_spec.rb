@@ -29,7 +29,9 @@ RSpec.describe "vectory-rs golden corpus parity" do
     it "reproduces the Ruby bytes for #{rel}" do
       document = Leptris::XML.parse(File.read(source))
       expect(document.root).not_to(be_nil)
-      expect(document.root.to_xml).to eq(File.binread(golden))
+      # Byte comparison in binary encodings: the goldens are checked out
+      # verbatim (.gitattributes -text) and to_xml emits LF ends.
+      expect(document.root.to_xml.b).to eq(File.binread(golden))
     end
   end
 end

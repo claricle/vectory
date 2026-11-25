@@ -1,0 +1,4 @@
+# vectory-rs golden/fixture bytes must check out byte-exactly on every
+# platform: the serializer-fidelity gates compare bytes, so EOL conversion
+# (autocrlf on Windows runners) must not touch them.
+vectory-rs/testdata/** -text
