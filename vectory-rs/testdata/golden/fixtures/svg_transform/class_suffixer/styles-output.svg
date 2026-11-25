@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="Layer_1" class="st0_inject_0 root_inject_0">
+  <style type="text/css"><![CDATA[
+    /* .st0 stays in this comment */
+    #Layer_1, rect, [class="st0"], [data-kind=.st0] { fill: url(#grad1); content: ".st0"; opacity: .5; }
+    .st0_inject_0.root_inject_0:hover, .unused_inject_0::before { stroke: red; }
+    @media screen {
+      .st0_inject_0:is(.root_inject_0, :not(.unused_inject_0), [data-label=".st0"]) { fill: url("#grad1"); }
+      @supports (display: grid) {
+        @layer drawing { .root_inject_0:has(> .st0_inject_0):nth-child(2n of .unused_inject_0) { --value: .st0; } }
+      }
+    }
+    @font-face { font-family: ".st0"; src: url(font.st0.woff); }
+  ]]></style>
+  <rect id="rect1" class="st0_inject_0 root_inject_0" style="fill: url(#grad1);"/>
+  <defs><linearGradient id="grad1"><stop offset="0%"/></linearGradient></defs>
+</svg>

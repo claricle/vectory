@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:unused="urn:unused" id="drawing" class="drawing active" data-owner="processed">
+  <style><![CDATA[/* .drawing stays */ .drawing.active:hover { fill: url(#paint); content: ".active"; } @media screen { .drawing:is(.active, :not(.hidden)) { stroke: url(#paint); } @supports (display: grid) { .active > .drawing { opacity: .5; } } }]]></style>
+  <defs><linearGradient id="paint"><stop offset="0%"/></linearGradient></defs>
+  <g class="drawing active" fill="url(#paint)" style="stroke: url(#paint)"><use xlink:href="#drawing"/><a href="#drawing">local</a></g>
+  <svg id="nested" class="drawing"><rect class="active"/></svg>
+</svg>
