@@ -1,0 +1,41 @@
+name: Rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  workspace:
+    name: Rust workspace on ubuntu
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vectory-rs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+
+      - name: Set up Ruby for the dependency-direction guard
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Check dependency direction
+        working-directory: .
+        run: ruby scripts/check_dep_direction.rb
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check lints
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
