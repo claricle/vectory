@@ -15,6 +15,3 @@ description = "The EMF-model → VIM transformer (claricle/vectory#102, claricle
 emf-core = { git = "https://github.com/claricle/emf", rev = "0a4f7ab6e6ba79407917cc3fdec226cb798fb748" }
 eikogram = { path = "../eikogram" }
 libz-sys = "1"
-
-[dev-dependencies]
-eikogram-to-svg = { path = "../eikogram-to-svg" }

@@ -5,7 +5,7 @@
 #
 # The owner's model-driven law: format models must not depend on transformers,
 # engines, bindings, or each other. The `vectory` crate (the SVG format model)
-# must never depend on the VIM (`vector-model`) - the VIM->SVG transformer is
+# must never depend on the VIM (`eikogram`) - the VIM->SVG transformer is
 # the only bridge between them. The VIM must have zero format-model
 # dependencies. A transformer may depend only on the models it bridges (plus
 # the VIM for VIM-emitting transformers). Models are leaves of the workspace
@@ -31,9 +31,24 @@ module DepDirection
 
   RULES = {
     "vectory" => { role: "model", note: "the SVG format model" },
-    "vector-model" => {
+    "eikogram" => {
       role: "model",
-      note: "the VIM (vector intermediate model); forward declaration - the rule activates when the crate lands",
+      note: "the VIM (the Vector Image Model, the format-free drawing super-model; named eikogram by the owner)",
+    },
+    "eikogram-to-svg" => {
+      role: "transformer",
+      note: "the VIM -> SVG-model transformer; the only bridge between the drawing model and the SVG model",
+      allowed: %w[vectory eikogram],
+    },
+    "emf-to-eikogram" => {
+      role: "transformer",
+      note: "the EMF-model -> VIM transformer; emf-core is an external pinned git dependency, not a workspace crate",
+      allowed: %w[eikogram],
+    },
+    "emf88-parity" => {
+      role: "binding",
+      note: "the claricle/emf#88 byte-parity acceptance harness; binds the two transformers to compare final bytes against the Ruby renderer",
+      allowed: %w[emf-to-eikogram eikogram-to-svg],
     },
   }.freeze
 
@@ -127,11 +142,11 @@ module DepDirection
     [
       { description: "the current graph shape is legal", members: %w[vectory], edges: [], expected: [] },
       { description: "the SVG model may not depend on the VIM - the transformer is the bridge",
-        members: %w[vectory vector-model], edges: [%w[vectory vector-model normal]],
-        expected: [/ILLEGAL EDGE: vectory --\(normal\)--> vector-model/] },
+        members: %w[vectory eikogram], edges: [%w[vectory eikogram normal]],
+        expected: [/ILLEGAL EDGE: vectory --\(normal\)--> eikogram/] },
       { description: "the VIM may not depend on a format model",
-        members: %w[vectory vector-model], edges: [%w[vector-model vectory normal]],
-        expected: [/ILLEGAL EDGE: vector-model --\(normal\)--> vectory/] },
+        members: %w[vectory eikogram], edges: [%w[eikogram vectory normal]],
+        expected: [/ILLEGAL EDGE: eikogram --\(normal\)--> vectory/] },
       { description: "an unclassified crate fails the check",
         members: %w[vectory svg-engine], edges: [], expected: [/UNCLASSIFIED CRATE: svg-engine/] },
     ].map { |case_data| case_data.merge(rules: rules) }
