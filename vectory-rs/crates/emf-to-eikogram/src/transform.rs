@@ -978,7 +978,14 @@ impl Walker {
     fn href_for(&mut self, decoded: &raster::Decoded) -> Option<(Raster, i64, i64)> {
         match decoded {
             raster::Decoded::Rgba { width, height, rgba } => {
-                let png = raster::encode_png_rgba8(*width as u32, *height as u32, rgba).ok()?;
+                let mut png = raster::encode_png_rgba8(*width as u32, *height as u32, rgba).ok()?;
+                // The reference PngEncoder pads the PNG to a multiple of 3
+                // with zero bytes (libemf2svg's fmem modulo-3 allocation), so
+                // the base64 tail is `AA`/`A=` rather than `==`.
+                let rem = png.len() % 3;
+                if rem != 0 {
+                    png.extend(std::iter::repeat_n(0u8, 3 - rem));
+                }
                 Some((
                     Raster { format: RasterFormat::Png, payload: png },
                     i64::from(*width),
@@ -1913,12 +1920,13 @@ impl Walker {
         let size_y = self.scale_dim_y(i64::from(transfer.destination_extent.y));
         let pos_x = self.cal_x(i64::from(transfer.destination.x));
         let pos_y = self.cal_y(i64::from(transfer.destination.y));
+        // The reference's d closes with a bare `Z` (no trailing space), so
+        // the close rides the arrangement, not a Close segment.
         let mut geometry = PathGeometry::new(CoordJoin::Tuple);
         geometry.push(Segment::MoveTo { x: pos_x, y: pos_y });
         geometry.push(Segment::LineTo { x: pos_x + size_x, y: pos_y });
         geometry.push(Segment::LineTo { x: pos_x + size_x, y: pos_y + size_y });
         geometry.push(Segment::LineTo { x: pos_x, y: pos_y + size_y });
-        geometry.push(Segment::Close);
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
             paint: PathPaint {
@@ -1991,9 +1999,15 @@ impl Walker {
                     return;
                 };
                 let raster::Decoded::Rgba { width, height, rgba } = decoded else { return };
-                let Ok(png) = raster::encode_png_rgba8(width as u32, height as u32, &rgba) else {
+                let Ok(mut png) = raster::encode_png_rgba8(width as u32, height as u32, &rgba)
+                else {
                     return;
                 };
+                // The same fmem modulo-3 zero padding as href_for.
+                let rem = png.len() % 3;
+                if rem != 0 {
+                    png.extend(std::iter::repeat_n(0u8, 3 - rem));
+                }
                 self.items.push(Item::DefineRasterPattern(RasterPatternDef {
                     id,
                     raster: Raster { format: RasterFormat::Png, payload: png },
