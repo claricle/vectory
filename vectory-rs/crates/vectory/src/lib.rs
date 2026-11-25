@@ -96,16 +96,29 @@
 //! model-driven law (one model per format; serializers belong to their
 //! model). EMF/PNG/PostScript concerns live in their own models.
 
+pub mod class_suffixer;
+pub mod css;
+pub mod datauri;
 pub mod decode;
 pub mod dom;
 pub mod error;
+pub mod graft;
+pub mod id_disambiguator;
+pub mod input_policy;
+pub mod mutation;
 pub mod namespace;
+pub mod namespace_binding;
+pub mod scan;
 pub mod serialize;
+pub mod svg_document;
+pub mod svg_mapping;
+pub mod transform;
 
 pub use decode::decode;
 pub use dom::{Attribute, Document, Element, Node, Text, XmlDeclaration};
 pub use error::Error;
-pub use serialize::{serialize, Profile};
+pub use serialize::{serialize, serialize_document, Profile};
+pub use transform::{SvgTransform, SvgTransformPipeline};
 
 /// Decode and serialize in one step: XML bytes → model → bytes.
 ///

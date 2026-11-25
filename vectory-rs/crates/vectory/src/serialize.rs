@@ -44,6 +44,35 @@ pub fn serialize(document: &Document, profile: Profile) -> String {
     out
 }
 
+/// The Ruby `document.to_xml` surface (leptris): the XML declaration (the
+/// source's, verbatim, or the libxml2 default when the source had none),
+/// then the prolog nodes, the root subtree, and the epilog nodes. The
+/// disambiguator, class suffixer, namespace binding and SvgMapping all
+/// serialize through this surface.
+#[must_use]
+pub fn serialize_document(document: &Document) -> String {
+    let mut out = String::new();
+    let mut prolog_nodes = &document.prolog[..];
+    if let Some(Node::Declaration(decl)) = document.prolog.first() {
+        out.push_str("<?");
+        out.push_str(&decl.raw);
+        out.push_str("?>");
+        prolog_nodes = &document.prolog[1..];
+    } else if document.root.is_some() {
+        out.push_str("<?xml version=\"1.0\"?>");
+    }
+    for node in prolog_nodes {
+        write_node(&mut out, node, Profile::RubyXml);
+    }
+    if let Some(root) = &document.root {
+        write_element(&mut out, root, Profile::RubyXml);
+    }
+    for node in &document.epilog {
+        write_node(&mut out, node, Profile::RubyXml);
+    }
+    out
+}
+
 fn write_element(out: &mut String, element: &Element, profile: Profile) {
     out.push('<');
     out.push_str(&element.name);
