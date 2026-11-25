@@ -21,8 +21,7 @@ use std::path::PathBuf;
 fn emfsvg_outputs() -> Vec<(PathBuf, String)> {
     let mut files: Vec<(PathBuf, String)> = Vec::new();
     let dir = testdata_dir().join("emfsvg");
-    let entries =
-        std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read_dir {dir:?}: {e}"));
+    let entries = std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read_dir {dir:?}: {e}"));
     for entry in entries {
         let path = entry.expect("dir entry").path();
         if path.extension().is_some_and(|e| e == "svg") {
@@ -46,18 +45,21 @@ fn emfsvg_renderer_outputs_roundtrip_to_renderer_bytes() {
     let files = emfsvg_outputs();
     assert!(files.len() >= 10, "fixture set drifted");
     for (name, source) in &files {
-        let document = vectory::decode(source)
-            .unwrap_or_else(|e| panic!("{name:?}: decode failed: {e}"));
+        let document =
+            vectory::decode(source).unwrap_or_else(|e| panic!("{name:?}: decode failed: {e}"));
         let first = vectory::serialize(&document, vectory::Profile::EmfsvgSvgBuilder);
         assert_eq!(
             normalize_quirks(source),
             normalize_quirks(&first),
             "{name:?}: emfsvg-profile output diverges beyond the declared quirk set"
         );
-        let second_document = vectory::decode(&first)
-            .unwrap_or_else(|e| panic!("{name:?}: re-decode failed: {e}"));
+        let second_document =
+            vectory::decode(&first).unwrap_or_else(|e| panic!("{name:?}: re-decode failed: {e}"));
         let second = vectory::serialize(&second_document, vectory::Profile::EmfsvgSvgBuilder);
-        assert_eq!(first, second, "{name:?}: not byte-stable across two round-trips");
+        assert_eq!(
+            first, second,
+            "{name:?}: not byte-stable across two round-trips"
+        );
     }
 }
 

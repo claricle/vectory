@@ -34,7 +34,10 @@ pub fn corpus_files() -> Vec<(PathBuf, String)> {
             if path.is_dir() {
                 stack.push(path);
             } else if path.extension().is_some_and(|e| e == "svg") {
-                let rel = path.strip_prefix(&spec_root).expect("under spec root").to_path_buf();
+                let rel = path
+                    .strip_prefix(&spec_root)
+                    .expect("under spec root")
+                    .to_path_buf();
                 let content =
                     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel:?}: {e}"));
                 out.push((rel, content));

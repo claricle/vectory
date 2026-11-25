@@ -21,7 +21,10 @@ fn corpus_roundtrip_matches_ruby_producer_bytes() {
             Ok(golden) => {
                 let first = vectory::roundtrip(source, vectory::Profile::RubyXml)
                     .unwrap_or_else(|e| panic!("{rel:?}: decode failed: {e}"));
-                assert_eq!(first, golden, "{rel:?}: round-trip diverges from Ruby bytes");
+                assert_eq!(
+                    first, golden,
+                    "{rel:?}: round-trip diverges from Ruby bytes"
+                );
                 let second = vectory::roundtrip(&first, vectory::Profile::RubyXml)
                     .unwrap_or_else(|e| panic!("{rel:?}: decode of own output failed: {e}"));
                 assert_eq!(second, first, "{rel:?}: round-trip is not byte-stable");
@@ -49,7 +52,11 @@ fn corpus_files_without_root_error_with_named_errors() {
         Err(e) => assert!(e.to_string().contains("invalid XML"), "named error: {e}"),
     }
     // eps_but_svg_extension.svg is PostScript despite its extension.
-    let source = std::fs::read_to_string(repo_spec_dir().join("examples/eps_but_svg_extension.svg"))
-        .expect("corpus file");
-    assert!(vectory::decode(&source).is_err(), "postscript file must not decode");
+    let source =
+        std::fs::read_to_string(repo_spec_dir().join("examples/eps_but_svg_extension.svg"))
+            .expect("corpus file");
+    assert!(
+        vectory::decode(&source).is_err(),
+        "postscript file must not decode"
+    );
 }
