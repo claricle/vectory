@@ -24,7 +24,11 @@ impl Profile {
     pub fn steps(self) -> &'static [StepName] {
         match self {
             Profile::Graft => &[StepName::GraftInto],
-            Profile::SvgCleanup => &[StepName::Disambiguate, StepName::SuffixClasses, StepName::BindNamespaces],
+            Profile::SvgCleanup => &[
+                StepName::Disambiguate,
+                StepName::SuffixClasses,
+                StepName::BindNamespaces,
+            ],
             Profile::GraftThenSvgCleanup => &[
                 StepName::GraftInto,
                 StepName::Disambiguate,
@@ -40,12 +44,9 @@ impl Profile {
             [StepName::Disambiguate, StepName::SuffixClasses, StepName::BindNamespaces] => {
                 Some(Profile::SvgCleanup)
             }
-            [
-                StepName::GraftInto,
-                StepName::Disambiguate,
-                StepName::SuffixClasses,
-                StepName::BindNamespaces,
-            ] => Some(Profile::GraftThenSvgCleanup),
+            [StepName::GraftInto, StepName::Disambiguate, StepName::SuffixClasses, StepName::BindNamespaces] => {
+                Some(Profile::GraftThenSvgCleanup)
+            }
             _ => None,
         }
     }
@@ -220,12 +221,15 @@ impl SvgTransformPipeline {
             ));
         }
         let names: Vec<StepName> = steps.iter().map(SvgTransform::name).collect();
-        let valid = [Profile::Graft, Profile::SvgCleanup, Profile::GraftThenSvgCleanup]
-            .iter()
-            .any(|profile| {
-                profile.steps().len() >= names.len()
-                    && profile.steps()[..names.len()] == names[..]
-            });
+        let valid = [
+            Profile::Graft,
+            Profile::SvgCleanup,
+            Profile::GraftThenSvgCleanup,
+        ]
+        .iter()
+        .any(|profile| {
+            profile.steps().len() >= names.len() && profile.steps()[..names.len()] == names[..]
+        });
         if !valid {
             return Err(Error::Transform(format!(
                 "invalid step sequence: {}",
@@ -324,8 +328,10 @@ impl SvgTransformPipeline {
     /// Keeps the cleaned root, including its new attributes and bindings,
     /// inside the captured envelope.
     fn finalize_graft(&self, output: &str) -> String {
-        let SvgTransform::GraftInto { host_content, .. } =
-            self.steps.first().expect("graft_then profile leads with graft_into")
+        let SvgTransform::GraftInto { host_content, .. } = self
+            .steps
+            .first()
+            .expect("graft_then profile leads with graft_into")
         else {
             unreachable!("graft_then profile leads with graft_into");
         };
@@ -388,8 +394,8 @@ fn remove_redundant_in(element: &mut crate::dom::Element, inherited: &[(String, 
         .attributes
         .iter()
         .filter_map(|attribute| {
-            crate::namespace::namespace_declaration(&attribute.name, &attribute.value)
-                .map(|(prefix, uri)| {
+            crate::namespace::namespace_declaration(&attribute.name, &attribute.value).map(
+                |(prefix, uri)| {
                     (
                         if prefix.is_empty() {
                             "xmlns".to_string()
@@ -398,15 +404,16 @@ fn remove_redundant_in(element: &mut crate::dom::Element, inherited: &[(String, 
                         },
                         uri,
                     )
-                })
+                },
+            )
         })
         .collect();
     let redundant: Vec<String> = own
         .iter()
         .filter(|(name, uri)| {
-            inherited
-                .iter()
-                .any(|(inherited_name, inherited_uri)| inherited_name == name && inherited_uri == uri)
+            inherited.iter().any(|(inherited_name, inherited_uri)| {
+                inherited_name == name && inherited_uri == uri
+            })
         })
         .map(|(name, _)| name.clone())
         .collect();

@@ -124,7 +124,10 @@ impl SvgMapping {
     }
 
     fn root_namespace(&self) -> Option<String> {
-        self.doc.root.as_ref().and_then(|root| root.namespace_uri.clone())
+        self.doc
+            .root
+            .as_ref()
+            .and_then(|root| root.namespace_uri.clone())
     }
 
     /// Paths (child-index chains) of the svgmap elements, document order,
@@ -177,7 +180,14 @@ impl SvgMapping {
         let image = {
             let mut found: Option<Vec<usize>> = None;
             let mut current = svgmap_path.to_vec();
-            find_first_named(svgmap, svgmap_path, root_ns.as_deref(), "image", &mut current, &mut found);
+            find_first_named(
+                svgmap,
+                svgmap_path,
+                root_ns.as_deref(),
+                "image",
+                &mut current,
+                &mut found,
+            );
             found
         };
         if let Some(image_path) = &image {
@@ -233,7 +243,10 @@ impl SvgMapping {
             let Some(target) = link_target(child_element, root_ns.as_deref()) else {
                 continue;
             };
-            let href = child_element.attribute("href").unwrap_or_default().to_string();
+            let href = child_element
+                .attribute("href")
+                .unwrap_or_default()
+                .to_string();
             out.push((join_path(svgmap_path, index), target, href));
         }
         out
@@ -253,7 +266,12 @@ impl SvgMapping {
             return Ok(None);
         };
         let mut svg_document = SvgDocument::new(&svg_content)?;
-        svg_document.namespace(index, links_map, self.base_dir.as_str(), self.id_suffix.as_deref())?;
+        svg_document.namespace(
+            index,
+            links_map,
+            self.base_dir.as_str(),
+            self.id_suffix.as_deref(),
+        )?;
         Ok(Some(svg_document.content()))
     }
 
@@ -285,11 +303,11 @@ impl SvgMapping {
             element_at(root, svgmap_path).is_some_and(|svgmap| {
                 svgmap.children.iter().any(|child| {
                     matches!(child, Node::Element(target)
-                        if mutation::is_named(target, root_ns.as_deref(), "target")
-                            && target.children.iter().any(|grandchild| {
-                                matches!(grandchild, Node::Element(eref)
-                                    if mutation::is_named(eref, root_ns.as_deref(), "eref"))
-                            }))
+                    if mutation::is_named(target, root_ns.as_deref(), "target")
+                        && target.children.iter().any(|grandchild| {
+                            matches!(grandchild, Node::Element(eref)
+                                if mutation::is_named(eref, root_ns.as_deref(), "eref"))
+                        }))
                 })
             })
         };
@@ -335,13 +353,12 @@ impl SvgMapping {
 
     fn replace_element_with_content(&mut self, path: &[usize], content: &str) -> Result<(), Error> {
         let (parent_path, index) = split_path(path);
-        let replacement = match Document::parse(content) {
-            Ok(processed) => processed
+        let replacement = Document::parse(content).map(|processed| {
+            processed
                 .root
                 .map(|root| vec![Node::Element(root)])
-                .unwrap_or_default(),
-            Err(error) => return Err(error),
-        };
+                .unwrap_or_default()
+        })?;
         let Some(root) = self.doc.root.as_mut() else {
             return Ok(());
         };

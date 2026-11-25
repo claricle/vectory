@@ -18,7 +18,12 @@ fn iri_tag_properties(tag: &str) -> Option<Option<&'static [&'static str]>> {
         "clipPath" => Some(Some(&["clip-path"])),
         "color-profile" | "cursor" | "filter" | "mask" => Some(None),
         "linearGradient" | "radialGradient" | "pattern" => Some(Some(&["fill", "stroke"])),
-        "marker" => Some(Some(&["marker", "marker-end", "marker-mid", "marker-start"])),
+        "marker" => Some(Some(&[
+            "marker",
+            "marker-end",
+            "marker-mid",
+            "marker-start",
+        ])),
         _ => None,
     }
 }
@@ -148,11 +153,10 @@ fn iri_properties(tag_names: &[String]) -> Vec<String> {
                     }
                 }
             }
-            Some(None) => {
-                if !properties.iter().any(|p| p == tag) {
-                    properties.push(tag.clone());
-                }
+            Some(None) if !properties.iter().any(|p| p == tag) => {
+                properties.push(tag.clone());
             }
+            Some(None) => {}
             None => {}
         }
     }
@@ -215,11 +219,7 @@ fn rewrite_element(
     }
 
     for property in iri_properties {
-        let Some(index) = element
-            .attributes
-            .iter()
-            .position(|a| a.name == *property)
-        else {
+        let Some(index) = element.attributes.iter().position(|a| a.name == *property) else {
             continue;
         };
         let value = &mut element.attributes[index].value;
@@ -269,10 +269,7 @@ fn rewrite_urls(text: &str, suffix: &str, ids: &HashMap<String, usize>) -> Strin
         }
         if chars.get(cursor) == Some(&'#') {
             let id_start = cursor + 1;
-            if chars
-                .get(id_start)
-                .is_some_and(|c| c.is_ascii_alphabetic())
-            {
+            if chars.get(id_start).is_some_and(|c| c.is_ascii_alphabetic()) {
                 let mut end = id_start + 1;
                 while chars
                     .get(end)

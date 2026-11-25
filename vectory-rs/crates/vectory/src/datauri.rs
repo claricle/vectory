@@ -153,14 +153,14 @@ pub fn strict_decode64(input: &str) -> Option<Vec<u8>> {
     if bytes.is_empty() {
         return Some(Vec::new());
     }
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         return None;
     }
     let padding = bytes.iter().rev().take_while(|b| **b == b'=').count();
     if padding > 2 {
         return None;
     }
-    if bytes[..bytes.len() - padding].iter().any(|b| *b == b'=') {
+    if bytes[..bytes.len() - padding].contains(&b'=') {
         return None;
     }
     let mut out = Vec::with_capacity(bytes.len() / 4 * 3);
@@ -201,7 +201,10 @@ mod tests {
     fn round_trips_base64() {
         let encoded = strict_encode64("hello world".as_bytes());
         assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
-        assert_eq!(strict_decode64(&encoded), Some("hello world".as_bytes().to_vec()));
+        assert_eq!(
+            strict_decode64(&encoded),
+            Some("hello world".as_bytes().to_vec())
+        );
     }
 
     #[test]
@@ -214,6 +217,8 @@ mod tests {
     #[test]
     fn rejects_non_datauri() {
         let error = Datauri::parse("123abc").unwrap_err();
-        assert!(error.to_string().contains("Could not parse datauri: '123abc'"));
+        assert!(error
+            .to_string()
+            .contains("Could not parse datauri: '123abc'"));
     }
 }

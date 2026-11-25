@@ -110,7 +110,10 @@ fn keeps_non_colliding_references_untouched() {
     let dupes = dupes();
     let b = svg_b();
     let out_b = id_disambiguator::rewrite(&b, "_inject_1", &dupes).unwrap();
-    assert!(out_b.contains("marker-mid=\"url(#marker-only)\""), "{out_b}");
+    assert!(
+        out_b.contains("marker-mid=\"url(#marker-only)\""),
+        "{out_b}"
+    );
 }
 
 #[test]
@@ -160,14 +163,11 @@ fn suffixes_compound_comma_functional_and_nested_selectors() {
     let output = class_suffixer::rewrite(&input, "_inject_0").expect("rewrites");
     manip_common::assert_xml_equivalent(&output, &expected);
     // Declarations and unrelated selector content survive byte-for-byte.
-    assert_eq!(
-        style_text(&output),
-        {
-            let expected_document = vectory::Document::parse(&expected).unwrap();
-            let root = expected_document.root.as_ref().unwrap();
-            text_of(find_first(root, "style").unwrap())
-        }
-    );
+    assert_eq!(style_text(&output), {
+        let expected_document = vectory::Document::parse(&expected).unwrap();
+        let root = expected_document.root.as_ref().unwrap();
+        text_of(find_first(root, "style").unwrap())
+    });
     let document = vectory::Document::parse(&output).unwrap();
     let root = document.root.as_ref().unwrap();
     let rect = manip_common::find_all(root, "path")
@@ -208,7 +208,8 @@ fn preserves_xml_child_nodes_while_suffixing_split_tokens() {
         ),
     ];
     for (css, expected_css) in cases {
-        let source = format!("<svg xmlns=\"http://www.w3.org/2000/svg\"><style>{css}</style></svg>");
+        let source =
+            format!("<svg xmlns=\"http://www.w3.org/2000/svg\"><style>{css}</style></svg>");
         let result = class_suffixer::rewrite(&source, suffix).expect("rewrites");
         let document = vectory::Document::parse(&result).expect("reparses");
         let root = document.root.as_ref().unwrap();
@@ -295,7 +296,10 @@ fn rewrites_nested_selectors_while_leaving_declarations_and_custom_properties_in
     assert_eq!(style_text(&output), expected_css, "{output}");
     let document = vectory::Document::parse(&output).unwrap();
     let root = document.root.as_ref().unwrap();
-    let g = manip_common::find_all(root, "g").into_iter().next().unwrap();
+    let g = manip_common::find_all(root, "g")
+        .into_iter()
+        .next()
+        .unwrap();
     assert_eq!(
         g.attribute("class"),
         Some("a_inject_0 b_inject_0 c_inject_0 d_inject_0 e_inject_0 f_inject_0 g_inject_0 h_inject_0")
@@ -317,7 +321,10 @@ fn keeps_escaped_identifiers_semantically_equal_to_the_suffixed_xml_classes() {
     );
     let document = vectory::Document::parse(&output).unwrap();
     let root = document.root.as_ref().unwrap();
-    let g = manip_common::find_all(root, "g").into_iter().next().unwrap();
+    let g = manip_common::find_all(root, "g")
+        .into_iter()
+        .next()
+        .unwrap();
     assert_eq!(g.attribute("class"), Some(r"foo1b foo\31b"));
     let repeated = class_suffixer::rewrite(&output, "b").expect("rewrites");
     manip_common::assert_xml_equivalent(&repeated, &output);
@@ -367,9 +374,7 @@ fn preserves_empty_classes_empty_styles_and_absent_classes() {
 
 #[test]
 fn rewrites_recognized_selectors_and_preserves_discarded_incomplete_streams() {
-    let input = concat!(
-        "<svg class=\"foo\"><style>.foo { broken; content: &quot;.foo&quot;; } .unfinished</style></svg>"
-    );
+    let input = "<svg class=\"foo\"><style>.foo { broken; content: &quot;.foo&quot;; } .unfinished</style></svg>";
     let output = class_suffixer::rewrite(input, "_inject_0").expect("rewrites");
     assert_eq!(
         style_text(&output),
@@ -379,17 +384,18 @@ fn rewrites_recognized_selectors_and_preserves_discarded_incomplete_streams() {
 
 #[test]
 fn keeps_an_unclosed_block_unclosed_while_rewriting_its_known_selector() {
-    let output =
-        class_suffixer::rewrite("<svg><style>.foo { fill: red</style></svg>", "_inject_0")
-            .expect("rewrites");
+    let output = class_suffixer::rewrite("<svg><style>.foo { fill: red</style></svg>", "_inject_0")
+        .expect("rewrites");
     assert_eq!(style_text(&output), ".foo_inject_0 { fill: red");
 }
 
 #[test]
 fn preserves_unknown_at_rules_without_guessing_at_their_blocks() {
-    let output =
-        class_suffixer::rewrite("<svg><style>@custom { value: .foo; }</style></svg>", "_inject_0")
-            .expect("rewrites");
+    let output = class_suffixer::rewrite(
+        "<svg><style>@custom { value: .foo; }</style></svg>",
+        "_inject_0",
+    )
+    .expect("rewrites");
     assert_eq!(style_text(&output), "@custom { value: .foo; }");
 }
 
@@ -410,13 +416,19 @@ fn preserves_unicode_identifiers_and_comments_between_class_selector_tokens() {
         "_inject_0",
     )
     .expect("rewrites");
-    assert_eq!(style_text(&output), r#"/*é*/ ./**/café_inject_0 { content: ".café" }"#);
+    assert_eq!(
+        style_text(&output),
+        r#"/*é*/ ./**/café_inject_0 { content: ".café" }"#
+    );
 }
 
 #[test]
 fn rejects_invalid_xml() {
     let result = class_suffixer::rewrite("<svg><path></svg>", "_inject_0");
-    assert!(matches!(result, Err(vectory::Error::Xml(_)) | Err(vectory::Error::Parsing(_))));
+    assert!(matches!(
+        result,
+        Err(vectory::Error::Xml(_)) | Err(vectory::Error::Parsing(_))
+    ));
 }
 
 #[test]

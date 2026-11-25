@@ -55,10 +55,7 @@ fn canon_element(out: &mut String, element: &Element, scope: &[(String, String)]
     let mut kept_declarations: Vec<(String, String)> = Vec::new();
     for attribute in declarations {
         let value = &attribute.value;
-        if let Some((_, existing)) = inner_scope
-            .iter()
-            .find(|(name, _)| *name == attribute.name)
-        {
+        if let Some((_, existing)) = inner_scope.iter().find(|(name, _)| *name == attribute.name) {
             if existing == value {
                 // Redundant redeclaration: canonical form drops it.
                 continue;

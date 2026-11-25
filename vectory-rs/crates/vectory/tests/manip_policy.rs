@@ -19,12 +19,13 @@
 
 mod manip_common;
 
-use manip_common::{repo_spec_dir};
+use manip_common::repo_spec_dir;
 use vectory::datauri::{strict_decode64, Datauri};
 use vectory::input_policy;
 
 const DECLARATION: &str = "<!DOCTYPE svg [<!ENTITY secret SYSTEM \"file:///secondary-secret\">]>";
-const SOURCE: &str = "<!DOCTYPE svg [<!ENTITY secret SYSTEM \"file:///secondary-secret\">]><svg>&secret;</svg>";
+const SOURCE: &str =
+    "<!DOCTYPE svg [<!ENTITY secret SYSTEM \"file:///secondary-secret\">]><svg>&secret;</svg>";
 
 #[test]
 fn rejects_internal_dtd_subsets_which_can_declare_entities() {
@@ -73,7 +74,10 @@ fn accepts_a_doctype_without_an_internal_subset_as_svg_editors_write_it() {
             .as_ref()
             .unwrap()
             .attribute("width")
-            .and_then(|value| value.split('.').next().and_then(|int| int.parse::<i64>().ok())),
+            .and_then(|value| value
+                .split('.')
+                .next()
+                .and_then(|int| int.parse::<i64>().ok())),
         Some(3)
     );
 }
@@ -126,33 +130,28 @@ fn encode_stub(source: &str, encoding: &str) -> Vec<u8> {
             out.push(*b);
             out
         }),
-        "UTF-32LE" => ascii
-            .iter()
-            .fold(Vec::new(), |mut out, b| {
-                out.push(*b);
-                out.push(0);
-                out.push(0);
-                out.push(0);
-                out
-            }),
-        "UTF-32BE" => ascii
-            .iter()
-            .fold(Vec::new(), |mut out, b| {
-                out.push(0);
-                out.push(0);
-                out.push(0);
-                out.push(*b);
-                out
-            }),
+        "UTF-32LE" => ascii.iter().fold(Vec::new(), |mut out, b| {
+            out.push(*b);
+            out.push(0);
+            out.push(0);
+            out.push(0);
+            out
+        }),
+        "UTF-32BE" => ascii.iter().fold(Vec::new(), |mut out, b| {
+            out.push(0);
+            out.push(0);
+            out.push(0);
+            out.push(*b);
+            out
+        }),
         other => panic!("unknown encoding {other}"),
     }
 }
 
 #[test]
 fn preserves_literal_declaration_text_in_comments_cdata_and_instructions() {
-    let safe = format!(
-        "<!-- {DECLARATION} --><?note {DECLARATION}?><svg><![CDATA[{DECLARATION}]]></svg>"
-    );
+    let safe =
+        format!("<!-- {DECLARATION} --><?note {DECLARATION}?><svg><![CDATA[{DECLARATION}]]></svg>");
     input_policy::validate(&safe).expect("opaque tokens accepted");
     let document = vectory::Document::parse(&safe).expect("parses");
     let content = vectory::serialize(&document, vectory::Profile::RubyXml);
@@ -170,7 +169,8 @@ fn continues_scanning_after_multibyte_comments_and_cdata() {
 // ---------------------------------------------------------------------------
 
 fn corpus(relative: &str) -> String {
-    std::fs::read_to_string(repo_spec_dir().join(relative)).unwrap_or_else(|e| panic!("{relative}: {e}"))
+    std::fs::read_to_string(repo_spec_dir().join(relative))
+        .unwrap_or_else(|e| panic!("{relative}: {e}"))
 }
 
 #[test]
@@ -224,13 +224,12 @@ fn svg_datauri_dimensions_come_from_the_svg() {
 }
 
 fn dimension(root: &vectory::Element, name: &str) -> Option<i64> {
-    let from_attr = root
-        .attribute(name)
-        .and_then(|value| leading_number(value));
+    let from_attr = root.attribute(name).and_then(leading_number);
     from_attr.or_else(|| {
         root.attribute("viewBox").and_then(|view_box| {
             let parts: Vec<&str> = view_box.split_whitespace().collect();
-            parts.get(if name == "width" { 2 } else { 3 })
+            parts
+                .get(if name == "width" { 2 } else { 3 })
                 .and_then(|part| part.parse::<i64>().ok())
         })
     })
@@ -263,10 +262,7 @@ fn returns_nil_for_an_empty_file() {
 
 #[test]
 fn detects_svg_references_by_their_tag() {
-    let references = [
-        "examples/eps2svg/ref.svg",
-        "examples/svg2emf/img.svg",
-    ];
+    let references = ["examples/eps2svg/ref.svg", "examples/svg2emf/img.svg"];
     for reference in references {
         let bytes = std::fs::read(repo_spec_dir().join(reference)).expect("reference file");
         assert_eq!(

@@ -120,7 +120,8 @@ fn id_suffix_applies_together_with_the_index_suffix() {
     );
     // CSS references carry both suffixes.
     assert!(
-        content.contains("#Layer_1_DOC_1_000000000") || content.contains("#Layer_1_DOC_1_000000001"),
+        content.contains("#Layer_1_DOC_1_000000000")
+            || content.contains("#Layer_1_DOC_1_000000001"),
         "CSS must reference the doubly-suffixed ids: {content}"
     );
 }
@@ -186,12 +187,15 @@ fn write_back_replaces_the_caller_root_children() {
     let figures = find_all(root, "figure");
     assert!(!figures.is_empty());
     assert!(
-        find_all(root, "svg").iter().any(|svg| true),
+        find_all(root, "svg").iter().any(|_svg| true),
         "the expanded SVG must be grafted into the caller tree"
     );
     let svgmaps = find_all(root, "svgmap");
     assert!(
-        svgmaps.is_empty() || svgmaps.iter().all(|svgmap| find_all(svgmap, "target").is_empty()),
+        svgmaps.is_empty()
+            || svgmaps
+                .iter()
+                .all(|svgmap| find_all(svgmap, "target").is_empty()),
         "resolvable targets are consumed in the caller tree"
     );
 }

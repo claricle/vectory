@@ -26,11 +26,7 @@ pub fn validate(content: &str) -> Result<(), Error> {
 const DOCTYPE_PREFIX: &[u8] = b"<!DOCTYPE";
 
 /// Literal text inside these tokens is not markup.
-const OPAQUE: [(&[u8], &[u8]); 3] = [
-    (b"<!--", b"-->"),
-    (b"<![CDATA[", b"]]>"),
-    (b"<?", b"?>"),
-];
+const OPAQUE: [(&[u8], &[u8]); 3] = [(b"<!--", b"-->"), (b"<![CDATA[", b"]]>"), (b"<?", b"?>")];
 
 fn token_end(bytes: &[u8], opening: usize) -> usize {
     if bytes.len() >= opening + 10 && &bytes[opening..opening + 9] == DOCTYPE_PREFIX {
@@ -79,7 +75,10 @@ fn index_byte(bytes: &[u8], needle: u8, from: usize) -> Option<usize> {
     if from >= bytes.len() {
         return None;
     }
-    bytes[from..].iter().position(|byte| *byte == needle).map(|position| position + from)
+    bytes[from..]
+        .iter()
+        .position(|byte| *byte == needle)
+        .map(|position| position + from)
 }
 
 fn index_slice(bytes: &[u8], needle: &[u8], from: usize) -> Option<usize> {
@@ -179,7 +178,9 @@ mod tests {
     #[test]
     fn preserves_literal_declaration_text_in_opaque_tokens() {
         let declaration = "<!DOCTYPE svg [<!ENTITY secret SYSTEM \"file:///x\">]>";
-        let safe = format!("<!-- {declaration} --><?note {declaration}?><svg><![CDATA[{declaration}]]></svg>");
+        let safe = format!(
+            "<!-- {declaration} --><?note {declaration}?><svg><![CDATA[{declaration}]]></svg>"
+        );
         assert!(!forbidden(safe.as_bytes()));
     }
 
