@@ -55,8 +55,18 @@ pub fn rewrite(content: &str, suffix: &str) -> Result<String, Error> {
     let mut document = Document::parse(content)?;
     let paths = svg_element_paths(&document);
     for path in &paths {
-        if let Some(element) = element_at_mut(&mut document, path) {
-            rewrite_element(element, suffix);
+        // The svg root itself plus every descendant (`[svg] + svg.xpath(".//*")`).
+        let mut targets = vec![path.clone()];
+        {
+            let root = document.root.as_ref().expect("parsed document has a root");
+            if let Some(subtree) = element_at(root, path) {
+                collect_descendant_paths(subtree, path, &mut targets);
+            }
+        }
+        for target in &targets {
+            if let Some(element) = element_at_mut(&mut document, target) {
+                rewrite_element(element, suffix);
+            }
         }
     }
     Ok(crate::serialize::serialize_document(&document))
@@ -97,6 +107,33 @@ fn element_at_mut<'a>(document: &'a mut Document, path: &[usize]) -> Option<&'a 
     Some(cursor)
 }
 
+fn element_at<'a>(root: &'a Element, path: &[usize]) -> Option<&'a Element> {
+    let mut cursor = root;
+    for &index in path {
+        match cursor.children.get(index) {
+            Some(Node::Element(child)) => cursor = child,
+            _ => return None,
+        }
+    }
+    Some(cursor)
+}
+
+/// Absolute paths of every element under (and excluding) `subtree`.
+fn collect_descendant_paths(
+    subtree: &Element,
+    base: &[usize],
+    out: &mut Vec<Vec<usize>>,
+) {
+    for (index, child) in subtree.children.iter().enumerate() {
+        if let Node::Element(child_element) = child {
+            let mut path = base.to_vec();
+            path.push(index);
+            out.push(path.clone());
+            collect_descendant_paths(child_element, &path, out);
+        }
+    }
+}
+
 fn rewrite_element(element: &mut Element, suffix: &str) {
     rewrite_classes(element, suffix);
     if element.name == "style" {
@@ -109,25 +146,33 @@ fn rewrite_classes(element: &mut Element, suffix: &str) {
         return;
     };
     let value = &mut element.attributes[index].value;
-    let rewritten = split_class_tokens(value)
-        .map(|token| {
-            if token.ends_with(suffix) {
-                token.to_string()
-            } else {
-                format!("{token}{suffix}")
+    // gsub(/[^\t\n\f\r ]+/) — rewrite each token in place, separators kept.
+    let mut rewritten = String::with_capacity(value.len());
+    let mut token = String::new();
+    for c in value.chars() {
+        if matches!(c, '\t' | '\n' | '\u{c}' | '\r' | ' ') {
+            if !token.is_empty() {
+                push_class_token(&mut rewritten, &token, suffix);
+                token.clear();
             }
-        })
-        .collect::<Vec<_>>()
-        .join("");
+            rewritten.push(c);
+        } else {
+            token.push(c);
+        }
+    }
+    if !token.is_empty() {
+        push_class_token(&mut rewritten, &token, suffix);
+    }
     *value = rewritten;
 }
 
-/// Splits a class list on `[^\t\n\f\r ]+`, yielding the tokens (the joining
-/// separators are re-concatenated by the caller through token iteration).
-fn split_class_tokens(value: &str) -> impl Iterator<Item = &str> {
-    value
-        .split(|c: char| matches!(c, '\t' | '\n' | '\u{c}' | '\r' | ' '))
-        .filter(|token| !token.is_empty())
+fn push_class_token(out: &mut String, token: &str, suffix: &str) {
+    if token.ends_with(suffix) {
+        out.push_str(token);
+    } else {
+        out.push_str(token);
+        out.push_str(suffix);
+    }
 }
 
 /// A text-bearing child of a `<style>` element, with its start offset in
@@ -210,7 +255,8 @@ fn css_insertions(css: &str, suffix: &str) -> Vec<(usize, String)> {
 }
 
 /// Unit table: `offsets[i]` is the original-string char offset of the i-th
-/// CSS-normalized position (a CRLF in the source counts as one unit).
+/// CSS-normalized position (a CRLF in the source counts as one unit but
+/// occupies two chars — exactly the Ruby `scan(/\r\n|./m)` arithmetic).
 fn source_offsets(css: &str) -> Vec<usize> {
     let mut offsets = vec![0usize];
     let chars: Vec<char> = css.chars().collect();
@@ -219,10 +265,10 @@ fn source_offsets(css: &str) -> Vec<usize> {
         let width = if chars[index] == '\r' && chars.get(index + 1) == Some(&'\n') {
             2
         } else {
-            chars[index].len_utf8()
+            1
         };
         offsets.push(offsets.last().unwrap() + width);
-        index += if width == 2 { 2 } else { 1 };
+        index += width;
     }
     offsets
 }
