@@ -267,7 +267,6 @@ fn rewrite_urls(text: &str, suffix: &str, ids: &HashMap<String, usize>) -> Strin
             quoted = true;
             cursor += 1;
         }
-        let mut matched = false;
         if chars.get(cursor) == Some(&'#') {
             let id_start = cursor + 1;
             if chars
@@ -287,8 +286,7 @@ fn rewrite_urls(text: &str, suffix: &str, ids: &HashMap<String, usize>) -> Strin
                     tail += 1;
                 }
                 if chars.get(tail) == Some(&')') {
-                    matched = true;
-                    cursor = tail + 1;
+                    let closing = tail + 1;
                     // Unmatched ids keep the original text (`x` unchanged);
                     // matched ids get the suffix inserted after the id.
                     out.extend(&chars[index..id_start]);
@@ -296,16 +294,14 @@ fn rewrite_urls(text: &str, suffix: &str, ids: &HashMap<String, usize>) -> Strin
                     if ids.contains_key(&id) {
                         out.push_str(suffix);
                     }
-                    out.extend(&chars[end..cursor]);
-                    index = cursor;
+                    out.extend(&chars[end..closing]);
+                    index = closing;
                     continue;
                 }
             }
         }
-        if !matched {
-            out.push(chars[index]);
-            index += 1;
-        }
+        out.push(chars[index]);
+        index += 1;
     }
     out
 }
