@@ -5,8 +5,8 @@
 use std::collections::HashMap;
 
 use eikogram::{
-    Arrangement, BaselineMode, Canvas, ClipDef, ClipShape, Color, CoordJoin, Dash, Drawing, Draw,
-    DrawBody, Fill, FillStyle, HatchStyle, HatchPatternDef, ImageArrangement, ImageDraw, Item,
+    Arrangement, BaselineMode, Canvas, ClipDef, ClipShape, Color, CoordJoin, Dash, Draw, DrawBody,
+    Drawing, Fill, FillStyle, HatchPatternDef, HatchStyle, ImageArrangement, ImageDraw, Item,
     LineCap, LineJoin, Matrix, PathDraw, PathGeometry, PathPaint, Preamble, Raster, RasterFormat,
     RasterPatternDef, Segment, ShapeDraw, ShapeKind, Stroke, TextAnchor, TextDraw, Width,
 };
@@ -16,7 +16,7 @@ use crate::fingerprint::sha256_hex;
 use crate::glyph;
 use crate::hint::{self, DrawingHint};
 use crate::raster;
-use crate::state::{BsdRand, Brush, DeviceContext, Font, GdiObject, ObjectTable, Pen, SaveStack};
+use crate::state::{Brush, BsdRand, DeviceContext, Font, GdiObject, ObjectTable, Pen, SaveStack};
 
 /// Render options (the reference renderer's keyword options).
 #[derive(Clone, Debug, Default)]
@@ -47,13 +47,21 @@ pub fn render(
     let (img_width, img_height) = compute_output_dimensions(bounds, options)?;
 
     let bounds_width = i64::from(bounds.right - bounds.left).abs();
-    let scaling = if bounds_width == 0 { 1.0 } else { img_width / bounds_width as f64 };
+    let scaling = if bounds_width == 0 {
+        1.0
+    } else {
+        img_width / bounds_width as f64
+    };
     let ref_x = f64::from(bounds.left);
     let ref_y = f64::from(bounds.top);
 
     let device = header.device;
     let mm = header.millimeters;
-    let px_per_mm = if mm.cx == 0 { 1.0 } else { f64::from(device.cx) / f64::from(mm.cx) };
+    let px_per_mm = if mm.cx == 0 {
+        1.0
+    } else {
+        f64::from(device.cx) / f64::from(mm.cx)
+    };
 
     let records = document.records();
     if records.len() as u64 > MAX_RECORDS {
@@ -66,7 +74,10 @@ pub fn render(
         canvas: Canvas {
             width: img_width,
             height: img_height,
-            preamble: Preamble { tx: -ref_x * scaling, ty: -ref_y * scaling },
+            preamble: Preamble {
+                tx: -ref_x * scaling,
+                ty: -ref_y * scaling,
+            },
             degenerate_y_repair: fix_broken_y,
             alias_namespace: options.namespace.as_deref() == Some("svg"),
         },
@@ -95,7 +106,10 @@ pub fn render(
     };
     walker.walk(document, records);
     walker.finish();
-    Ok(Drawing { canvas: walker.canvas, items: walker.items })
+    Ok(Drawing {
+        canvas: walker.canvas,
+        items: walker.items,
+    })
 }
 
 fn compute_output_dimensions(
@@ -159,7 +173,14 @@ fn matrix_of(xform: &emf_core::XForm) -> MatrixF64 {
 }
 
 fn identity() -> MatrixF64 {
-    MatrixF64 { m11: 1.0, m12: 0.0, m21: 0.0, m22: 1.0, dx: 0.0, dy: 0.0 }
+    MatrixF64 {
+        m11: 1.0,
+        m12: 0.0,
+        m21: 0.0,
+        m22: 1.0,
+        dx: 0.0,
+        dy: 0.0,
+    }
 }
 
 fn multiply(a: &MatrixF64, b: &MatrixF64) -> MatrixF64 {
@@ -216,12 +237,8 @@ impl Walker {
             4 => self.px_per_mm * 0.01 * 25.4,
             5 => self.px_per_mm * 0.001 * 25.4,
             6 => self.px_per_mm / 1440.0 * 25.4,
-            7 | 8 => {
-                if coord.window_ext_set && coord.viewport_ext_set {
-                    f64::from(coord.viewport_ext.0) / f64::from(coord.window_ext.0)
-                } else {
-                    1.0
-                }
+            7 | 8 if coord.window_ext_set && coord.viewport_ext_set => {
+                f64::from(coord.viewport_ext.0) / f64::from(coord.window_ext.0)
             }
             _ => 1.0,
         }
@@ -231,11 +248,11 @@ impl Walker {
         let coord = self.dc.coordinate_state.borrow();
         match coord.map_mode {
             1 => 1.0,
-            2 => self.px_per_mm * 0.1 * -1.0,
-            3 => self.px_per_mm * 0.01 * -1.0,
-            4 => self.px_per_mm * 0.01 * 25.4 * -1.0,
-            5 => self.px_per_mm * 0.001 * 25.4 * -1.0,
-            6 => self.px_per_mm / 1440.0 * 25.4 * -1.0,
+            2 => -(self.px_per_mm * 0.1),
+            3 => -(self.px_per_mm * 0.01),
+            4 => -(self.px_per_mm * 0.01 * 25.4),
+            5 => -(self.px_per_mm * 0.001 * 25.4),
+            6 => -(self.px_per_mm / 1440.0 * 25.4),
             7 => self.sf_x(),
             8 => {
                 if coord.window_ext_set && coord.viewport_ext_set {
@@ -290,9 +307,7 @@ impl Walker {
                 self.hint = None;
                 let matches = document
                     .record_bytes(span)
-                    .map(|bytes| {
-                        pending.record_fingerprint == sha256_hex(bytes)
-                    })
+                    .map(|bytes| pending.record_fingerprint == sha256_hex(bytes))
                     .unwrap_or(false);
                 if matches {
                     self.hint = Some(pending);
@@ -338,19 +353,40 @@ impl Walker {
                 }
             }
             emf_core::RecordData::SelectObject { ih_object } => self.select_object(*ih_object),
-            emf_core::RecordData::DeleteObject { ih_object } => self.object_table.delete(*ih_object),
-            emf_core::RecordData::CreatePen { ih_pen, pen_style, width, color } => {
-                let pen = Pen { style: *pen_style, width: width.x, color: color_of(color) };
+            emf_core::RecordData::DeleteObject { ih_object } => {
+                self.object_table.delete(*ih_object)
+            }
+            emf_core::RecordData::CreatePen {
+                ih_pen,
+                pen_style,
+                width,
+                color,
+            } => {
+                let pen = Pen {
+                    style: *pen_style,
+                    width: width.x,
+                    color: color_of(color),
+                };
                 self.object_table.store(*ih_pen, GdiObject::Pen(pen));
             }
-            emf_core::RecordData::CreateBrushIndirect { ih_brush, brush_style, color, brush_hatch } => {
-                let brush =
-                    Brush { style: *brush_style, color: color_of(color), hatch: *brush_hatch, image_id: None };
+            emf_core::RecordData::CreateBrushIndirect {
+                ih_brush,
+                brush_style,
+                color,
+                brush_hatch,
+            } => {
+                let brush = Brush {
+                    style: *brush_style,
+                    color: color_of(color),
+                    hatch: *brush_hatch,
+                    image_id: None,
+                };
                 self.object_table.store(*ih_brush, GdiObject::Brush(brush));
             }
             emf_core::RecordData::CreateFontIndirectW(font_record) => {
                 let font = font_from_record(&font_record.font);
-                self.object_table.store(font_record.ih_object, GdiObject::Font(font));
+                self.object_table
+                    .store(font_record.ih_object, GdiObject::Font(font));
             }
             emf_core::RecordData::SetWindowOrgEx { origin } => {
                 self.dc.coordinate_state.borrow_mut().window_org = (origin.x, origin.y);
@@ -372,17 +408,29 @@ impl Walker {
                 self.current_x = f64::from(origin.x);
                 self.current_y = f64::from(origin.y);
                 if self.in_path {
-                    let point = (self.cal_x(i64::from(origin.x)), self.cal_y(i64::from(origin.y)));
+                    let point = (
+                        self.cal_x(i64::from(origin.x)),
+                        self.cal_y(i64::from(origin.y)),
+                    );
                     if let Some(geometry) = self.building.as_mut() {
-                        geometry.push(Segment::MoveTo { x: point.0, y: point.1 });
+                        geometry.push(Segment::MoveTo {
+                            x: point.0,
+                            y: point.1,
+                        });
                     }
                 }
             }
             emf_core::RecordData::LineTo { origin } => {
                 if self.in_path {
-                    let point = (self.cal_x(i64::from(origin.x)), self.cal_y(i64::from(origin.y)));
+                    let point = (
+                        self.cal_x(i64::from(origin.x)),
+                        self.cal_y(i64::from(origin.y)),
+                    );
                     if let Some(geometry) = self.building.as_mut() {
-                        geometry.push(Segment::LineTo { x: point.0, y: point.1 });
+                        geometry.push(Segment::LineTo {
+                            x: point.0,
+                            y: point.1,
+                        });
                     }
                     self.current_x = f64::from(origin.x);
                     self.current_y = f64::from(origin.y);
@@ -396,7 +444,9 @@ impl Walker {
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
                     paint: self.paint_now(),
-                    arrangement: Arrangement::ContourOpen { leading_fill_space: true },
+                    arrangement: Arrangement::ContourOpen {
+                        leading_fill_space: true,
+                    },
                 }));
                 self.current_x = f64::from(origin.x);
                 self.current_y = f64::from(origin.y);
@@ -410,7 +460,12 @@ impl Walker {
                     dim_y = -dim_y;
                     lt_y -= dim_y;
                 }
-                self.push_shape(ShapeKind::Rect { x: lt_x, y: lt_y, width: dim_x, height: dim_y });
+                self.push_shape(ShapeKind::Rect {
+                    x: lt_x,
+                    y: lt_y,
+                    width: dim_x,
+                    height: dim_y,
+                });
             }
             emf_core::RecordData::Ellipse { bounds } => {
                 let (lt_x, lt_y, rb_x, rb_y) = self.cal_box(bounds);
@@ -486,14 +541,24 @@ impl Walker {
             }
             emf_core::RecordData::BeginPath => {
                 if self.in_path {
-                    self.pending_action = self.analysis.actions.get(&idx).copied().unwrap_or(PathAction::End);
+                    self.pending_action = self
+                        .analysis
+                        .actions
+                        .get(&idx)
+                        .copied()
+                        .unwrap_or(PathAction::End);
                     return;
                 }
                 self.current_begin = Some(idx);
                 self.apply_path_transform(true);
                 self.building = Some(PathGeometry::new(CoordJoin::Tuple));
                 self.in_path = true;
-                self.pending_action = self.analysis.actions.get(&idx).copied().unwrap_or(PathAction::End);
+                self.pending_action = self
+                    .analysis
+                    .actions
+                    .get(&idx)
+                    .copied()
+                    .unwrap_or(PathAction::End);
             }
             emf_core::RecordData::EndPath => {
                 self.in_path = false;
@@ -581,8 +646,14 @@ impl Walker {
             emf_core::RecordData::ExtTextOutW(text) => {
                 let content = if text.options & glyph::ETO_GLYPH_INDEX != 0 {
                     let font = &self.dc.font;
-                    glyph::map_glyphs(&text.text, font.face_name.as_deref(), font.weight, font.italic, font.charset)
-                        .unwrap_or_default()
+                    glyph::map_glyphs(
+                        &text.text,
+                        font.face_name.as_deref(),
+                        font.weight,
+                        font.italic,
+                        font.charset,
+                    )
+                    .unwrap_or_default()
                 } else {
                     glyph::decode_utf16_with_question_mark(&text.text)
                 };
@@ -605,7 +676,9 @@ impl Walker {
                 self.dc.brush_origin = (origin.x, origin.y);
             }
             emf_core::RecordData::OffsetClipRgn { offset } => {
-                let Some(region) = self.dc.clip_region.clone() else { return };
+                let Some(region) = self.dc.clip_region.clone() else {
+                    return;
+                };
                 let shifted = match region {
                     crate::state::ClipRegion::Bounds(rect) => {
                         Some(crate::state::ClipRegion::Bounds(emf_core::Rect {
@@ -638,25 +711,50 @@ impl Walker {
             emf_core::RecordData::CreatePalette { .. } => {}
             emf_core::RecordData::ResizePalette { .. } => {}
             emf_core::RecordData::SetPaletteEntries { .. } => {}
-            emf_core::RecordData::PolyPolygon { poly_counts, points, .. } => {
+            emf_core::RecordData::PolyPolygon {
+                poly_counts,
+                points,
+                ..
+            } => {
                 self.emit_poly_multi_owned(poly_counts, points_of(points), true);
             }
-            emf_core::RecordData::PolyPolygon16 { poly_counts, points, .. } => {
+            emf_core::RecordData::PolyPolygon16 {
+                poly_counts,
+                points,
+                ..
+            } => {
                 self.emit_poly_multi_owned(poly_counts, points16_of(points), true);
             }
-            emf_core::RecordData::PolyPolyline { poly_counts, points, .. } => {
+            emf_core::RecordData::PolyPolyline {
+                poly_counts,
+                points,
+                ..
+            } => {
                 self.emit_poly_multi_owned(poly_counts, points_of(points), false);
             }
-            emf_core::RecordData::PolyPolyline16 { poly_counts, points, .. } => {
+            emf_core::RecordData::PolyPolyline16 {
+                poly_counts,
+                points,
+                ..
+            } => {
                 self.emit_poly_multi_owned(poly_counts, points16_of(points), false);
             }
-            emf_core::RecordData::PolyDraw { points, ab_types, .. } => {
+            emf_core::RecordData::PolyDraw {
+                points, ab_types, ..
+            } => {
                 self.emit_poly_draw_owned(points_of(points), ab_types);
             }
-            emf_core::RecordData::PolyDraw16 { points, ab_types, .. } => {
+            emf_core::RecordData::PolyDraw16 {
+                points, ab_types, ..
+            } => {
                 self.emit_poly_draw_owned(points16_of(points), ab_types);
             }
-            emf_core::RecordData::AngleArc { center, radius, start_angle, sweep_angle } => {
+            emf_core::RecordData::AngleArc {
+                center,
+                radius,
+                start_angle,
+                sweep_angle,
+            } => {
                 self.emit_angle_arc(center, *radius, start_angle.to_f32(), sweep_angle.to_f32());
             }
             emf_core::RecordData::ExtCreatePen(pen) => {
@@ -669,7 +767,9 @@ impl Walker {
                 self.visit_ext_select_clip_rgn(document, span, *region_mode);
             }
             emf_core::RecordData::SelectClipPath { .. } => {
-                let Some(geometry) = self.last_path_geometry.clone() else { return };
+                let Some(geometry) = self.last_path_geometry.clone() else {
+                    return;
+                };
                 if geometry.segments.is_empty() {
                     return;
                 }
@@ -687,10 +787,8 @@ impl Walker {
             emf_core::RecordData::SetTextJustification { .. } => {}
             emf_core::RecordData::SetColorAdjustment(_) => {}
             // SmallTextOut stays Raw in the model; parse its fixed prefix.
-            emf_core::RecordData::Raw => {
-                if record_type == 108 {
-                    self.visit_small_text_out(document, span);
-                }
+            emf_core::RecordData::Raw if record_type == 108 => {
+                self.visit_small_text_out(document, span);
             }
             // Records without reference handlers fall through silently.
             _ => {}
@@ -706,7 +804,9 @@ impl Walker {
             self.apply_stock_object(index);
             return;
         }
-        let Some(entry) = self.object_table.lookup(ih).cloned() else { return };
+        let Some(entry) = self.object_table.lookup(ih).cloned() else {
+            return;
+        };
         match entry {
             GdiObject::Pen(pen) => self.dc.pen = pen,
             GdiObject::Brush(brush) => self.dc.brush = brush,
@@ -771,11 +871,17 @@ impl Walker {
             return if self.dc.brush.is_null() {
                 Stroke::NoneWithZeroWidth
             } else {
-                Stroke::FromFill { color: self.dc.brush.color }
+                Stroke::FromFill {
+                    color: self.dc.brush.color,
+                }
             };
         }
         let pen_type = pen.style & 0x000F_0000;
-        let width_for_emit = if pen_type == 0x0001_0000 { i64::from(pen.width) } else { 1 };
+        let width_for_emit = if pen_type == 0x0001_0000 {
+            i64::from(pen.width)
+        } else {
+            1
+        };
         let width = self.resolve_width(width_for_emit);
         Stroke::Solid {
             color: pen.color,
@@ -822,7 +928,9 @@ impl Walker {
     fn resolve_attrmap_fill(&mut self) -> Option<Fill> {
         let brush = &self.dc.brush;
         if brush.is_null() {
-            return Some(Fill { style: FillStyle::None });
+            return Some(Fill {
+                style: FillStyle::None,
+            });
         }
         if brush.style == 2 {
             self.hatch_counter += 1;
@@ -831,11 +939,19 @@ impl Walker {
                 id: id.clone(),
                 style: hatch_style_of(brush.hatch),
                 foreground: brush.color,
-                background: if self.dc.bk_mode == 2 { Some(self.dc.bk_color) } else { None },
+                background: if self.dc.bk_mode == 2 {
+                    Some(self.dc.bk_color)
+                } else {
+                    None
+                },
             }));
-            return Some(Fill { style: FillStyle::HatchRef { id } });
+            return Some(Fill {
+                style: FillStyle::HatchRef { id },
+            });
         }
-        Some(Fill { style: FillStyle::Solid { color: brush.color } })
+        Some(Fill {
+            style: FillStyle::Solid { color: brush.color },
+        })
     }
 
     fn resolve_attrmap_stroke(&self) -> Stroke {
@@ -844,7 +960,9 @@ impl Walker {
             return if self.dc.brush.is_null() {
                 Stroke::NoneWithZeroWidth
             } else {
-                Stroke::FromFill { color: self.dc.brush.color }
+                Stroke::FromFill {
+                    color: self.dc.brush.color,
+                }
             };
         }
         let w = i64::from(pen.width.max(1));
@@ -854,7 +972,9 @@ impl Walker {
             1 => Some(Dash(vec![dash_len, dash_len])),
             2 => Some(Dash(vec![dot_len, dot_len])),
             3 => Some(Dash(vec![dash_len, dash_len, dot_len, dash_len])),
-            4 => Some(Dash(vec![dash_len, dash_len, dot_len, dot_len, dot_len, dash_len])),
+            4 => Some(Dash(vec![
+                dash_len, dash_len, dot_len, dot_len, dot_len, dash_len,
+            ])),
             _ => None,
         };
         Stroke::Solid {
@@ -915,10 +1035,17 @@ impl Walker {
     }
 
     fn apply_path_transform(&mut self, before: bool) {
-        let Some(begin) = self.current_begin else { return };
-        let Some(entry) = self.analysis.transforms.get(&begin) else { return };
-        let selected: Option<&PathTransform> =
-            if before { entry.wt_before.as_ref() } else { entry.wt_after.as_ref() };
+        let Some(begin) = self.current_begin else {
+            return;
+        };
+        let Some(entry) = self.analysis.transforms.get(&begin) else {
+            return;
+        };
+        let selected: Option<&PathTransform> = if before {
+            entry.wt_before.as_ref()
+        } else {
+            entry.wt_after.as_ref()
+        };
         let Some(pt) = selected else { return };
         let current = self.world_matrix();
         let new_matrix = match pt.mode {
@@ -977,7 +1104,11 @@ impl Walker {
     /// boundary under image/jpg). Returns (raster, width, height).
     fn href_for(&mut self, decoded: &raster::Decoded) -> Option<(Raster, i64, i64)> {
         match decoded {
-            raster::Decoded::Rgba { width, height, rgba } => {
+            raster::Decoded::Rgba {
+                width,
+                height,
+                rgba,
+            } => {
                 let mut png = raster::encode_png_rgba8(*width as u32, *height as u32, rgba).ok()?;
                 // The reference PngEncoder pads the PNG to a multiple of 3
                 // with zero bytes (libemf2svg's fmem modulo-3 allocation), so
@@ -987,18 +1118,29 @@ impl Walker {
                     png.extend(std::iter::repeat_n(0u8, 3 - rem));
                 }
                 Some((
-                    Raster { format: RasterFormat::Png, payload: png },
+                    Raster {
+                        format: RasterFormat::Png,
+                        payload: png,
+                    },
                     i64::from(*width),
                     i64::from(*height),
                 ))
             }
-            raster::Decoded::Png(bytes) => {
-                Some((Raster { format: RasterFormat::Png, payload: bytes.clone() }, 0, 0))
-            }
+            raster::Decoded::Png(bytes) => Some((
+                Raster {
+                    format: RasterFormat::Png,
+                    payload: bytes.clone(),
+                },
+                0,
+                0,
+            )),
             raster::Decoded::Jpeg(bytes) => {
                 if self.hint.as_ref().is_some_and(|hint| hint.kind == "jpeg") {
                     Some((
-                        Raster { format: RasterFormat::Jpeg { zero_padded: false }, payload: bytes.clone() },
+                        Raster {
+                            format: RasterFormat::Jpeg { zero_padded: false },
+                            payload: bytes.clone(),
+                        },
                         0,
                         0,
                     ))
@@ -1009,7 +1151,10 @@ impl Walker {
                         payload.extend(std::iter::repeat_n(0u8, (3 - rem) % 3));
                     }
                     Some((
-                        Raster { format: RasterFormat::Jpeg { zero_padded: true }, payload },
+                        Raster {
+                            format: RasterFormat::Jpeg { zero_padded: true },
+                            payload,
+                        },
                         0,
                         0,
                     ))
@@ -1048,7 +1193,9 @@ impl Walker {
     }
 
     fn finish_pending_path(&mut self, mode: PathAction) {
-        let Some(geometry) = self.building.take() else { return };
+        let Some(geometry) = self.building.take() else {
+            return;
+        };
         self.last_path_geometry = Some(geometry.clone());
         let paint = PathPaint {
             fill: if matches!(mode, PathAction::Fill | PathAction::StrokeFill) {
@@ -1079,7 +1226,10 @@ impl Walker {
     }
 
     fn emit_path_polygon16_owned(&mut self, points: &[emf_core::Point16], closed: bool) {
-        let owned: Vec<(i32, i32)> = points.iter().map(|p| (i32::from(p.x), i32::from(p.y))).collect();
+        let owned: Vec<(i32, i32)> = points
+            .iter()
+            .map(|p| (i32::from(p.x), i32::from(p.y)))
+            .collect();
         self.emit_path_polygon(&owned, closed);
     }
 
@@ -1093,9 +1243,15 @@ impl Walker {
                 .map(|(x, y)| (self.cal_x(i64::from(*x)), self.cal_y(i64::from(*y))))
                 .collect();
             if let Some(geometry) = self.building.as_mut() {
-                geometry.push(Segment::MoveTo { x: calibrated[0].0, y: calibrated[0].1 });
+                geometry.push(Segment::MoveTo {
+                    x: calibrated[0].0,
+                    y: calibrated[0].1,
+                });
                 for point in &calibrated[1..] {
-                    geometry.push(Segment::LineTo { x: point.0, y: point.1 });
+                    geometry.push(Segment::LineTo {
+                        x: point.0,
+                        y: point.1,
+                    });
                 }
             }
             let (xl, yl) = points[points.len() - 1];
@@ -1123,7 +1279,9 @@ impl Walker {
             arrangement: if closed {
                 Arrangement::RegionStrokeFirst
             } else {
-                Arrangement::ContourOpen { leading_fill_space: false }
+                Arrangement::ContourOpen {
+                    leading_fill_space: false,
+                }
             },
         }));
         let (xl, yl) = points[points.len() - 1];
@@ -1137,7 +1295,10 @@ impl Walker {
     }
 
     fn emit_polyline_to16_owned(&mut self, points: &[emf_core::Point16]) {
-        let owned: Vec<(i32, i32)> = points.iter().map(|p| (i32::from(p.x), i32::from(p.y))).collect();
+        let owned: Vec<(i32, i32)> = points
+            .iter()
+            .map(|p| (i32::from(p.x), i32::from(p.y)))
+            .collect();
         self.emit_polyline_to(&owned);
     }
 
@@ -1152,7 +1313,10 @@ impl Walker {
                 .collect();
             if let Some(geometry) = self.building.as_mut() {
                 for point in &calibrated {
-                    geometry.push(Segment::LineTo { x: point.0, y: point.1 });
+                    geometry.push(Segment::LineTo {
+                        x: point.0,
+                        y: point.1,
+                    });
                 }
             }
             let (xl, yl) = points[points.len() - 1];
@@ -1170,7 +1334,9 @@ impl Walker {
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
             paint: self.paint_now(),
-            arrangement: Arrangement::ContourOpen { leading_fill_space: true },
+            arrangement: Arrangement::ContourOpen {
+                leading_fill_space: true,
+            },
         }));
         let (xl, yl) = points[points.len() - 1];
         self.current_x = f64::from(xl);
@@ -1183,8 +1349,10 @@ impl Walker {
     }
 
     fn emit_poly_bezier16_owned(&mut self, points: &[emf_core::Point16], starting_point: bool) {
-        let owned: Vec<(i32, i32)> =
-            points.iter().map(|p| (i32::from(p.x), i32::from(p.y))).collect();
+        let owned: Vec<(i32, i32)> = points
+            .iter()
+            .map(|p| (i32::from(p.x), i32::from(p.y)))
+            .collect();
         self.emit_poly_bezier(&owned, starting_point);
     }
 
@@ -1205,7 +1373,11 @@ impl Walker {
                     geometry.push(Segment::MoveTo { x, y });
                 }
             }
-            let ctrls: &[(f64, f64)] = if starting_point { &cal_points[1..] } else { &cal_points };
+            let ctrls: &[(f64, f64)] = if starting_point {
+                &cal_points[1..]
+            } else {
+                &cal_points
+            };
             if let Some(geometry) = self.building.as_mut() {
                 push_bezier_triplets(geometry, ctrls);
             }
@@ -1219,12 +1391,18 @@ impl Walker {
             let (x, y) = cal_points[0];
             geometry.push(Segment::MoveTo { x, y });
         }
-        let ctrls: &[(f64, f64)] = if starting_point { &cal_points[1..] } else { &cal_points };
+        let ctrls: &[(f64, f64)] = if starting_point {
+            &cal_points[1..]
+        } else {
+            &cal_points
+        };
         push_bezier_triplets(&mut geometry, ctrls);
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
             paint: self.paint_now(),
-            arrangement: Arrangement::ContourOpen { leading_fill_space: true },
+            arrangement: Arrangement::ContourOpen {
+                leading_fill_space: true,
+            },
         }));
         let (xl, yl) = points[points.len() - 1];
         self.current_x = f64::from(xl);
@@ -1267,7 +1445,10 @@ impl Walker {
             let (x0, y0) = calibrated[0];
             geometry.push(Segment::MoveTo { x: x0, y: y0 });
             for point in &calibrated[1..] {
-                geometry.push(Segment::LineTo { x: point.0, y: point.1 });
+                geometry.push(Segment::LineTo {
+                    x: point.0,
+                    y: point.1,
+                });
             }
             if closed {
                 geometry.push(Segment::Close);
@@ -1291,7 +1472,9 @@ impl Walker {
                 arrangement: if closed {
                     Arrangement::RegionFillFirst
                 } else {
-                    Arrangement::ContourOpen { leading_fill_space: false }
+                    Arrangement::ContourOpen {
+                        leading_fill_space: false,
+                    }
                 },
             }));
         }
@@ -1311,11 +1494,9 @@ impl Walker {
         }
         let mut geometry = PathGeometry::new(CoordJoin::Sequence);
         let mut bezier_buf: Vec<(f64, f64)> = Vec::new();
-        let mut i = 0usize;
-        for t in types {
+        for (i, t) in types.iter().enumerate() {
             let t = *t;
             let Some(point) = points.get(i) else { break };
-            i += 1;
             match t & 0x07 {
                 1 => geometry.push(Segment::MoveTo {
                     x: self.cal_x(i64::from(point.0)),
@@ -1326,13 +1507,22 @@ impl Walker {
                     y: self.cal_y(i64::from(point.1)),
                 }),
                 4 => {
-                    bezier_buf
-                        .push((self.cal_x(i64::from(point.0)), self.cal_y(i64::from(point.1))));
+                    bezier_buf.push((
+                        self.cal_x(i64::from(point.0)),
+                        self.cal_y(i64::from(point.1)),
+                    ));
                     if bezier_buf.len() == 3 {
                         let (x1, y1) = bezier_buf[0];
                         let (x2, y2) = bezier_buf[1];
                         let (x3, y3) = bezier_buf[2];
-                        geometry.push(Segment::CubicTo { x1, y1, x2, y2, x: x3, y: y3 });
+                        geometry.push(Segment::CubicTo {
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            x: x3,
+                            y: y3,
+                        });
                         bezier_buf.clear();
                     }
                 }
@@ -1359,7 +1549,13 @@ impl Walker {
 
     // --- arcs ---
 
-    fn emit_angle_arc(&mut self, center: &emf_core::Point, radius: u32, start_angle: f32, sweep_angle: f32) {
+    fn emit_angle_arc(
+        &mut self,
+        center: &emf_core::Point,
+        radius: u32,
+        start_angle: f32,
+        sweep_angle: f32,
+    ) {
         let cx_raw = i64::from(center.x);
         let cy_raw = i64::from(center.y);
         let r_raw = i64::from(radius);
@@ -1368,14 +1564,18 @@ impl Walker {
         let large_arc_flag = i32::from(arcdir > 0);
 
         let start_rad = f64::from(start_angle) * std::f64::consts::PI / 180.0;
-        let end_rad = (f64::from(start_angle) + f64::from(sweep_angle)) * std::f64::consts::PI / 180.0;
+        let end_rad =
+            (f64::from(start_angle) + f64::from(sweep_angle)) * std::f64::consts::PI / 180.0;
         let sx_raw = r_raw as f64 * f64::cos(start_rad) + cx_raw as f64;
         let sy_raw = r_raw as f64 * f64::sin(start_rad) + cy_raw as f64;
         let ex_raw = r_raw as f64 * f64::cos(end_rad) + cx_raw as f64;
         let ey_raw = r_raw as f64 * f64::sin(end_rad) + cy_raw as f64;
 
         let mut geometry = self.start_standalone();
-        geometry.push(Segment::MoveTo { x: self.cal_x_f(sx_raw), y: self.cal_y_f(sy_raw) });
+        geometry.push(Segment::MoveTo {
+            x: self.cal_x_f(sx_raw),
+            y: self.cal_y_f(sy_raw),
+        });
         geometry.push(Segment::ArcTo {
             rx: self.cal_x_f(r_raw as f64),
             ry: self.cal_y_f(r_raw as f64),
@@ -1388,11 +1588,19 @@ impl Walker {
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
             paint: self.paint_now(),
-            arrangement: Arrangement::ContourOpen { leading_fill_space: true },
+            arrangement: Arrangement::ContourOpen {
+                leading_fill_space: true,
+            },
         }));
     }
 
-    fn emit_arc(&mut self, bounds: emf_core::Rect, start: emf_core::Point, end: emf_core::Point, mode: ArcMode) {
+    fn emit_arc(
+        &mut self,
+        bounds: emf_core::Rect,
+        start: emf_core::Point,
+        end: emf_core::Point,
+        mode: ArcMode,
+    ) {
         let radii_x = c_int_div(i64::from(bounds.right - bounds.left), 2);
         let radii_y = c_int_div(i64::from(bounds.bottom - bounds.top), 2);
         if radii_x == 0.0 || radii_y == 0.0 {
@@ -1409,7 +1617,10 @@ impl Walker {
         let large_arc_flag = i32::from(arcdir > 0);
 
         let mut geometry = self.start_standalone();
-        geometry.push(Segment::MoveTo { x: self.cal_x_f(start_pt.0), y: self.cal_y_f(start_pt.1) });
+        geometry.push(Segment::MoveTo {
+            x: self.cal_x_f(start_pt.0),
+            y: self.cal_y_f(start_pt.1),
+        });
         geometry.push(Segment::ArcTo {
             rx: self.cal_x_f(radii_x),
             ry: self.cal_y_f(radii_y),
@@ -1423,8 +1634,10 @@ impl Walker {
         match mode {
             ArcMode::Pie => {
                 // Ruby Integer division floors here (plain `/ 2`).
-                let center_x = floor_div(i64::from(bounds.right) + i64::from(bounds.left), 2) as f64;
-                let center_y = floor_div(i64::from(bounds.bottom) + i64::from(bounds.top), 2) as f64;
+                let center_x =
+                    floor_div(i64::from(bounds.right) + i64::from(bounds.left), 2) as f64;
+                let center_y =
+                    floor_div(i64::from(bounds.bottom) + i64::from(bounds.top), 2) as f64;
                 geometry.push(Segment::LineTo {
                     x: self.cal_x_f(center_x),
                     y: self.cal_y_f(center_y),
@@ -1452,7 +1665,9 @@ impl Walker {
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
                     paint: self.paint_now(),
-                    arrangement: Arrangement::ContourOpen { leading_fill_space: true },
+                    arrangement: Arrangement::ContourOpen {
+                        leading_fill_space: true,
+                    },
                 }));
                 self.current_x = end_pt.0;
                 self.current_y = end_pt.1;
@@ -1567,14 +1782,29 @@ impl Walker {
     fn emit_ext_text_a(&mut self, text: &emf_core::ExtTextOut<u8>) {
         let content = if text.options & glyph::ETO_GLYPH_INDEX != 0 {
             // An A record with glyph indices stores the ids as LE u16 pairs.
-            let units: Vec<u16> =
-                text.text.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = text
+                .text
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .collect();
             let font = &self.dc.font;
-            glyph::map_glyphs(&units, font.face_name.as_deref(), font.weight, font.italic, font.charset)
-                .unwrap_or_default()
+            glyph::map_glyphs(
+                &units,
+                font.face_name.as_deref(),
+                font.weight,
+                font.italic,
+                font.charset,
+            )
+            .unwrap_or_default()
         } else {
             // Bytes above DEL collapse to spaces (reference cleaning).
-            text.text.iter().map(|b| if *b > 0x7F { 0x20 } else { *b }).map(|b| b as char).collect()
+            text.text
+                .iter()
+                .map(|b| if *b > 0x7F { 0x20 } else { *b })
+                .map(|b| b as char)
+                .collect()
         };
         let x = self.cal_x(i64::from(text.reference.x));
         let y = self.cal_y(i64::from(text.reference.y));
@@ -1582,7 +1812,9 @@ impl Walker {
     }
 
     fn visit_small_text_out(&mut self, document: &emf_core::Document, span: &emf_core::RecordSpan) {
-        let Some(bytes) = document.record_bytes(span) else { return };
+        let Some(bytes) = document.record_bytes(span) else {
+            return;
+        };
         if bytes.len() < 52 {
             return;
         }
@@ -1602,13 +1834,19 @@ impl Walker {
         let small_chars = fu & 0x200 != 0;
         let bytes_per_char = if small_chars { 1 } else { 2 };
         let end = (text_offset + c_chars * bytes_per_char).min(body.len());
-        let text_bytes = if text_offset <= body.len() { &body[text_offset..end] } else { &[] };
+        let text_bytes = if text_offset <= body.len() {
+            &body[text_offset..end]
+        } else {
+            &[]
+        };
         let content = if small_chars {
             cp1252_to_utf8(text_bytes)
         } else {
             glyph::decode_utf16_with_question_mark(
                 &text_bytes
-                    .chunks_exact(2)
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
                     .map(|c| u16::from_le_bytes([c[0], c[1]]))
                     .collect::<Vec<u16>>(),
             )
@@ -1667,7 +1905,9 @@ impl Walker {
     ) {
         // The EXTLOGPEN body: pen_style at body offset 16, width at 20, the
         // colour at 28..31 — where body starts after EMR + ihPen (12).
-        let Some(bytes) = document.record_bytes(span) else { return };
+        let Some(bytes) = document.record_bytes(span) else {
+            return;
+        };
         let body = bytes.get(12..).unwrap_or(&[]);
         if body.len() >= 32 {
             let pen_style = u32::from_le_bytes([body[16], body[17], body[18], body[19]]);
@@ -1675,10 +1915,15 @@ impl Walker {
             let color = Color::new(body[28], body[29], body[30]);
             self.object_table.store(
                 pen.ih_pen,
-                GdiObject::Pen(Pen { style: pen_style, width: width as i32, color }),
+                GdiObject::Pen(Pen {
+                    style: pen_style,
+                    width: width as i32,
+                    color,
+                }),
             );
         } else {
-            self.object_table.store(pen.ih_pen, GdiObject::Pen(Pen::default()));
+            self.object_table
+                .store(pen.ih_pen, GdiObject::Pen(Pen::default()));
         }
     }
 
@@ -1691,15 +1936,26 @@ impl Walker {
         bitmap: &emf_core::BitmapRecord,
     ) {
         match bitmap {
-            emf_core::BitmapRecord::BitBlt { transfer, raster_operation } => {
-                let bits_present = transfer.buffers.source_bits.as_ref().is_some_and(|b| !b.data.is_empty());
+            emf_core::BitmapRecord::BitBlt {
+                transfer,
+                raster_operation,
+            } => {
+                let bits_present = transfer
+                    .buffers
+                    .source_bits
+                    .as_ref()
+                    .is_some_and(|b| !b.data.is_empty());
                 if !bits_present {
                     self.emit_bitblt_solid_fill(transfer, *raster_operation);
                     return;
                 }
                 self.emit_image_from_buffers(document, span, transfer, true);
             }
-            emf_core::BitmapRecord::StretchBlt { transfer, source_extent, .. } => {
+            emf_core::BitmapRecord::StretchBlt {
+                transfer,
+                source_extent,
+                ..
+            } => {
                 let bits_present = transfer
                     .buffers
                     .source_bits
@@ -1730,7 +1986,11 @@ impl Walker {
                     i64::from(b.bottom - b.top),
                 );
             }
-            emf_core::BitmapRecord::StretchDibits { transfer, destination_extent, .. } => {
+            emf_core::BitmapRecord::StretchDibits {
+                transfer,
+                destination_extent,
+                ..
+            } => {
                 self.emit_stretch_dibits(transfer, destination_extent);
             }
             emf_core::BitmapRecord::CreateMonoBrush { ih_brush, .. }
@@ -1746,16 +2006,24 @@ impl Walker {
         transfer: &emf_core::DibTransfer,
         destination_extent: &emf_core::Point,
     ) {
-        let Some(bmi) = transfer.buffers.source_info.as_ref() else { return };
+        let Some(bmi) = transfer.buffers.source_info.as_ref() else {
+            return;
+        };
         if bmi.data.is_empty() {
             return;
         }
-        let Some(bits) = transfer.buffers.source_bits.as_ref() else { return };
+        let Some(bits) = transfer.buffers.source_bits.as_ref() else {
+            return;
+        };
         let mut dib = bmi.data.clone();
         dib.extend_from_slice(&bits.data);
         let cb_bmi = bmi.data.len();
-        let Some(decoded) = raster::decode_dib(&dib, Some(cb_bmi), None) else { return };
-        let Some((raster_payload, _, _)) = self.href_for(&decoded) else { return };
+        let Some(decoded) = raster::decode_dib(&dib, Some(cb_bmi), None) else {
+            return;
+        };
+        let Some((raster_payload, _, _)) = self.href_for(&decoded) else {
+            return;
+        };
         let x = i64::from(transfer.destination.x);
         let y = i64::from(transfer.destination.y);
         let width = i64::from(destination_extent.x);
@@ -1789,16 +2057,24 @@ impl Walker {
         transfer: &emf_core::BitmapTransfer,
         _position_via_point_cal: bool,
     ) {
-        let Some(bmi) = transfer.buffers.source_info.as_ref() else { return };
+        let Some(bmi) = transfer.buffers.source_info.as_ref() else {
+            return;
+        };
         if bmi.data.is_empty() {
             return;
         }
-        let Some(bits) = transfer.buffers.source_bits.as_ref() else { return };
+        let Some(bits) = transfer.buffers.source_bits.as_ref() else {
+            return;
+        };
         let mut dib = bmi.data.clone();
         dib.extend_from_slice(&bits.data);
         let cb_bmi = bmi.data.len();
-        let Some(decoded) = raster::decode_dib(&dib, Some(cb_bmi), None) else { return };
-        let Some((raster_payload, _, _)) = self.href_for(&decoded) else { return };
+        let Some(decoded) = raster::decode_dib(&dib, Some(cb_bmi), None) else {
+            return;
+        };
+        let Some((raster_payload, _, _)) = self.href_for(&decoded) else {
+            return;
+        };
         let x = i64::from(transfer.destination.x);
         let y = i64::from(transfer.destination.y);
         let width = i64::from(transfer.destination_extent.x);
@@ -1849,8 +2125,12 @@ impl Walker {
         if body.len() < 40 {
             return;
         }
-        let Some(decoded) = raster::decode_dib(&body, None, None) else { return };
-        let Some((raster_payload, _, _)) = self.href_for(&decoded) else { return };
+        let Some(decoded) = raster::decode_dib(&body, None, None) else {
+            return;
+        };
+        let Some((raster_payload, _, _)) = self.href_for(&decoded) else {
+            return;
+        };
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Image(ImageDraw {
                 raster: raster_payload,
@@ -1896,7 +2176,13 @@ impl Walker {
             } else {
                 false
             };
-            if geometry_match && hint.values.last().map(|v| v == &rgb_hex(self.dc.brush.color)).unwrap_or(false) {
+            if geometry_match
+                && hint
+                    .values
+                    .last()
+                    .map(|v| v == &rgb_hex(self.dc.brush.color))
+                    .unwrap_or(false)
+            {
                 let values = hint.values.clone();
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::BareRect(eikogram::BareRect {
@@ -1927,13 +2213,24 @@ impl Walker {
         // the close rides the arrangement, not a Close segment.
         let mut geometry = PathGeometry::new(CoordJoin::Tuple);
         geometry.push(Segment::MoveTo { x: pos_x, y: pos_y });
-        geometry.push(Segment::LineTo { x: pos_x + size_x, y: pos_y });
-        geometry.push(Segment::LineTo { x: pos_x + size_x, y: pos_y + size_y });
-        geometry.push(Segment::LineTo { x: pos_x, y: pos_y + size_y });
+        geometry.push(Segment::LineTo {
+            x: pos_x + size_x,
+            y: pos_y,
+        });
+        geometry.push(Segment::LineTo {
+            x: pos_x + size_x,
+            y: pos_y + size_y,
+        });
+        geometry.push(Segment::LineTo {
+            x: pos_x,
+            y: pos_y + size_y,
+        });
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
             paint: PathPaint {
-                fill: Some(Fill { style: FillStyle::Solid { color } }),
+                fill: Some(Fill {
+                    style: FillStyle::Solid { color },
+                }),
                 stroke: None,
                 clip: None,
                 stroke_from_fill: false,
@@ -1950,7 +2247,9 @@ impl Walker {
         span: &emf_core::RecordSpan,
         ih_brush: u32,
     ) {
-        let Some(bytes) = document.record_bytes(span) else { return };
+        let Some(bytes) = document.record_bytes(span) else {
+            return;
+        };
         if bytes.len() < 32 {
             return;
         }
@@ -2001,7 +2300,14 @@ impl Walker {
                 let Some(decoded) = raster::decode_dib(&dib, None, mono_palette) else {
                     return;
                 };
-                let raster::Decoded::Rgba { width, height, rgba } = decoded else { return };
+                let raster::Decoded::Rgba {
+                    width,
+                    height,
+                    rgba,
+                } = decoded
+                else {
+                    return;
+                };
                 let Ok(mut png) = raster::encode_png_rgba8(width as u32, height as u32, &rgba)
                 else {
                     return;
@@ -2013,7 +2319,10 @@ impl Walker {
                 }
                 self.items.push(Item::DefineRasterPattern(RasterPatternDef {
                     id,
-                    raster: Raster { format: RasterFormat::Png, payload: png },
+                    raster: Raster {
+                        format: RasterFormat::Png,
+                        payload: png,
+                    },
                     width: i64::from(width),
                     height: i64::from(height),
                 }));
@@ -2071,9 +2380,18 @@ fn hatch_style_of(hatch: u32) -> HatchStyle {
 /// The curve triplets of a calibrated bezier point list, C-joined into the
 /// geometry.
 fn push_bezier_triplets(geometry: &mut PathGeometry, ctrls: &[(f64, f64)]) {
-    for chunk in ctrls.chunks_exact(3) {
-        let [(x1, y1), (x2, y2), (x3, y3)] = chunk[..] else { continue };
-        geometry.push(Segment::CubicTo { x1, y1, x2, y2, x: x3, y: y3 });
+    for chunk in ctrls.as_chunks::<3>().0 {
+        let [(x1, y1), (x2, y2), (x3, y3)] = chunk[..] else {
+            continue;
+        };
+        geometry.push(Segment::CubicTo {
+            x1,
+            y1,
+            x2,
+            y2,
+            x: x3,
+            y: y3,
+        });
     }
 }
 
@@ -2082,11 +2400,18 @@ fn points_of(points: &[emf_core::Point]) -> Vec<(i32, i32)> {
 }
 
 fn points16_of(points: &[emf_core::Point16]) -> Vec<(i32, i32)> {
-    points.iter().map(|p| (i32::from(p.x), i32::from(p.y))).collect()
+    points
+        .iter()
+        .map(|p| (i32::from(p.x), i32::from(p.y)))
+        .collect()
 }
 
 fn color_of(color: &emf_core::ColorRef) -> Color {
-    Color { red: color.red, green: color.green, blue: color.blue }
+    Color {
+        red: color.red,
+        green: color.green,
+        blue: color.blue,
+    }
 }
 
 fn font_from_record(font: &emf_core::Font) -> Font {
@@ -2136,10 +2461,10 @@ fn font_from_logfont(lf: &emf_core::LogFont) -> Font {
 
 /// iconv-style UTF-16LE validation: any lone surrogate pair kills the face.
 fn valid_utf16le_pairs(bytes: &[u8]) -> bool {
-    if bytes.len() % 2 != 0 {
+    if !bytes.len().is_multiple_of(2) {
         return false;
     }
-    for pair in bytes.chunks_exact(2) {
+    for pair in bytes.as_chunks::<2>().0 {
         let code = u16::from_le_bytes([pair[0], pair[1]]);
         if (0xD800..=0xDFFF).contains(&code) {
             return false;
@@ -2150,10 +2475,38 @@ fn valid_utf16le_pairs(bytes: &[u8]) -> bool {
 
 fn cp1252_to_utf8(bytes: &[u8]) -> String {
     const HIGH: [Option<char>; 32] = [
-        Some('€'), None, Some('‚'), Some('ƒ'), Some('„'), Some('…'), Some('†'), Some('‡'),
-        Some('ˆ'), Some('‰'), Some('Š'), Some('‹'), Some('Œ'), None, Some('Ž'), None,
-        None, Some('‘'), Some('’'), Some('“'), Some('”'), Some('•'), Some('–'), Some('—'),
-        Some('˜'), Some('™'), Some('š'), Some('›'), Some('œ'), None, Some('ž'), Some('Ÿ'),
+        Some('€'),
+        None,
+        Some('‚'),
+        Some('ƒ'),
+        Some('„'),
+        Some('…'),
+        Some('†'),
+        Some('‡'),
+        Some('ˆ'),
+        Some('‰'),
+        Some('Š'),
+        Some('‹'),
+        Some('Œ'),
+        None,
+        Some('Ž'),
+        None,
+        None,
+        Some('‘'),
+        Some('’'),
+        Some('“'),
+        Some('”'),
+        Some('•'),
+        Some('–'),
+        Some('—'),
+        Some('˜'),
+        Some('™'),
+        Some('š'),
+        Some('›'),
+        Some('œ'),
+        None,
+        Some('ž'),
+        Some('Ÿ'),
     ];
     let mut out = String::with_capacity(bytes.len());
     for &b in bytes {

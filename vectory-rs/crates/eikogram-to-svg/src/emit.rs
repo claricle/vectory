@@ -200,13 +200,7 @@ impl<'a> Emitter<'a> {
         self.push_text("\n");
     }
 
-    fn emit_raster_pattern(
-        &mut self,
-        id: u32,
-        raster: &eikogram::Raster,
-        width: i64,
-        height: i64,
-    ) {
+    fn emit_raster_pattern(&mut self, id: u32, raster: &eikogram::Raster, width: i64, height: i64) {
         let b64 = base64_encode(&raster.payload);
         let mut image = Element::new("image");
         image.set_attribute("id", &format!("img-{id}"));
@@ -598,7 +592,12 @@ impl<'a> Emitter<'a> {
                 self.push_element(element);
                 // No newline.
             }
-            ImageArrangement::BodyBounds { x, y, width, height } => {
+            ImageArrangement::BodyBounds {
+                x,
+                y,
+                width,
+                height,
+            } => {
                 let mut element = Element::new("image");
                 element.set_attribute("x", &ruby_int_to_s(*x as f64));
                 element.set_attribute("y", &ruby_float_to_s(*y));

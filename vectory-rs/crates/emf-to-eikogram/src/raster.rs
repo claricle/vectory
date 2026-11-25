@@ -29,17 +29,23 @@ pub enum Decoded {
 ///
 /// `None` mirrors the Ruby decoder returning nil.
 #[must_use]
-pub fn decode_dib(dib: &[u8], bits_offset: Option<usize>, mono_palette: Option<[[u8; 4]; 2]>) -> Option<Decoded> {
+pub fn decode_dib(
+    dib: &[u8],
+    bits_offset: Option<usize>,
+    mono_palette: Option<[[u8; 4]; 2]>,
+) -> Option<Decoded> {
     if dib.len() < 40 {
         return None;
     }
     let header = BitmapInfoHeader::parse(dib);
     match header.compression {
-        0 | 3 => decode_bi_rgb(dib, &header, bits_offset, mono_palette).map(|decoded| Decoded::Rgba {
-            width: decoded.0,
-            height: decoded.1,
-            rgba: decoded.2,
-        }),
+        0 | 3 => {
+            decode_bi_rgb(dib, &header, bits_offset, mono_palette).map(|decoded| Decoded::Rgba {
+                width: decoded.0,
+                height: decoded.1,
+                rgba: decoded.2,
+            })
+        }
         4 => Some(Decoded::Jpeg(payload_after_header(dib, &header))),
         5 => Some(Decoded::Png(payload_after_header(dib, &header))),
         _ => None,
@@ -145,9 +151,33 @@ fn decode_bi_rgb(
             24 => decode_rgb24_row(dib, row_start, width, &mut pixels, row * width * 4),
             32 => decode_rgb32_row(dib, row_start, width, &mut pixels, row * width * 4),
             16 => decode_rgb16_row(dib, row_start, width, &mut pixels, row * width * 4),
-            8 => decode_indexed_row(dib, row_start, width, 1, &palette, &mut pixels, row * width * 4),
-            4 => decode_indexed_row(dib, row_start, width, 2, &palette, &mut pixels, row * width * 4),
-            1 => decode_indexed_row(dib, row_start, width, 8, &palette, &mut pixels, row * width * 4),
+            8 => decode_indexed_row(
+                dib,
+                row_start,
+                width,
+                1,
+                &palette,
+                &mut pixels,
+                row * width * 4,
+            ),
+            4 => decode_indexed_row(
+                dib,
+                row_start,
+                width,
+                2,
+                &palette,
+                &mut pixels,
+                row * width * 4,
+            ),
+            1 => decode_indexed_row(
+                dib,
+                row_start,
+                width,
+                8,
+                &palette,
+                &mut pixels,
+                row * width * 4,
+            ),
             _ => return None,
         }
     }
@@ -244,7 +274,10 @@ fn decode_indexed_row(
             }
             _ => getbyte(dib, row_start + x),
         };
-        let entry = palette.get(usize::from(idx)).copied().unwrap_or([0, 0, 0, 255]);
+        let entry = palette
+            .get(usize::from(idx))
+            .copied()
+            .unwrap_or([0, 0, 0, 255]);
         let at = out + x * 4;
         pixels[at..at + 4].copy_from_slice(&entry);
     }
@@ -261,8 +294,15 @@ pub fn encode_png_rgba8(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>,
     if width == 0 || height == 0 {
         return Err("zero image dimension".to_string());
     }
-    let row_bytes = usize::try_from(width).ok().and_then(|w| w.checked_mul(4)).ok_or("row overflow")?;
-    if rgba.len() < row_bytes.checked_mul(height as usize).ok_or("image overflow")? {
+    let row_bytes = usize::try_from(width)
+        .ok()
+        .and_then(|w| w.checked_mul(4))
+        .ok_or("row overflow")?;
+    if rgba.len()
+        < row_bytes
+            .checked_mul(height as usize)
+            .ok_or("image overflow")?
+    {
         return Err("pixel buffer too short".to_string());
     }
 
@@ -314,7 +354,11 @@ pub fn encode_png_rgba8(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>,
 }
 
 fn push_chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
-    out.extend_from_slice(&u32::try_from(data.len()).expect("chunk length").to_be_bytes());
+    out.extend_from_slice(
+        &u32::try_from(data.len())
+            .expect("chunk length")
+            .to_be_bytes(),
+    );
     out.extend_from_slice(kind);
     out.extend_from_slice(data);
     let table = crc_table();
@@ -333,7 +377,11 @@ fn crc_table() -> &'static [u32; 256] {
         for (n, slot) in table.iter_mut().enumerate() {
             let mut c = n as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 { 0xedb8_8320 ^ (c >> 1) } else { c >> 1 };
+                c = if c & 1 != 0 {
+                    0xedb8_8320 ^ (c >> 1)
+                } else {
+                    c >> 1
+                };
             }
             *slot = c;
         }
@@ -516,7 +564,11 @@ fn zlib_compress(input: &[u8], level: i32, window_bits: i32) -> Result<Vec<u8>, 
             let avail_in = (input.len() - cursor).min(u32::MAX as usize);
             strm.next_in = input[cursor..].as_ptr().cast_mut().cast();
             strm.avail_in = avail_in as libz_sys::uInt;
-            let flush = if cursor + avail_in == input.len() { Z_FINISH } else { Z_NO_FLUSH };
+            let flush = if cursor + avail_in == input.len() {
+                Z_FINISH
+            } else {
+                Z_NO_FLUSH
+            };
             loop {
                 let before = out.len();
                 strm.next_out = out.spare_capacity_mut().as_mut_ptr().cast();

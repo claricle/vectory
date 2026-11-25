@@ -24,7 +24,10 @@ pub fn map_glyphs(
     charset: u8,
 ) -> Option<String> {
     let map = build_reverse_map(face_name, weight, italic)?;
-    let codepoints: Vec<u32> = glyph_ids.iter().map(|gid| map.get(gid).copied().unwrap_or(0)).collect();
+    let codepoints: Vec<u32> = glyph_ids
+        .iter()
+        .map(|gid| map.get(gid).copied().unwrap_or(0))
+        .collect();
 
     let mut units: Vec<u16> = Vec::with_capacity(codepoints.len());
     for cp in codepoints {
@@ -94,8 +97,18 @@ fn parse_cmap_reverse(bytes: &[u8]) -> Option<HashMap<u16, u32>> {
             break;
         }
         if &bytes[off..off + 4] == b"cmap" {
-            let cmap_offset = u32::from_be_bytes([bytes[off + 8], bytes[off + 9], bytes[off + 10], bytes[off + 11]]) as usize;
-            let cmap_length = u32::from_be_bytes([bytes[off + 12], bytes[off + 13], bytes[off + 14], bytes[off + 15]]) as usize;
+            let cmap_offset = u32::from_be_bytes([
+                bytes[off + 8],
+                bytes[off + 9],
+                bytes[off + 10],
+                bytes[off + 11],
+            ]) as usize;
+            let cmap_length = u32::from_be_bytes([
+                bytes[off + 12],
+                bytes[off + 13],
+                bytes[off + 14],
+                bytes[off + 15],
+            ]) as usize;
             cmap = Some((cmap_offset, cmap_length));
             break;
         }
@@ -125,9 +138,11 @@ fn parse_unicode_mappings(data: &[u8]) -> Option<HashMap<u16, u32>> {
         }
         let platform_id = u16::from_be_bytes([data[rec], data[rec + 1]]);
         let encoding_id = u16::from_be_bytes([data[rec + 2], data[rec + 3]]);
-        let offset = u32::from_be_bytes([data[rec + 4], data[rec + 5], data[rec + 6], data[rec + 7]]) as usize;
-        let is_unicode = (platform_id == 0)
-            || (platform_id == 3 && (encoding_id == 1 || encoding_id == 10));
+        let offset =
+            u32::from_be_bytes([data[rec + 4], data[rec + 5], data[rec + 6], data[rec + 7]])
+                as usize;
+        let is_unicode =
+            (platform_id == 0) || (platform_id == 3 && (encoding_id == 1 || encoding_id == 10));
         if is_unicode {
             // Prefer the highest-offset (usually most complete) subtable,
             // matching the last-usable-record selection.
@@ -176,8 +191,10 @@ fn parse_unicode_mappings(data: &[u8]) -> Option<HashMap<u16, u32>> {
                     let gid = if id_range_offset == 0 {
                         cp.wrapping_add(id_delta)
                     } else {
-                        let glyph_index_at =
-                            id_range_offset_at + seg * 2 + (usize::from(cp - start_code)) * 2 + usize::from(id_range_offset);
+                        let glyph_index_at = id_range_offset_at
+                            + seg * 2
+                            + (usize::from(cp - start_code)) * 2
+                            + usize::from(id_range_offset);
                         let raw = u16_at(sub, glyph_index_at)?;
                         if raw == 0 {
                             cp.wrapping_add(id_delta)
@@ -250,7 +267,12 @@ fn u32_at(data: &[u8], at: usize) -> Option<u32> {
     if at + 4 > data.len() {
         return None;
     }
-    Some(u32::from_be_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]]))
+    Some(u32::from_be_bytes([
+        data[at],
+        data[at + 1],
+        data[at + 2],
+        data[at + 3],
+    ]))
 }
 
 /// UTF-16LE decode with the reference's `replace: "?"` behaviour (lone
@@ -263,7 +285,9 @@ pub fn decode_utf16_with_question_mark(units: &[u16]) -> String {
         let unit = units[i];
         if (0xD800..0xDC00).contains(&unit) {
             if i + 1 < units.len() && (0xDC00..0xE000).contains(&units[i + 1]) {
-                let cp = 0x10000 + ((u32::from(unit) - 0xD800) << 10) + (u32::from(units[i + 1]) - 0xDC00);
+                let cp = 0x10000
+                    + ((u32::from(unit) - 0xD800) << 10)
+                    + (u32::from(units[i + 1]) - 0xDC00);
                 if let Some(c) = char::from_u32(cp) {
                     out.push(c);
                 }

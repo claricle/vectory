@@ -64,11 +64,9 @@ pub enum RenderFailure {
 }
 
 impl From<ParseFailure> for RenderFailure {
-    fn from(failure: ParseFailure) -> Self {
-        match failure {
-            // Kept for completeness: parse happens before render.
-            _ => RenderFailure::Dimension("parse failure".to_string()),
-        }
+    fn from(_failure: ParseFailure) -> Self {
+        // Kept for completeness: parse happens before render.
+        RenderFailure::Dimension("parse failure".to_string())
     }
 }
 
