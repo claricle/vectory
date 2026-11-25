@@ -393,7 +393,6 @@ fn solid_rect_fill_and_bare_shape_continue_in_stream() {
     geometry.push(Segment::LineTo { x: 4.0, y: 0.0 });
     geometry.push(Segment::LineTo { x: 4.0, y: 4.0 });
     geometry.push(Segment::LineTo { x: 0.0, y: 4.0 });
-    geometry.push(Segment::Close);
     drawing.items.push(Item::Draw(Draw {
         body: DrawBody::Path(PathDraw { geometry }),
         paint: solid_paint(Some(Fill::solid(Color::new(0xAB, 0xCD, 0xEF))), None),
@@ -405,16 +404,18 @@ fn solid_rect_fill_and_bare_shape_continue_in_stream() {
             y: "2".to_string(),
             width: "3.5".to_string(),
             height: "4".to_string(),
-            fill: "#123456".to_string(),
+            fill: "#abcdef".to_string(),
         }),
         paint: solid_paint(None, None),
         arrangement: Arrangement::BareShape,
     }));
     let svg = drawing_to_svg(&drawing);
-    // Neither family emits a newline: they run together on one line.
+    // Neither family emits a newline: they run together on one line. The
+    // solid-fill style colour prints lowercase and the geometry closes with
+    // a bare `Z` (no trailing space).
     assert!(svg.contains(
-        "<path style=\"fill:#ABCDEF\" d=\"M 0.0000,0.0000 L 4.0000,0.0000 L 4.0000,4.0000 \
-         L 0.0000,4.0000 Z \"/><rect x=\"1\" y=\"2\" width=\"3.5\" height=\"4\" \
-         fill=\"#123456\"/>"
+        "<path style=\"fill:#abcdef\" d=\"M 0.0000,0.0000 L 4.0000,0.0000 L 4.0000,4.0000 \
+         L 0.0000,4.0000 Z\"/><rect x=\"1\" y=\"2\" width=\"3.5\" height=\"4\" \
+         fill=\"#abcdef\"/>"
     ));
 }

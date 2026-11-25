@@ -122,13 +122,23 @@ fn load_corpus() -> Option<Corpus> {
     let golden_root = PathBuf::from(golden_root);
 
     let mut sources = BTreeMap::new();
-    for dir in ["spec/fixtures/emf", "spec/fixtures/emf-ea", "spec/fixtures/simple"] {
+    for dir in [
+        "spec/fixtures/emf",
+        "spec/fixtures/emf-ea",
+        "spec/fixtures/simple",
+    ] {
         let dir = fixture_root.join(dir);
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "emf") {
-                let name = path.file_name()?.to_string_lossy().trim_end_matches(".emf").to_string();
+                let name = path
+                    .file_name()?
+                    .to_string_lossy()
+                    .trim_end_matches(".emf")
+                    .to_string();
                 let bytes = std::fs::read(&path).ok()?;
                 sources.insert(name, bytes);
             }
@@ -140,7 +150,11 @@ fn load_corpus() -> Option<Corpus> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().is_some_and(|e| e == "svg") {
-            let name = path.file_name()?.to_string_lossy().trim_end_matches(".svg").to_string();
+            let name = path
+                .file_name()?
+                .to_string_lossy()
+                .trim_end_matches(".svg")
+                .to_string();
             let content = std::fs::read_to_string(&path).ok()?;
             goldens.insert(name, content);
         }
@@ -153,7 +167,8 @@ fn load_corpus() -> Option<Corpus> {
 fn render_svg(emf_bytes: &[u8]) -> Result<String, String> {
     let document = emf_core::parse(emf_bytes, &emf_core::ParseLimits::default())
         .map_err(|e| format!("parse: {e}"))?;
-    let drawing = render(&document, &RenderOptions::default()).map_err(|e| format!("render: {e}"))?;
+    let drawing =
+        render(&document, &RenderOptions::default()).map_err(|e| format!("render: {e}"))?;
     Ok(drawing_to_svg(&drawing))
 }
 
@@ -181,7 +196,9 @@ fn first_diff(expected: &str, actual: &str) -> String {
 #[test]
 fn parity_corpus_byte_gate() {
     let Some(corpus) = load_corpus() else {
-        eprintln!("parity corpus not configured (EMF_FIXTURE_ROOT / EMF_GOLDEN_ROOT unset); skipping");
+        eprintln!(
+            "parity corpus not configured (EMF_FIXTURE_ROOT / EMF_GOLDEN_ROOT unset); skipping"
+        );
         return;
     };
 
@@ -191,7 +208,9 @@ fn parity_corpus_byte_gate() {
     let mut unported: Vec<(String, String)> = Vec::new();
 
     for (name, emf_bytes) in &corpus.sources {
-        let Some(golden) = corpus.goldens.get(name) else { continue };
+        let Some(golden) = corpus.goldens.get(name) else {
+            continue;
+        };
         match render_svg(emf_bytes) {
             Ok(actual) => {
                 if actual == *golden {
@@ -213,7 +232,11 @@ fn parity_corpus_byte_gate() {
     }
 
     eprintln!("=== EMF → VIM → SVG byte-parity gate ===");
-    eprintln!("corpus: {} sources, {} goldens", corpus.sources.len(), corpus.goldens.len());
+    eprintln!(
+        "corpus: {} sources, {} goldens",
+        corpus.sources.len(),
+        corpus.goldens.len()
+    );
     eprintln!("match (raw bytes):       {}", matched_raw.len());
     eprintln!("match (quirk-normalized): {}", matched_normalized.len());
     eprintln!("mismatch: {}", mismatches.len());
@@ -240,7 +263,9 @@ fn parity_corpus_byte_gate() {
 /// PARITY_ONE=<name>).
 #[test]
 fn parity_single_file() {
-    let Ok(name) = std::env::var("PARITY_ONE") else { return };
+    let Ok(name) = std::env::var("PARITY_ONE") else {
+        return;
+    };
     let Some(corpus) = load_corpus() else { return };
     let Some(emf_bytes) = corpus.sources.get(&name) else {
         panic!("no EMF source for {name}");

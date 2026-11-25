@@ -47,16 +47,28 @@ pub struct Pen {
 
 impl Default for Pen {
     fn default() -> Self {
-        Pen { style: 0, width: 1, color: Color::black() }
+        Pen {
+            style: 0,
+            width: 1,
+            color: Color::black(),
+        }
     }
 }
 
 impl Pen {
     pub fn null() -> Self {
-        Pen { style: 5, width: 1, color: Color::black() }
+        Pen {
+            style: 5,
+            width: 1,
+            color: Color::black(),
+        }
     }
     pub fn solid(style: u32, width: i32, color: Color) -> Self {
-        Pen { style, width, color }
+        Pen {
+            style,
+            width,
+            color,
+        }
     }
     pub fn is_null(&self) -> bool {
         self.style & 0xFF == 5
@@ -75,16 +87,31 @@ pub struct Brush {
 
 impl Default for Brush {
     fn default() -> Self {
-        Brush { style: 0, color: Color::black(), hatch: 0, image_id: None }
+        Brush {
+            style: 0,
+            color: Color::black(),
+            hatch: 0,
+            image_id: None,
+        }
     }
 }
 
 impl Brush {
     pub fn solid(color: Color) -> Self {
-        Brush { style: 0, color, hatch: 0, image_id: None }
+        Brush {
+            style: 0,
+            color,
+            hatch: 0,
+            image_id: None,
+        }
     }
     pub fn null() -> Self {
-        Brush { style: 1, color: Color::white(), hatch: 0, image_id: None }
+        Brush {
+            style: 1,
+            color: Color::white(),
+            hatch: 0,
+            image_id: None,
+        }
     }
     pub fn is_null(&self) -> bool {
         self.style == 1
@@ -92,7 +119,7 @@ impl Brush {
 }
 
 /// Font value object: the LOGFONT subset the reference renderer carries.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Font {
     pub face_name: Option<String>,
     pub height: i32,
@@ -102,21 +129,6 @@ pub struct Font {
     pub strikeout: bool,
     pub escapement: i32,
     pub charset: u8,
-}
-
-impl Default for Font {
-    fn default() -> Self {
-        Font {
-            face_name: None,
-            height: 0,
-            weight: 0,
-            italic: false,
-            underline: false,
-            strikeout: false,
-            escapement: 0,
-            charset: 0,
-        }
-    }
 }
 
 /// A clip region: rectangular bounds (as carried coordinates) or a captured
@@ -244,7 +256,10 @@ pub struct BsdRand {
 
 impl Default for BsdRand {
     fn default() -> Self {
-        BsdRand { values: load_sequence(), index: 0 }
+        BsdRand {
+            values: load_sequence(),
+            index: 0,
+        }
     }
 }
 
@@ -261,5 +276,7 @@ fn load_sequence() -> Vec<u32> {
         env!("CARGO_MANIFEST_DIR"),
         "/data/bsd_rand_sequence.txt"
     ));
-    raw.lines().filter_map(|line| line.trim().parse::<u32>().ok()).collect()
+    raw.lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .collect()
 }

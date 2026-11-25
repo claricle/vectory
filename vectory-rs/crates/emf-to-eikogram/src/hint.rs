@@ -94,7 +94,11 @@ fn parse_hint_json(payload: &[u8]) -> Option<ParsedHint> {
             "kind" => kind = Some(parse_json_string(&mut chars)?),
             "record" => {
                 let parsed = parse_json_string(&mut chars)?;
-                if parsed.len() != 64 || !parsed.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()) {
+                if parsed.len() != 64
+                    || !parsed
+                        .chars()
+                        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+                {
                     return None;
                 }
                 record = Some(parsed);
@@ -145,10 +149,7 @@ fn skip_ws(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) {
     }
 }
 
-fn expect_char(
-    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
-    expected: char,
-) -> Option<()> {
+fn expect_char(chars: &mut std::iter::Peekable<std::str::Chars<'_>>, expected: char) -> Option<()> {
     if chars.next() == Some(expected) {
         Some(())
     } else {
@@ -156,9 +157,7 @@ fn expect_char(
     }
 }
 
-fn parse_json_string(
-    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
-) -> Option<String> {
+fn parse_json_string(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<String> {
     expect_char(chars, '"')?;
     let mut out = String::new();
     loop {
@@ -202,5 +201,7 @@ fn is_hex_color(value: &str) -> bool {
     let body = value.strip_prefix('#').unwrap_or(value);
     value.starts_with('#')
         && body.len() == 6
-        && body.chars().all(|c| c.is_ascii_digit() || ('A'..='F').contains(&c))
+        && body
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('A'..='F').contains(&c))
 }

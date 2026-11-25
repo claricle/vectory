@@ -84,8 +84,10 @@ pub struct PathAnalysis {
 /// Pre-scans the records to build the action map and the transform captures.
 #[must_use]
 pub fn analyze(records: &[RecordSpan]) -> PathAnalysis {
-    let kinds: Vec<Option<Kind>> =
-        records.iter().map(|span| kind_of(span.record_type())).collect();
+    let kinds: Vec<Option<Kind>> = records
+        .iter()
+        .map(|span| kind_of(span.record_type()))
+        .collect();
 
     // Backward pass: each BeginPath takes the first following action.
     let mut actions: HashMap<usize, PathAction> = HashMap::new();
@@ -131,11 +133,10 @@ pub fn analyze(records: &[RecordSpan]) -> PathAnalysis {
                     continue;
                 }
                 let (matrix, mode) = match span.data() {
-                    RecordData::ModifyWorldTransform { xform, modify_mode } => (*xform, *modify_mode),
-                    RecordData::SetWorldTransform { xform } => (
-                        *xform,
-                        0,
-                    ),
+                    RecordData::ModifyWorldTransform { xform, modify_mode } => {
+                        (*xform, *modify_mode)
+                    }
+                    RecordData::SetWorldTransform { xform } => (*xform, 0),
                     _ => continue,
                 };
                 let pt = PathTransform { matrix, mode };
@@ -147,13 +148,14 @@ pub fn analyze(records: &[RecordSpan]) -> PathAnalysis {
                     captured.wt_after = Some(pt);
                 }
             }
-            Some(Kind::Drawing) => {
-                if in_path {
-                    path_drawn = true;
-                }
+            Some(Kind::Drawing) if in_path => {
+                path_drawn = true;
             }
             _ => {}
         }
     }
-    PathAnalysis { actions, transforms }
+    PathAnalysis {
+        actions,
+        transforms,
+    }
 }
