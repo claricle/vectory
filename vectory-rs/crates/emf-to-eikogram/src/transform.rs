@@ -1590,11 +1590,14 @@ impl Walker {
             u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
         };
         let read_i32 = |at: usize| -> i32 { read_u32(at) as i32 };
-        let x_dest = read_i32(36);
-        let y_dest = read_i32(40);
-        let c_chars = read_u32(44) as usize;
-        let fu = read_u32(48);
-        let body = &bytes[52..];
+        // The wire order: Dest (8, 12), cChars (16), fuOptions (20),
+        // iGraphicsMode (24), ex/eyScale (28/32), then the body (36) —
+        // an optional RECTL (16 bytes, skipped) then the text.
+        let x_dest = read_i32(8);
+        let y_dest = read_i32(12);
+        let c_chars = read_u32(16) as usize;
+        let fu = read_u32(20);
+        let body = &bytes[36..];
         let text_offset = if fu & 0x100 == 0 { 16 } else { 0 };
         let small_chars = fu & 0x200 != 0;
         let bytes_per_char = if small_chars { 1 } else { 2 };
