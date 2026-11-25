@@ -8,6 +8,17 @@ pub enum Error {
     /// The input parsed but has no root element (mirrors vectory's
     /// `ParsingError` on `document.root` being nil).
     NoRoot,
+    /// Ruby `Vectory::ParsingError`: a serialized boundary failed to parse
+    /// (graft envelopes, pipeline inputs).
+    Parsing(String),
+    /// Ruby `ArgumentError`: an invalid transform sequence, scope mismatch,
+    /// or invalid namespace request.
+    Transform(String),
+    /// Ruby `ConversionError`: unparseable data URIs and unknown mime types.
+    Conversion(String),
+    /// Ruby `ForbiddenExternalReferenceError`: the input policy refused the
+    /// content before parsing (DTD internal subsets).
+    ForbiddenExternalReference(String),
 }
 
 impl fmt::Display for Error {
@@ -15,6 +26,12 @@ impl fmt::Display for Error {
         match self {
             Error::Xml(detail) => write!(f, "invalid XML: {detail}"),
             Error::NoRoot => write!(f, "invalid XML: no root element"),
+            Error::Parsing(detail) => write!(f, "parsing: {detail}"),
+            Error::Transform(detail) => write!(f, "transform: {detail}"),
+            Error::Conversion(detail) => write!(f, "conversion: {detail}"),
+            Error::ForbiddenExternalReference(detail) => {
+                write!(f, "forbidden external reference: {detail}")
+            }
         }
     }
 }
