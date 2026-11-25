@@ -4,13 +4,13 @@
 //! preamble, `%.4f` numbers, attribute orders per arrangement, and the
 //! trailing newline discipline.
 
-use vector_model::{
+use eikogram::{
     Arrangement, BaselineMode, Canvas, ClipDef, ClipShape, Color, CoordJoin, Dash, Draw, DrawBody,
     Drawing, Fill, HatchPatternDef, HatchStyle, ImageArrangement, ImageDraw, Item, LineCap,
     LineJoin, Matrix, PathDraw, PathGeometry, PathPaint, Preamble, Raster, RasterFormat,
     RasterPatternDef, Segment, ShapeDraw, ShapeKind, Stroke, TextAnchor, TextDraw, Width,
 };
-use vim_to_svg::drawing_to_svg;
+use eikogram_to_svg::drawing_to_svg;
 
 fn canvas(width: f64, height: f64) -> Canvas {
     Canvas {
@@ -400,7 +400,7 @@ fn solid_rect_fill_and_bare_shape_continue_in_stream() {
         arrangement: Arrangement::SolidRectFill,
     }));
     drawing.items.push(Item::Draw(Draw {
-        body: DrawBody::BareRect(vector_model::BareRect {
+        body: DrawBody::BareRect(eikogram::BareRect {
             x: "1".to_string(),
             y: "2".to_string(),
             width: "3.5".to_string(),

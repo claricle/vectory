@@ -1,0 +1,17 @@
+[package]
+name = "emf-to-eikogram"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The EMF-model → VIM transformer (claricle/vectory#102, claricle/emf#88): lifts the emf-core metafile model into the Vector Image Model with byte-parity against the Ruby renderer"
+
+[dependencies]
+# Pinned git dependency on claricle/emf@main (pre-publication cross-repo pin —
+# emf-core stays in claricle/emf; this flips to the crates.io dep when the
+# emf workspace publishes, per the pin note in the PR).
+emf-core = { git = "ssh://git@github.com/claricle/emf", rev = "0a4f7ab6e6ba79407917cc3fdec226cb798fb748" }
+eikogram = { path = "../eikogram" }
+libz-sys = "1"
+
+[dev-dependencies]
+eikogram-to-svg = { path = "../eikogram-to-svg" }

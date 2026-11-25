@@ -1,10 +1,10 @@
 [package]
-name = "vim-to-svg"
+name = "eikogram-to-svg"
 version = "0.0.0"
 edition = "2021"
 publish = false
 description = "The VIM → SVG-model transformer: expresses a Vector Image Model drawing through the vectory SVG model (claricle/vectory#102)"
 
 [dependencies]
-vector-model = { path = "../vector-model" }
+eikogram = { path = "../eikogram" }
 vectory = { path = "../vectory" }

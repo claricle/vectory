@@ -1,8 +1,8 @@
-//! # vector-model — the Vector Image Model (VIM)
+//! # eikogram — the Vector Image Model (VIM)
 //!
 //! The format-neutral vector drawing super-model (claricle/vectory#102): one
 //! internal model for DRAWING semantics, of which file formats are encodings.
-//! SVG is one serialization of it (via the `vim-to-svg` transformer into the
+//! SVG is one serialization of it (via the `eikogram-to-svg` transformer into the
 //! `vectory` SVG model); EMF is another encoding (the emf workspace's
 //! transformer); pixel rasterization is a third lane.
 //!

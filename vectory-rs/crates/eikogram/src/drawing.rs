@@ -159,10 +159,11 @@ pub enum ImageArrangement {
         width: f64,
         height: f64,
     },
-    /// The placed family with integral geometry from region bounds.
-    PlacedIntegral {
+    /// The region-bounds family: integer x/width/height from the carried
+    /// region, but the float mapped y (the reference maps only the y).
+    BodyBounds {
         x: i64,
-        y: i64,
+        y: f64,
         width: i64,
         height: i64,
     },
