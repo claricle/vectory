@@ -90,6 +90,32 @@
 //! to the XML namespace, and remapping operates on URIs rather than lexical
 //! prefixes. Lexical names are always preserved for serialization.
 //!
+//! ## Manipulation (lane 2)
+//!
+//! The DOM-manipulation layer ports vectory's Ruby manipulation semantics
+//! one-to-one, gated by the same specs' fixtures:
+//!
+//! * [`mutation`] — mutation on the model, which makes the #84
+//!   caller-document write-back contract expressible: processing updates
+//!   the CALLER's tree in place;
+//! * [`svg_mapping`] — svgmap/hotspot processing with the caller
+//!   write-back ([`SvgMapping`]);
+//! * [`svg_document`] — two-stage ID suffixing (cross-document id suffix,
+//!   then the zero-padded per-svgmap index suffix), link remapping, PI
+//!   removal;
+//! * [`id_disambiguator`] / [`class_suffixer`] — the exact renaming rules,
+//!   with [`css`] providing the crass-subset CSS tokenizer (the recorded
+//!   decision: port the used subset in Rust — the suffixer depends on
+//!   crass-exact token positions and raw slices);
+//! * [`namespace_binding`] — the bind/unbind/remap declaration changes;
+//! * [`graft`] + [`scan`] — root-content replacement with the host
+//!   document envelope preserved byte-for-byte;
+//! * [`transform`] — [`SvgTransform`] / [`SvgTransformPipeline`] with the
+//!   three executable profiles and their sequence/scope validation;
+//! * [`datauri`] — the SVG-subset data URI parse/encode; [`input_policy`] —
+//!   the pre-parse DTD policy and the `:svg` file sniff (EMF/PNG/PostScript
+//!   concepts stay out of this crate per the model-driven law).
+//!
 //! ## Boundaries
 //!
 //! Zero foreign-format concepts live in this crate — SVG/XML only, per the
