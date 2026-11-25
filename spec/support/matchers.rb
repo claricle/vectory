@@ -37,6 +37,7 @@ RSpec::Matchers.define :be_equivalent_eps_to do |expected|
   def sub_time_and_version(str)
     str.sub(/%%CreationDate:(.+)$/, "%%CreationDate:")
       .sub(/%%Creator: cairo(.+)$/, "%%Creator: cairo")
+      .sub(/%%Creator: Postscript(.+)$/, "%%Creator: Postscript")
   end
 
   diffable
