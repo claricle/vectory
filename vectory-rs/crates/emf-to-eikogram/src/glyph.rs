@@ -199,7 +199,7 @@ fn parse_unicode_mappings(data: &[u8]) -> Option<HashMap<u16, u32>> {
             let count = u16::from_be_bytes([sub[8], sub[9]]) as usize;
             for i in 0..count {
                 let at = 10 + i * 4;
-                let cp = u16_at(sub, at)?;
+                let _cp = u16_at(sub, at)?;
                 let gid = u16_at(sub, at + 2)?;
                 if gid != 0 {
                     forward.push((u32::from(first) + i as u32, gid));

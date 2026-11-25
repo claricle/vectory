@@ -403,7 +403,7 @@ impl Walker {
             }
             emf_core::RecordData::Rectangle { bounds } => {
                 let (lt_x, lt_y, rb_x, rb_y) = self.cal_box(bounds);
-                let mut dim_x = rb_x - lt_x;
+                let dim_x = rb_x - lt_x;
                 let mut dim_y = rb_y - lt_y;
                 let mut lt_y = lt_y;
                 if self.fix_broken_y && dim_y < 0.0 {
@@ -422,7 +422,7 @@ impl Walker {
             }
             emf_core::RecordData::RoundRect { bounds, corner } => {
                 let (lt_x, lt_y, rb_x, rb_y) = self.cal_box(bounds);
-                let mut dim_x = rb_x - lt_x;
+                let dim_x = rb_x - lt_x;
                 let mut dim_y = rb_y - lt_y;
                 let mut lt_y = lt_y;
                 if self.fix_broken_y && dim_y < 0.0 {
@@ -1094,8 +1094,15 @@ impl Walker {
             self.current_y = f64::from(yl);
             return;
         }
-        let mut geometry = self.start_standalone();
-        for (x, y) in points {
+        // The standalone polygon family starts at the record's FIRST point
+        // (no current-position prefix — that is the line-family's form).
+        let mut geometry = PathGeometry::new(CoordJoin::Tuple);
+        let (x0, y0) = points[0];
+        geometry.push(Segment::MoveTo {
+            x: self.cal_x(i64::from(x0)),
+            y: self.cal_y(i64::from(y0)),
+        });
+        for (x, y) in &points[1..] {
             geometry.push(Segment::LineTo {
                 x: self.cal_x(i64::from(*x)),
                 y: self.cal_y(i64::from(*y)),
