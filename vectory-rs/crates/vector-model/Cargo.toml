@@ -1,0 +1,8 @@
+[package]
+name = "vector-model"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The Vector Image Model (VIM): the format-neutral vector drawing super-model (claricle/vectory#102)"
+
+[dependencies]

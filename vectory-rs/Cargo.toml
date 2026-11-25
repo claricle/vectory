@@ -6,6 +6,14 @@
 # owner opts for one. The published crate name is `vectory` (owner decision,
 # 2026-11-25 — the etassia precedent: published crate takes the repo name).
 # Nothing is published; publishing is an owner decision.
+#
+# Crates:
+#   vectory      — the SVG model (decode + serialize, claricle/vectory#97)
+#   vector-model — the Vector Image Model, the format-neutral drawing
+#                  super-model (claricle/vectory#102)
+#   vim-to-svg   — the VIM → SVG-model transformer (drawing → the SVG
+#                  serialization tree, through the existing EmfsvgSvgBuilder
+#                  serialize profile)
 [workspace]
 resolver = "2"
-members = ["crates/vectory"]
+members = ["crates/vectory", "crates/vector-model", "crates/vim-to-svg"]

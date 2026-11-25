@@ -18,8 +18,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "vector-model"
+version = "0.0.0"
+
+[[package]]
 name = "vectory"
 version = "0.0.0"
 dependencies = [
  "quick-xml",
+]
+
+[[package]]
+name = "vim-to-svg"
+version = "0.0.0"
+dependencies = [
+ "vector-model",
+ "vectory",
 ]
