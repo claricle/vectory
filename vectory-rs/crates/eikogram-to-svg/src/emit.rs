@@ -3,7 +3,7 @@
 //! number forms. The tree serializes through the SVG model's existing
 //! `EmfsvgSvgBuilder` profile.
 
-use vector_model::{
+use eikogram::{
     Arrangement, BaselineMode, Canvas, ClipShape, CoordJoin, DrawBody, Drawing, HatchStyle,
     ImageArrangement, Item, LineCap, LineJoin, PathPaint, RasterFormat, Segment, ShapeKind, Stroke,
     TextAnchor, Width,
@@ -203,7 +203,7 @@ impl<'a> Emitter<'a> {
     fn emit_raster_pattern(
         &mut self,
         id: u32,
-        raster: &vector_model::Raster,
+        raster: &eikogram::Raster,
         width: i64,
         height: i64,
     ) {
@@ -239,8 +239,8 @@ impl<'a> Emitter<'a> {
         &mut self,
         id: &str,
         style: HatchStyle,
-        foreground: vector_model::Color,
-        background: Option<vector_model::Color>,
+        foreground: eikogram::Color,
+        background: Option<eikogram::Color>,
     ) {
         let lines: &[&str] = match style {
             HatchStyle::Horizontal => &["M0,4 L8,4"],
@@ -337,14 +337,16 @@ impl<'a> Emitter<'a> {
 
     fn emit_path(
         &mut self,
-        geometry: &vector_model::PathGeometry,
+        geometry: &eikogram::PathGeometry,
         paint: &PathPaint,
         arrangement: Arrangement,
     ) {
         match arrangement {
             Arrangement::DeferredPath => {
                 let mut element = Element::new("path");
-                apply_clip_raw(&mut element, paint.clip);
+                // The deferred family opens its geometry with no clip
+                // attachment (the reference opens `<path d="` bare at
+                // begin-path and paints at the closing action).
                 element.set_attribute("d", &path_d(geometry));
                 // Paint lands at the closing action: fill first when both
                 // paints are present.
@@ -363,12 +365,33 @@ impl<'a> Emitter<'a> {
                 self.push_element(element);
                 self.push_text("\n");
             }
-            Arrangement::RegionStrokeFirst | Arrangement::FormClosed => {
+            Arrangement::RegionStrokeFirst => {
                 let mut element = Element::new("path");
                 apply_clip_raw(&mut element, paint.clip);
                 let mut d = path_d(geometry);
                 d.push('Z');
                 element.set_attribute("d", &d);
+                if let Some(stroke) = &paint.stroke {
+                    apply_raw_stroke(&mut element, stroke);
+                }
+                if let Some(fill) = &paint.fill {
+                    apply_raw_fill(&mut element, fill);
+                }
+                if paint.fill.is_none() {
+                    element.set_attribute("fill", "none");
+                }
+                if paint.stroke.is_none() {
+                    element.set_attribute("stroke", "none");
+                }
+                self.push_element(element);
+                self.push_text("\n");
+            }
+            Arrangement::FormClosed => {
+                // The closed-form family carries its close inside the
+                // geometry ("Z ") and closes the tag with the wide form.
+                let mut element = Element::new("path");
+                apply_clip_raw(&mut element, paint.clip);
+                element.set_attribute("d", &path_d(geometry));
                 if let Some(stroke) = &paint.stroke {
                     apply_raw_stroke(&mut element, stroke);
                 }
@@ -422,23 +445,23 @@ impl<'a> Emitter<'a> {
                 let mut element = Element::new("path");
                 // Attribute-map order: fill, clip, stroke, width, extras, d last.
                 match &paint.fill {
-                    Some(vector_model::Fill {
-                        style: vector_model::FillStyle::None,
+                    Some(eikogram::Fill {
+                        style: eikogram::FillStyle::None,
                     }) => {
                         element.set_attribute("fill", "none");
                     }
-                    Some(vector_model::Fill {
-                        style: vector_model::FillStyle::HatchRef { id },
+                    Some(eikogram::Fill {
+                        style: eikogram::FillStyle::HatchRef { id },
                     }) => {
                         element.set_attribute("fill", &format!("url(#{id})"));
                     }
-                    Some(vector_model::Fill {
-                        style: vector_model::FillStyle::Solid { color },
+                    Some(eikogram::Fill {
+                        style: eikogram::FillStyle::Solid { color },
                     }) => {
                         element.set_attribute("fill", &rgb_hex(*color));
                     }
-                    Some(vector_model::Fill {
-                        style: vector_model::FillStyle::PatternRef { id },
+                    Some(eikogram::Fill {
+                        style: eikogram::FillStyle::PatternRef { id },
                     }) => {
                         element.set_attribute("fill", &format!("url(#{id})"));
                     }
@@ -466,8 +489,8 @@ impl<'a> Emitter<'a> {
             Arrangement::SolidRectFill => {
                 let mut element = Element::new("path");
                 let style = match &paint.fill {
-                    Some(vector_model::Fill {
-                        style: vector_model::FillStyle::Solid { color },
+                    Some(eikogram::Fill {
+                        style: eikogram::FillStyle::Solid { color },
                     }) => {
                         format!("fill:{}", rgb_hex(*color))
                     }
@@ -482,7 +505,7 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    fn emit_text(&mut self, text: &vector_model::TextDraw, paint: &PathPaint) {
+    fn emit_text(&mut self, text: &eikogram::TextDraw, paint: &PathPaint) {
         let mut element = Element::new("text");
         apply_clip(&mut element, paint.clip);
         if let Some(face) = &text.face {
@@ -538,7 +561,7 @@ impl<'a> Emitter<'a> {
         self.push_text("\n");
     }
 
-    fn emit_image(&mut self, image: &vector_model::ImageDraw, paint: &PathPaint) {
+    fn emit_image(&mut self, image: &eikogram::ImageDraw, paint: &PathPaint) {
         let href = image_href(&image.raster);
         match &image.arrangement {
             ImageArrangement::Calibrated {
@@ -573,15 +596,10 @@ impl<'a> Emitter<'a> {
                 self.push_element(element);
                 // No newline.
             }
-            ImageArrangement::PlacedIntegral {
-                x,
-                y,
-                width,
-                height,
-            } => {
+            ImageArrangement::BodyBounds { x, y, width, height } => {
                 let mut element = Element::new("image");
                 element.set_attribute("x", &ruby_int_to_s(*x as f64));
-                element.set_attribute("y", &ruby_int_to_s(*y as f64));
+                element.set_attribute("y", &ruby_float_to_s(*y));
                 element.set_attribute("width", &ruby_int_to_s(*width as f64));
                 element.set_attribute("height", &ruby_int_to_s(*height as f64));
                 element.set_attribute("xlink:href", &href);
@@ -592,7 +610,7 @@ impl<'a> Emitter<'a> {
         }
     }
 
-    fn emit_bare_rect(&mut self, rect: &vector_model::BareRect) {
+    fn emit_bare_rect(&mut self, rect: &eikogram::BareRect) {
         let mut element = Element::new("rect");
         element.set_attribute("x", &rect.x);
         element.set_attribute("y", &rect.y);
@@ -607,7 +625,7 @@ impl<'a> Emitter<'a> {
 /// The linear form of path geometry: `M x,y L x,y C ... Z ` with the
 /// geometry's join style.
 #[must_use]
-pub fn path_d(geometry: &vector_model::PathGeometry) -> String {
+pub fn path_d(geometry: &eikogram::PathGeometry) -> String {
     let mut d = String::new();
     let tuple = geometry.join == CoordJoin::Tuple;
     for segment in &geometry.segments {
@@ -667,20 +685,20 @@ fn append_point(out: &mut String, x: f64, y: f64, tuple: bool) {
 
 /// The raw-stream fill attachment (fill_draw): the solid fill's leading
 /// space is the reference fill-rule quirk.
-fn apply_raw_fill(element: &mut Element, fill: &vector_model::Fill) {
+fn apply_raw_fill(element: &mut Element, fill: &eikogram::Fill) {
     match &fill.style {
-        vector_model::FillStyle::None => element.set_attribute("fill", "none"),
-        vector_model::FillStyle::Solid { color } => {
+        eikogram::FillStyle::None => element.set_attribute("fill", "none"),
+        eikogram::FillStyle::Solid { color } => {
             // The leading space is emitted by appending the fill attribute
             // after a spacing-only pseudo-entry; in the DOM model it lands
             // as a single separator space, which the quirk normalization
             // produces on the reference side too.
             element.set_attribute("fill", &rgb_hex(*color));
         }
-        vector_model::FillStyle::PatternRef { id } => {
+        eikogram::FillStyle::PatternRef { id } => {
             element.set_attribute("fill", &format!("#{id}"));
         }
-        vector_model::FillStyle::HatchRef { id } => {
+        eikogram::FillStyle::HatchRef { id } => {
             element.set_attribute("fill", &format!("url(#{id})"));
         }
     }
@@ -809,11 +827,11 @@ fn apply_clip_raw(element: &mut Element, clip: Option<u32>) {
 }
 
 #[must_use]
-fn rgb_hex(color: vector_model::Color) -> String {
+fn rgb_hex(color: eikogram::Color) -> String {
     format!("#{:02X}{:02X}{:02X}", color.red, color.green, color.blue)
 }
 
-fn image_href(raster: &vector_model::Raster) -> String {
+fn image_href(raster: &eikogram::Raster) -> String {
     match &raster.format {
         RasterFormat::Png => {
             format!("data:image/png;base64,{}", base64_encode(&raster.payload))

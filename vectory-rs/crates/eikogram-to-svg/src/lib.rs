@@ -1,6 +1,6 @@
-//! # vim-to-svg — the VIM → SVG-model transformer
+//! # eikogram-to-svg — the VIM → SVG-model transformer
 //!
-//! Expresses a [`vector_model::Drawing`] through the `vectory` SVG model
+//! Expresses a [`eikogram::Drawing`] through the `vectory` SVG model
 //! (`vectory::Document`), serializable with the existing
 //! [`vectory::Profile::EmfsvgSvgBuilder`] profile. The transformer invents no
 //! serializer: it builds the SVG tree; the SVG model's own profile emits the
@@ -33,7 +33,7 @@ mod number;
 
 pub use emit::{drawing_to_document, drawing_to_svg};
 
-use vector_model::Drawing;
+use eikogram::Drawing;
 
 /// Transforms a VIM drawing into SVG bytes via the SVG model's
 /// `EmfsvgSvgBuilder` profile.
