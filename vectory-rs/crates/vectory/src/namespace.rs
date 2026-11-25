@@ -63,15 +63,23 @@ impl NamespaceScope {
             .map(|(_, uri)| uri.as_str())
             .filter(|uri| !uri.is_empty())
     }
+
+    /// True when this scope MENTIONS the prefix — including an explicit
+    /// `xmlns:p=""` undeclaration, which stops outward resolution.
+    #[must_use]
+    pub fn mentions(&self, prefix: &str) -> bool {
+        self.bindings.iter().any(|(p, _)| p == prefix)
+    }
 }
 
 /// Resolves a prefix through the scope chain (innermost first), honoring the
-/// implicit `xml:` binding.
+/// implicit `xml:` binding. An explicit undeclaration (`xmlns:p=""`) in an
+/// inner scope shadows — and unbinds — any outer declaration.
 #[must_use]
 pub fn resolve_prefix<'a>(scopes: &'a [NamespaceScope], prefix: &str) -> Option<&'a str> {
     for scope in scopes.iter().rev() {
-        if let Some(uri) = scope.resolve(prefix) {
-            return Some(uri);
+        if scope.mentions(prefix) {
+            return scope.resolve(prefix);
         }
     }
     if prefix == "xml" {

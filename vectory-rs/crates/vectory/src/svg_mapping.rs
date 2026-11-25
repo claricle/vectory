@@ -271,7 +271,6 @@ impl SvgMapping {
             return Ok(Some(datauri::svg_content(src)?));
         }
         let path = expand_path(src, &self.base_dir);
-        let path = path.strip_prefix('/').unwrap_or(&path).to_string();
         match std::fs::read_to_string(&path) {
             Ok(content) => Ok(Some(content)),
             Err(_) => Ok(None),
@@ -364,8 +363,9 @@ fn split_path(path: &[usize]) -> (Vec<usize>, usize) {
     (path[..path.len() - 1].to_vec(), index)
 }
 
-/// `File.expand_path(value)` against the mapping base (both sides of the
-/// links map use this, so keys match as the Ruby CWD expansion does).
+/// The mapping-side path/key expansion (both sides of the links map use
+/// this, so keys match; the Ruby layer expands against the process CWD,
+/// which is the base directory of its callers).
 #[must_use]
 pub fn expand_path(value: &str, base: &str) -> String {
     if value.starts_with('/') {
@@ -373,7 +373,7 @@ pub fn expand_path(value: &str, base: &str) -> String {
     } else {
         let base = base.trim_end_matches('/');
         if base.is_empty() || base == "." {
-            format!("/{value}")
+            value.to_string()
         } else {
             format!("{base}/{value}")
         }
