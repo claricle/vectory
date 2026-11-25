@@ -487,10 +487,6 @@ impl Parser {
         }
         token
     }
-
-    fn current(&mut self) -> Option<Token> {
-        self.tokens.get(self.index).cloned()
-    }
 }
 
 /// Parses top-level rules (crass `consume_rules(top_level: true)`).
