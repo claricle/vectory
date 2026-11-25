@@ -13,7 +13,14 @@ use vectory::graft::replace_root_content;
 
 #[test]
 fn grafted_content_matches_the_expected_documents() {
-    for case in ["changed", "metadata", "mixed", "namespaces", "empty", "repeat"] {
+    for case in [
+        "changed",
+        "metadata",
+        "mixed",
+        "namespaces",
+        "empty",
+        "repeat",
+    ] {
         let host = transform_fixture(&format!("subtree_graft/{case}/host.xml"));
         let processed = transform_fixture(&format!("subtree_graft/{case}/processed.xml"));
         let expected = transform_fixture(&format!("subtree_graft/{case}/expected.xml"));
@@ -71,17 +78,28 @@ fn conflicting_namespaces_retain_host_metadata_and_grafted_expanded_names() {
     vectory::mutation::elements(root, &mut collected);
     let names: Vec<(String, Option<String>)> = collected
         .iter()
-        .map(|element| (element.local_name().to_string(), element.namespace_uri.clone()))
+        .map(|element| {
+            (
+                element.local_name().to_string(),
+                element.namespace_uri.clone(),
+            )
+        })
         .collect();
     assert_eq!(
         names,
         vec![
             ("host".to_string(), Some("urn:host".to_string())),
             ("g".to_string(), Some("urn:svg".to_string())),
-            ("shape".to_string(), Some("urn:processed-prefix".to_string())),
+            (
+                "shape".to_string(),
+                Some("urn:processed-prefix".to_string())
+            ),
             ("plain".to_string(), None),
             ("child".to_string(), None),
-            ("other".to_string(), Some("urn:processed-prefix".to_string())),
+            (
+                "other".to_string(),
+                Some("urn:processed-prefix".to_string())
+            ),
             ("bare".to_string(), None),
         ]
     );
@@ -126,8 +144,9 @@ fn retains_every_attribute_configuration_through_the_graft() {
             let source = format!(
                 "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">{content}</svg>"
             );
-            let output = replace_root_content("<svg xmlns=\"http://www.w3.org/2000/svg\"/>", &source)
-                .expect("graft succeeds");
+            let output =
+                replace_root_content("<svg xmlns=\"http://www.w3.org/2000/svg\"/>", &source)
+                    .expect("graft succeeds");
             let expected = vectory::Document::parse(&source).expect("parses");
             let actual = vectory::Document::parse(&output).expect("parses");
             let mut expected_attrs = Vec::new();
@@ -166,13 +185,17 @@ fn collect_rect_attributes(element: &vectory::Element, out: &mut Vec<(String, St
 #[test]
 fn rejects_malformed_host_xml_with_the_stable_prefix() {
     let error = replace_root_content("<host>", "<svg/>").unwrap_err();
-    assert!(matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid host_content XML:")));
+    assert!(
+        matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid host_content XML:"))
+    );
 }
 
 #[test]
 fn rejects_malformed_processed_xml_with_the_stable_prefix() {
     let error = replace_root_content("<host/>", "<svg>").unwrap_err();
-    assert!(matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid processed_content XML:")));
+    assert!(
+        matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid processed_content XML:"))
+    );
 }
 
 #[test]
@@ -196,7 +219,9 @@ fn rejects_rootless_processed_content_with_the_exact_message() {
 #[test]
 fn does_not_classify_malformed_rootless_content_as_a_missing_root() {
     let error = replace_root_content("<!--unterminated", "<svg/>").unwrap_err();
-    assert!(matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid host_content XML:")));
+    assert!(
+        matches!(error, vectory::Error::Parsing(detail) if detail.starts_with("invalid host_content XML:"))
+    );
 }
 
 #[test]
@@ -204,7 +229,8 @@ fn keeps_the_utf8_declared_envelope_verbatim() {
     // The encoding-normalization semantics (Ruby re-encodes ISO-8859-1 and
     // UTF-16 hosts to UTF-8) are gated here with a UTF-8-declared host:
     // metadata, ordered Unicode content, and the envelope all survive.
-    let host = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--café--><host label=\"été\"/><!--fin été-->";
+    let host =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--café--><host label=\"été\"/><!--fin été-->";
     let processed = "<svg><text>été 日本語</text><!--日本語--><![CDATA[日本語]]></svg>";
     let result = replace_root_content(host, processed).expect("graft succeeds");
     assert!(

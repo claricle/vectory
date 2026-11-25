@@ -31,7 +31,11 @@ pub fn replace_root_content(host_content: &str, processed_content: &str) -> Resu
         let mut children: Vec<Node> = Vec::new();
         for node in &processed_root.children {
             if let Node::Element(element) = node {
-                children.push(Node::Element(seal_namespaces(element, &processed_scope, &host_ns)));
+                children.push(Node::Element(seal_namespaces(
+                    element,
+                    &processed_scope,
+                    &host_ns,
+                )));
             } else {
                 children.push(node.clone());
             }
@@ -62,9 +66,7 @@ fn parse_document(content: &str, label: &str) -> Result<Document, Error> {
             }
         }
         Err(Error::NoRoot) => Err(Error::Parsing(format!("{label} has no document root"))),
-        Err(Error::Xml(detail)) => {
-            Err(Error::Parsing(format!("invalid {label} XML: {detail}")))
-        }
+        Err(Error::Xml(detail)) => Err(Error::Parsing(format!("invalid {label} XML: {detail}"))),
         Err(other) => Err(other),
     }
 }

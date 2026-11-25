@@ -56,17 +56,13 @@ fn normalize_prefix(prefix: &str) -> Result<String, Error> {
     if prefix.is_empty() {
         return Ok(String::new());
     }
-    let valid = prefix
-        .chars()
-        .enumerate()
-        .all(|(index, c)| {
-            if index == 0 {
-                c.is_ascii_alphabetic() || c == '_'
-            } else {
-                c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-')
-            }
-        })
-        && !prefix.to_lowercase().starts_with("xml");
+    let valid = prefix.chars().enumerate().all(|(index, c)| {
+        if index == 0 {
+            c.is_ascii_alphabetic() || c == '_'
+        } else {
+            c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-')
+        }
+    }) && !prefix.to_lowercase().starts_with("xml");
     if !valid {
         return Err(Error::Transform(
             "invalid namespace request: invalid or reserved prefix".to_string(),
@@ -126,15 +122,21 @@ pub fn rewrite(content: &str, request: &BindingRequest) -> Result<String, Error>
         other => other,
     })?;
     let Some(root) = &document.root else {
-        return Err(Error::Transform("invalid SVG: expected SVG root".to_string()));
+        return Err(Error::Transform(
+            "invalid SVG: expected SVG root".to_string(),
+        ));
     };
     if root.name != "svg" {
-        return Err(Error::Transform("invalid SVG: expected SVG root".to_string()));
+        return Err(Error::Transform(
+            "invalid SVG: expected SVG root".to_string(),
+        ));
     }
     let elements = document_elements_ref(&document);
     for element in &elements {
         if element.name.contains(':') && element.namespace_uri.is_none() {
-            return Err(Error::Transform("invalid SVG: unbound element prefix".to_string()));
+            return Err(Error::Transform(
+                "invalid SVG: unbound element prefix".to_string(),
+            ));
         }
         for attribute in &element.attributes {
             if attribute.name.contains(':') && attribute.namespace_uri.is_none() {
@@ -191,12 +193,17 @@ fn preflight_default(
     remap: &[(String, String)],
 ) -> Result<(), Error> {
     let elements = document_elements_ref(document);
-    if elements.iter().any(|element| element.namespace_uri.is_none()) {
+    if elements
+        .iter()
+        .any(|element| element.namespace_uri.is_none())
+    {
         return Err(Error::Transform(
             "default namespace: would qualify unqualified elements".to_string(),
         ));
     }
-    let remapped_to_default = remap.iter().any(|(existing, prefix)| existing == uri && prefix.is_empty());
+    let remapped_to_default = remap
+        .iter()
+        .any(|(existing, prefix)| existing == uri && prefix.is_empty());
     if remapped_to_default
         && elements.iter().any(|element| {
             element
@@ -226,7 +233,11 @@ fn preflight_unbind(document: &Document, request: &BindingRequest) -> Result<(),
     Ok(())
 }
 
-fn preflight_prefix_usage(document: &Document, prefix: &str, request: &BindingRequest) -> Result<(), Error> {
+fn preflight_prefix_usage(
+    document: &Document,
+    prefix: &str,
+    request: &BindingRequest,
+) -> Result<(), Error> {
     for element in document_elements_ref(document) {
         let element_uses = matches!(element.prefix(), Some(element_prefix)
             if element_prefix == prefix

@@ -58,10 +58,18 @@ fn exposes_only_the_three_executable_profiles() {
 
 #[test]
 fn builds_new_values_without_extending_the_original_prefix() {
-    let prefix = SvgTransformPipeline::new(vec![disambiguate(1, &["shape"]), SvgTransform::suffix_classes(1)])
-        .expect("valid prefix");
-    let pipeline = prefix.clone()
-        .then(vec![namespaces(&[("xlink", "http://www.w3.org/1999/xlink")], &[], &[])])
+    let prefix = SvgTransformPipeline::new(vec![
+        disambiguate(1, &["shape"]),
+        SvgTransform::suffix_classes(1),
+    ])
+    .expect("valid prefix");
+    let pipeline = prefix
+        .clone()
+        .then(vec![namespaces(
+            &[("xlink", "http://www.w3.org/1999/xlink")],
+            &[],
+            &[],
+        )])
         .expect("valid extension");
     assert_eq!(prefix.steps().len(), 2);
     assert_eq!(pipeline.steps().len(), 3);
@@ -73,8 +81,11 @@ fn rejects_incomplete_prefixes_before_parsing_input() {
         SvgTransformPipeline::new(vec![disambiguate(1, &["shape"])]).expect("valid");
     let error = disambiguate_only.call("broken XML").unwrap_err();
     assert!(format!("{error}").contains("incomplete profile"), "{error}");
-    let two_steps = SvgTransformPipeline::new(vec![disambiguate(1, &["shape"]), SvgTransform::suffix_classes(1)])
-        .expect("valid");
+    let two_steps = SvgTransformPipeline::new(vec![
+        disambiguate(1, &["shape"]),
+        SvgTransform::suffix_classes(1),
+    ])
+    .expect("valid");
     let error = two_steps.call("broken XML").unwrap_err();
     assert!(format!("{error}").contains("incomplete profile"));
 }
@@ -85,11 +96,18 @@ fn rejects_skipped_duplicate_reversed_and_non_leading_graft_steps() {
     let disambiguate_step = disambiguate(1, &["shape"]);
     let namespaces_step = namespaces(&[("xlink", "http://www.w3.org/1999/xlink")], &[], &[]);
     // skipped: disambiguate >> namespaces
-    assert!(SvgTransformPipeline::new(vec![disambiguate_step.clone(), namespaces_step.clone()]).is_err());
+    assert!(
+        SvgTransformPipeline::new(vec![disambiguate_step.clone(), namespaces_step.clone()])
+            .is_err()
+    );
     // duplicate
     assert!(SvgTransformPipeline::new(vec![disambiguate_step.clone(), disambiguate_step]).is_err());
     // reversed
-    assert!(SvgTransformPipeline::new(vec![SvgTransform::suffix_classes(1), disambiguate(1, &["shape"])]).is_err());
+    assert!(SvgTransformPipeline::new(vec![
+        SvgTransform::suffix_classes(1),
+        disambiguate(1, &["shape"])
+    ])
+    .is_err());
     // non-leading graft
     let cleanup = cleanup(1, &["shape"]);
     assert!(cleanup.then(vec![graft]).is_err());
@@ -99,7 +117,10 @@ fn rejects_skipped_duplicate_reversed_and_non_leading_graft_steps() {
 fn rejects_complete_host_input_for_a_per_svg_cleanup() {
     let cleanup = cleanup(1, &["shape"]);
     let error = cleanup.call("<host><svg/><svg/></host>").unwrap_err();
-    assert!(format!("{error}").contains("execution-scope mismatch"), "{error}");
+    assert!(
+        format!("{error}").contains("execution-scope mismatch"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -162,14 +183,20 @@ fn captures_host_text_independently_and_preserves_host_metadata() {
     let g = find_first(root, "g").unwrap();
     assert_eq!(g.attribute("class"), Some("label_inject_1"));
     let xml = result.clone();
-    assert!(xml.contains("xmlns:xlink=\"http://www.w3.org/1999/xlink\""), "{xml}");
+    assert!(
+        xml.contains("xmlns:xlink=\"http://www.w3.org/1999/xlink\""),
+        "{xml}"
+    );
 }
 
 #[test]
 fn allows_a_whole_document_graft_without_per_svg_operations() {
-    let graft = SvgTransform::graft_into("<host retained=\"yes\"><old/></host>").expect("valid host");
+    let graft =
+        SvgTransform::graft_into("<host retained=\"yes\"><old/></host>").expect("valid host");
     let pipeline = SvgTransformPipeline::new(vec![graft]).expect("valid");
-    let result = pipeline.call("<mapped><svg/><svg/></mapped>").expect("processes");
+    let result = pipeline
+        .call("<mapped><svg/><svg/></mapped>")
+        .expect("processes");
     let document = vectory::Document::parse(&result).expect("reparses");
     let root = document.root.as_ref().unwrap();
     assert_eq!(root.name, "host");
@@ -180,14 +207,18 @@ fn allows_a_whole_document_graft_without_per_svg_operations() {
 #[test]
 fn rejects_malformed_captured_hosts_when_creating_a_step() {
     let error = SvgTransform::graft_into("<svg>").unwrap_err();
-    assert!(matches!(error, vectory::Error::Parsing(detail) if detail.contains("invalid host_content XML")));
+    assert!(
+        matches!(error, vectory::Error::Parsing(detail) if detail.contains("invalid host_content XML"))
+    );
 }
 
 #[test]
 fn propagates_malformed_selected_input_before_processing_steps() {
     let cleanup = cleanup(1, &["shape"]);
     let error = cleanup.call("<svg>").unwrap_err();
-    assert!(matches!(error, vectory::Error::Parsing(detail) if detail.contains("invalid content XML")));
+    assert!(
+        matches!(error, vectory::Error::Parsing(detail) if detail.contains("invalid content XML"))
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +228,10 @@ fn propagates_malformed_selected_input_before_processing_steps() {
 #[test]
 fn pins_exactly_the_public_executable_profiles_and_their_sequences() {
     // pipeline_profiles.yml steps, verbatim.
-    assert_eq!(Profile::Graft.steps(), &[vectory::transform::StepName::GraftInto]);
+    assert_eq!(
+        Profile::Graft.steps(),
+        &[vectory::transform::StepName::GraftInto]
+    );
     assert_eq!(
         Profile::SvgCleanup.steps(),
         &[
@@ -219,8 +253,9 @@ fn pins_exactly_the_public_executable_profiles_and_their_sequences() {
 
 fn manifest_pipeline(name: &str) -> SvgTransformPipeline {
     let steps: Vec<SvgTransform> = match name {
-        "graft" => vec![SvgTransform::graft_into(&transform_fixture("pipeline_inputs/host.xml"))
-            .expect("host")],
+        "graft" => vec![
+            SvgTransform::graft_into(&transform_fixture("pipeline_inputs/host.xml")).expect("host"),
+        ],
         "svg_cleanup" | "graft_then_svg_cleanup" => {
             let mut all: Vec<SvgTransform> = Vec::new();
             if name == "graft_then_svg_cleanup" {
@@ -335,7 +370,10 @@ fn cleanup_profiles_retain_rewritten_references_classes_and_final_namespaces() {
         // Nested selectors and non-selector CSS content.
         let style = find_first(root, "style").unwrap();
         let css = manip_common::text_of(style);
-        assert!(css.contains(".drawing_inject_1.active_inject_1:hover"), "{css}");
+        assert!(
+            css.contains(".drawing_inject_1.active_inject_1:hover"),
+            "{css}"
+        );
         assert!(css.contains(".drawing_inject_1:is(.active_inject_1, :not(.hidden_inject_1))"));
         assert!(css.contains("@supports"));
         assert!(css.contains("url(#paint_inject_1)"));
@@ -358,7 +396,8 @@ fn grafts_a_real_whole_host_svgmap_expansion_before_selecting_svgs() {
     let expected_mapped = transform_fixture("consumer_flow/svgmap-mapped.xml");
     let spec_dir = manip_common::repo_spec_dir();
     let base = spec_dir.join("fixtures/svg_transform/consumer_flow");
-    let mut mapping = vectory::svg_mapping::SvgMapping::from_xml(&host, &base, None).expect("mapping");
+    let mut mapping =
+        vectory::svg_mapping::SvgMapping::from_xml(&host, &base, None).expect("mapping");
     let mapped = mapping.to_xml().expect("maps");
     assert_xml_equivalent(&mapped, &expected_mapped);
 
@@ -427,8 +466,14 @@ fn batch_disambiguation_gates_the_consumer_flow_corpus() {
                 .expect("rewrites")
         })
         .collect();
-    assert_xml_equivalent(&outputs[0], &transform_fixture("consumer_flow/batch-first.svg"));
-    assert_xml_equivalent(&outputs[1], &transform_fixture("consumer_flow/batch-second.svg"));
+    assert_xml_equivalent(
+        &outputs[0],
+        &transform_fixture("consumer_flow/batch-first.svg"),
+    );
+    assert_xml_equivalent(
+        &outputs[1],
+        &transform_fixture("consumer_flow/batch-second.svg"),
+    );
 }
 
 #[test]
@@ -448,11 +493,7 @@ fn grafted_svg_envelope_and_namespace_remap_keeps_href_and_fill() {
         .then(vec![
             disambiguate(2, &["g", "r"]),
             SvgTransform::suffix_classes(2),
-            namespaces(
-                &[],
-                &["xlink"],
-                &[("http://www.w3.org/1999/xlink", "xl")],
-            ),
+            namespaces(&[], &["xlink"], &[("http://www.w3.org/1999/xlink", "xl")]),
         ])
         .expect("valid pipeline");
 
@@ -501,11 +542,7 @@ fn preserves_descendant_namespace_shadows_and_default_undeclarations_on_repeat()
         .then(vec![
             disambiguate(2, &["g", "r"]),
             SvgTransform::suffix_classes(2),
-            namespaces(
-                &[],
-                &["xlink"],
-                &[("http://www.w3.org/1999/xlink", "xl")],
-            ),
+            namespaces(&[], &["xlink"], &[("http://www.w3.org/1999/xlink", "xl")]),
         ])
         .expect("valid pipeline");
     let first = pipeline.call(source).expect("processes");
@@ -542,7 +579,10 @@ fn utf8_declared_envelope_normalizes_through_the_pipeline() {
     let output = pipeline
         .call("<svg><text>été 日本語</text></svg>")
         .expect("processes");
-    assert!(output.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--été-->"), "{output}");
+    assert!(
+        output.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?><!--été-->"),
+        "{output}"
+    );
     assert!(output.ends_with("<!--fin-->"));
     assert!(output.contains("id=\"r_inject_1\""));
     assert!(output.contains("café_inject_1"));

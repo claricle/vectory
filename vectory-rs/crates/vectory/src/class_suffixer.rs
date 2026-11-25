@@ -119,11 +119,7 @@ fn element_at<'a>(root: &'a Element, path: &[usize]) -> Option<&'a Element> {
 }
 
 /// Absolute paths of every element under (and excluding) `subtree`.
-fn collect_descendant_paths(
-    subtree: &Element,
-    base: &[usize],
-    out: &mut Vec<Vec<usize>>,
-) {
+fn collect_descendant_paths(subtree: &Element, base: &[usize], out: &mut Vec<Vec<usize>>) {
     for (index, child) in subtree.children.iter().enumerate() {
         if let Node::Element(child_element) = child {
             let mut path = base.to_vec();
@@ -214,16 +210,15 @@ fn rewrite_style(element: &mut Element, suffix: &str) {
         for (index, piece) in pieces.iter().enumerate() {
             let length = piece.text.chars().count();
             if position > piece.start && position <= piece.start + length {
-                let mut insert_at = position - piece.start;
-                for c in insertion.chars() {
-                    piece_texts[index].insert(insert_at, c);
-                    insert_at += 1;
+                let insert_at = position - piece.start;
+                for (offset, c) in insertion.chars().enumerate() {
+                    piece_texts[index].insert(insert_at + offset, c);
                 }
                 break;
             }
         }
     }
-// Write back, skipping unchanged pieces (`node.content = rewritten
+    // Write back, skipping unchanged pieces (`node.content = rewritten
     // unless rewritten == text`).
     let mut piece_iter = piece_texts.into_iter();
     for child in element.children.iter_mut() {
@@ -280,7 +275,11 @@ fn rewrite_rules(rules: &[Rule], suffix: &str, changes: &mut BTreeMap<usize, Str
                 rewrite_selector(prelude, suffix, changes);
                 rewrite_nested_rules(block, suffix, changes);
             }
-            Rule::AtRule { name, prelude, block } => {
+            Rule::AtRule {
+                name,
+                prelude,
+                block,
+            } => {
                 rewrite_at_rule(name, prelude, block.as_deref(), suffix, changes);
             }
         }
@@ -320,8 +319,7 @@ fn rewrite_nested_rules(tokens: &[Token], suffix: &str, changes: &mut BTreeMap<u
             TokenKind::AtKeyword => {
                 if prelude.iter().all(Token::is_trivia) {
                     // Reconsume at the at-keyword: consume the whole at-rule.
-                    let (name, at_prelude, block) =
-                        consume_at_rule(&token, tokens, &mut index);
+                    let (name, at_prelude, block) = consume_at_rule(&token, tokens, &mut index);
                     rewrite_at_rule(&name, &at_prelude, block.as_deref(), suffix, changes);
                     prelude.clear();
                 } else {
@@ -359,11 +357,7 @@ fn consume_at_rule(
             _ => prelude.push(token),
         }
     }
-    (
-        at_keyword.name.clone().unwrap_or_default(),
-        prelude,
-        block,
-    )
+    (at_keyword.name.clone().unwrap_or_default(), prelude, block)
 }
 
 fn custom_property(tokens: &[Token]) -> bool {
@@ -402,9 +396,8 @@ fn rewrite_selector(tokens: &[Token], suffix: &str, changes: &mut BTreeMap<usize
 
 fn class_identifier(token: &Token, previous: Option<&Token>) -> bool {
     token.kind == TokenKind::Ident
-        && previous.is_some_and(|previous| {
-            previous.kind == TokenKind::Delim && previous.value == "."
-        })
+        && previous
+            .is_some_and(|previous| previous.kind == TokenKind::Delim && previous.value == ".")
 }
 
 fn selector_function(token: &Token) -> bool {

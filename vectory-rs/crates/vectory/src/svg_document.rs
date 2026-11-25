@@ -248,12 +248,10 @@ fn update_ids_css(root: &mut Element, ids: &[String], suffix: &str) {
 }
 
 fn update_ids_css_in(element: &mut Element, ids: &[String], suffix: &str) {
-    if element.namespace_uri.as_deref() == Some(SVG_NAMESPACE_URI) && element.local_name() == "style" {
-        let children_xml: String = element
-            .children
-            .iter()
-            .map(|child| serialize_child_node(child))
-            .collect();
+    if element.namespace_uri.as_deref() == Some(SVG_NAMESPACE_URI)
+        && element.local_name() == "style"
+    {
+        let children_xml: String = element.children.iter().map(serialize_child_node).collect();
         let updated = update_ids_css_string(&children_xml, ids, suffix);
         element.children = vec![Node::Text(crate::dom::Text(updated))];
     }

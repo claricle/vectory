@@ -233,7 +233,12 @@ fn tokenize_at(css: &str, pos_offset: usize) -> Vec<Token> {
                 scanner.pos += 1;
             }
             let raw = scanner.slice(start, scanner.pos);
-            push!(Token::scalar(TokenKind::Whitespace, start, raw.clone(), raw));
+            push!(Token::scalar(
+                TokenKind::Whitespace,
+                start,
+                raw.clone(),
+                raw
+            ));
             continue;
         }
 
@@ -305,7 +310,12 @@ fn tokenize_at(css: &str, pos_offset: usize) -> Vec<Token> {
             if matches!(scanner.peek(), Some('%')) {
                 scanner.pos += 1;
                 let raw = scanner.slice(start, scanner.pos);
-                push!(Token::scalar(TokenKind::Percentage, start, raw.clone(), raw));
+                push!(Token::scalar(
+                    TokenKind::Percentage,
+                    start,
+                    raw.clone(),
+                    raw
+                ));
                 continue;
             }
             let (ident, _) = if matches!(scanner.peek(), Some(c) if is_ident_start(c)) {
@@ -350,9 +360,7 @@ fn tokenize_at(css: &str, pos_offset: usize) -> Vec<Token> {
 
         // url(...) — consumed as a function-shaped token without inner
         // tokenization (the suffixer never descends into it).
-        if (c == 'u' || c == 'U')
-            && normalized_starts_with_ignore_case(&scanner, "url(")
-        {
+        if (c == 'u' || c == 'U') && normalized_starts_with_ignore_case(&scanner, "url(") {
             scanner.pos += 4;
             let _ = consume_block(&mut scanner, '(', ')');
             let raw = scanner.slice(start, scanner.pos);
@@ -504,11 +512,7 @@ pub fn parse_rules(css: &str) -> Vec<Rule> {
 fn consume_rules(parser: &mut Parser) -> Vec<Rule> {
     let mut rules = Vec::new();
     let mut prelude: Vec<Token> = Vec::new();
-    loop {
-        let token = match parser.consume() {
-            Some(token) => token,
-            None => break,
-        };
+    while let Some(token) = parser.consume() {
         match token.kind {
             TokenKind::AtKeyword => {
                 let (name, at_prelude, block) = consume_at_rule(parser, &token);
@@ -541,11 +545,7 @@ fn consume_at_rule(
 ) -> (String, Vec<Token>, Option<Vec<Token>>) {
     let mut prelude = Vec::new();
     let mut block = None;
-    loop {
-        let token = match parser.consume() {
-            Some(token) => token,
-            None => break,
-        };
+    while let Some(token) = parser.consume() {
         match token.kind {
             TokenKind::Semicolon => break,
             TokenKind::SimpleBlock if token.start == Some('{') => {
@@ -555,11 +555,7 @@ fn consume_at_rule(
             _ => prelude.push(token),
         }
     }
-    (
-        at_keyword.name.clone().unwrap_or_default(),
-        prelude,
-        block,
-    )
+    (at_keyword.name.clone().unwrap_or_default(), prelude, block)
 }
 
 #[cfg(test)]
@@ -572,7 +568,10 @@ mod tests {
         assert_eq!(tokens[0].kind, TokenKind::Delim);
         assert_eq!(tokens[1].kind, TokenKind::Ident);
         assert_eq!(tokens[1].value, "a");
-        let function = tokens.iter().find(|t| t.kind == TokenKind::Function).unwrap();
+        let function = tokens
+            .iter()
+            .find(|t| t.kind == TokenKind::Function)
+            .unwrap();
         assert_eq!(function.name.as_deref(), Some("is"));
         assert!(function.tokens.iter().any(|t| t.value == "b"));
     }
@@ -627,7 +626,10 @@ mod tests {
         let tokens = tokenize(".foo { fill: red");
         assert!(tokens.iter().any(|t| t.kind == TokenKind::SimpleBlock));
         let tokens = tokenize(".a{content:\"<!-- keep -->\"}");
-        let block = tokens.iter().find(|t| t.kind == TokenKind::SimpleBlock).unwrap();
+        let block = tokens
+            .iter()
+            .find(|t| t.kind == TokenKind::SimpleBlock)
+            .unwrap();
         assert!(block.tokens.iter().any(|t| t.kind == TokenKind::String));
     }
 }
