@@ -395,7 +395,7 @@ impl Walker {
                 });
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
-                    paint: self.paint_now(false),
+                    paint: self.paint_now(),
                     arrangement: Arrangement::ContourOpen { leading_fill_space: true },
                 }));
                 self.current_x = f64::from(origin.x);
@@ -741,11 +741,13 @@ impl Walker {
 
     // --- paint ---
 
-    fn paint_now(&self, with_clip: bool) -> PathPaint {
+    fn paint_now(&self) -> PathPaint {
+        // Every raw family carries the clip attachment (clipset_draw);
+        // only the deferred path family omits it.
         PathPaint {
             fill: self.resolve_raw_fill(),
             stroke: Some(self.resolve_raw_stroke()),
-            clip: if with_clip { self.dc.clip_id } else { None },
+            clip: self.dc.clip_id,
             stroke_from_fill: false,
         }
     }
@@ -1021,7 +1023,7 @@ impl Walker {
     }
 
     fn push_shape(&mut self, kind: ShapeKind) {
-        let paint = self.paint_now(true);
+        let paint = self.paint_now();
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Shape(ShapeDraw { kind }),
             paint,
@@ -1110,7 +1112,7 @@ impl Walker {
         }
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
-            paint: self.paint_now(true),
+            paint: self.paint_now(),
             arrangement: if closed {
                 Arrangement::RegionStrokeFirst
             } else {
@@ -1160,7 +1162,7 @@ impl Walker {
         }
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
-            paint: self.paint_now(false),
+            paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen { leading_fill_space: true },
         }));
         let (xl, yl) = points[points.len() - 1];
@@ -1214,7 +1216,7 @@ impl Walker {
         push_bezier_triplets(&mut geometry, ctrls);
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
-            paint: self.paint_now(false),
+            paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen { leading_fill_space: true },
         }));
         let (xl, yl) = points[points.len() - 1];
@@ -1273,12 +1275,9 @@ impl Walker {
                 building.segments.extend(geometry.segments);
             }
         } else {
-            let paint = PathPaint {
-                fill: if closed { self.resolve_attrmap_fill() } else { self.resolve_attrmap_fill() },
-                stroke: Some(self.resolve_attrmap_stroke()),
-                clip: self.dc.clip_id,
-                stroke_from_fill: false,
-            };
+            // The multi-region families paint through the RAW fill/stroke
+            // resolution (fmt'd widths), not the attribute-map family.
+            let paint = self.paint_now();
             self.items.push(Item::Draw(Draw {
                 body: DrawBody::Path(PathDraw { geometry }),
                 paint,
@@ -1381,7 +1380,7 @@ impl Walker {
         });
         self.items.push(Item::Draw(Draw {
             body: DrawBody::Path(PathDraw { geometry }),
-            paint: self.paint_now(false),
+            paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen { leading_fill_space: true },
         }));
     }
@@ -1426,7 +1425,7 @@ impl Walker {
                 geometry.push(Segment::Close);
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
-                    paint: self.paint_now(true),
+                    paint: self.paint_now(),
                     arrangement: Arrangement::FormClosed,
                 }));
                 self.current_x = center_x;
@@ -1436,7 +1435,7 @@ impl Walker {
                 geometry.push(Segment::Close);
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
-                    paint: self.paint_now(true),
+                    paint: self.paint_now(),
                     arrangement: Arrangement::FormClosed,
                 }));
                 self.current_x = end_pt.0;
@@ -1445,7 +1444,7 @@ impl Walker {
             ArcMode::Arc => {
                 self.items.push(Item::Draw(Draw {
                     body: DrawBody::Path(PathDraw { geometry }),
-                    paint: self.paint_now(false),
+                    paint: self.paint_now(),
                     arrangement: Arrangement::ContourOpen { leading_fill_space: true },
                 }));
                 self.current_x = end_pt.0;
