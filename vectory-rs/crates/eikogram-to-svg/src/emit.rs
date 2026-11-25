@@ -491,13 +491,15 @@ impl<'a> Emitter<'a> {
                 let style = match &paint.fill {
                     Some(eikogram::Fill {
                         style: eikogram::FillStyle::Solid { color },
-                    }) => {
-                        format!("fill:{}", rgb_hex(*color))
-                    }
+                    }) => format!("fill:{}", rgb_hex_lower(*color)),
                     _ => String::new(),
                 };
                 element.set_attribute("style", &style);
-                element.set_attribute("d", &path_d(geometry));
+                // The reference's d closes with a bare `Z` (no trailing
+                // space), so the close rides the arrangement.
+                let mut d = path_d(geometry);
+                d.push('Z');
+                element.set_attribute("d", &d);
                 self.push_element(element);
                 // No newline.
             }
@@ -829,6 +831,13 @@ fn apply_clip_raw(element: &mut Element, clip: Option<u32>) {
 #[must_use]
 fn rgb_hex(color: eikogram::Color) -> String {
     format!("#{:02X}{:02X}{:02X}", color.red, color.green, color.blue)
+}
+
+/// The lowercase form the reference's style attribute prints (BitBlt solid
+/// fill paths only).
+#[must_use]
+fn rgb_hex_lower(color: eikogram::Color) -> String {
+    format!("#{:02x}{:02x}{:02x}", color.red, color.green, color.blue)
 }
 
 fn image_href(raster: &eikogram::Raster) -> String {
