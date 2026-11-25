@@ -27,7 +27,7 @@ dependencies = [
 [[package]]
 name = "emf-core"
 version = "0.0.0"
-source = "git+ssh://git@github.com/claricle/emf?rev=0a4f7ab6e6ba79407917cc3fdec226cb798fb748#0a4f7ab6e6ba79407917cc3fdec226cb798fb748"
+source = "git+https://github.com/claricle/emf?rev=0a4f7ab6e6ba79407917cc3fdec226cb798fb748#0a4f7ab6e6ba79407917cc3fdec226cb798fb748"
 
 [[package]]
 name = "emf-to-eikogram"
