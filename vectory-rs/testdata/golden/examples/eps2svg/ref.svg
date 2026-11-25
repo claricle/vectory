@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 540 720" width="540" height="720">
+<g transform="translate(0 720) scale(1 -1)">
+<!-- unhandled operator: save -->
+<path d="M 63 153 L 549 153" fill="none" stroke="#000000"/>
+<path d="M 549 153 L 549 639" fill="none" stroke="#000000"/>
+<path d="M 549 639 L 63 639" fill="none" stroke="#000000"/>
+<path d="M 63 639 L 63 153" fill="none" stroke="#000000"/>
+<path d="M 468 261 A 108 108 0 1 1 252 261 A 108 108 0 1 1 468 261 Z Z" fill="none" stroke="#000000"/>
+<path d="M 361 357 L 358 358 L 353 356 L 348 353 L 342 347 L 336 340 L 329 331 L 322 321 L 315 309 L 307 296 L 300 283 L 292 268 L 285 253 L 278 237 L 271 222 L 266 206 L 260 191 L 256 177 L 252 164 L 249 152 L 247 141 L 246 131 L 246 123 L 247 117 L 248 113 L 251 111 L 254 110 L 259 112 L 264 115 L 270 121 L 276 128 L 283 137 L 290 147 L 297 159 L 305 172 L 312 185 L 320 200 L 327 215 L 334 231 L 341 246 L 346 262 L 352 277 L 356 291 L 360 304 L 363 316 L 365 327 L 366 337 L 366 345 L 365 351 L 364 355 L 361 357" fill="none" stroke="#000000"/>
+<path d="M 171 261 L 171 531" fill="none" stroke="#000000"/>
+<path d="M 198 261 L 198 531" fill="none" stroke="#000000"/>
+<path d="M 225 261 L 225 531" fill="none" stroke="#000000"/>
+<path d="M 252 261 L 252 531" fill="none" stroke="#000000"/>
+<path d="M 279 261 L 279 531" fill="none" stroke="#000000"/>
+<path d="M 306 261 L 306 531" fill="none" stroke="#000000"/>
+<path d="M 333 261 L 333 531" fill="none" stroke="#000000"/>
+<path d="M 360 261 L 360 531" fill="none" stroke="#000000"/>
+<path d="M 387 261 L 387 531" fill="none" stroke="#000000"/>
+<path d="M 414 261 L 414 531" fill="none" stroke="#000000"/>
+<path d="M 441 261 L 441 531" fill="none" stroke="#000000"/>
+<path d="M 171 261 L 441 261" fill="none" stroke="#000000"/>
+<path d="M 171 288 L 441 288" fill="none" stroke="#000000"/>
+<path d="M 171 315 L 441 315" fill="none" stroke="#000000"/>
+<path d="M 171 342 L 441 342" fill="none" stroke="#000000"/>
+<path d="M 171 369 L 441 369" fill="none" stroke="#000000"/>
+<path d="M 171 396 L 441 396" fill="none" stroke="#000000"/>
+<path d="M 171 423 L 441 423" fill="none" stroke="#000000"/>
+<path d="M 171 450 L 441 450" fill="none" stroke="#000000"/>
+<path d="M 171 477 L 441 477" fill="none" stroke="#000000"/>
+<path d="M 171 504 L 441 504" fill="none" stroke="#000000"/>
+<path d="M 171 531 L 441 531" fill="none" stroke="#000000"/>
+<path d="M 311 396 A 5 5 0 1 1 301 396 A 5 5 0 1 1 311 396 Z Z" fill="none" stroke="#000000"/>
+<path d="M 441 477 A 54 54 0 1 1 387 531" fill="none" stroke="#00ff00"/>
+<text transform="scale(1 -1)" x="171" y="-261" font-family="Helvetica" font-size="0" fill="#000000">This is "circle.plot".</text>
+<text transform="scale(1 -1)" x="171" y="-342" font-family="Helvetica" font-size="0" fill="#000000">This is small print.</text>
+<!-- unhandled operator: restore -->
+</g>
+</svg>

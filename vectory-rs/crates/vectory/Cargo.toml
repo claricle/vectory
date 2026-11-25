@@ -1,0 +1,9 @@
+[package]
+name = "vectory"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The SVG model in Rust with byte-faithful decode and serialize (vectory-rs lane 1)"
+
+[dependencies]
+quick-xml = "0.42"

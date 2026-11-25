@@ -1,0 +1,11 @@
+# The vectory-rs workspace — the Rust SVG model + vector-manipulation program
+# (umbrella: claricle/vectory#96, lane 1: claricle/vectory#97).
+#
+# In-repo workspace (the emf-rs precedent): lives under vectory-rs/ inside the
+# vectory repository and can be extracted to a standalone repo later if the
+# owner opts for one. The published crate name is `vectory` (owner decision,
+# 2026-11-25 — the etassia precedent: published crate takes the repo name).
+# Nothing is published; publishing is an owner decision.
+[workspace]
+resolver = "2"
+members = ["crates/vectory"]
