@@ -1,0 +1,11 @@
+[package]
+name = "emf88-parity"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The claricle/emf#88 byte-parity acceptance harness: EMF -> emf-to-eikogram -> eikogram -> eikogram-to-svg -> bytes, compared file-by-file against the Ruby renderer"
+
+[dev-dependencies]
+emf-to-eikogram = { path = "../emf-to-eikogram" }
+eikogram-to-svg = { path = "../eikogram-to-svg" }
+emf-core = { git = "https://github.com/claricle/emf", rev = "0a4f7ab6e6ba79407917cc3fdec226cb798fb748" }

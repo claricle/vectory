@@ -34,9 +34,17 @@ name = "emf-to-eikogram"
 version = "0.0.0"
 dependencies = [
  "eikogram",
- "eikogram-to-svg",
  "emf-core",
  "libz-sys",
+]
+
+[[package]]
+name = "emf88-parity"
+version = "0.0.0"
+dependencies = [
+ "eikogram-to-svg",
+ "emf-core",
+ "emf-to-eikogram",
 ]
 
 [[package]]

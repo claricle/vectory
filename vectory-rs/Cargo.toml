@@ -17,6 +17,7 @@
 #   emf-to-eikogram — the EMF-model → VIM transformer (the conversion
 #                  hub's EMF lane; emf-core is a pinned git dependency on
 #                  claricle/emf@main until it publishes)
+#   emf88-parity  — the byte-parity acceptance harness (the emf#88 gate)
 [workspace]
 resolver = "2"
 members = [
@@ -24,4 +25,5 @@ members = [
     "crates/eikogram",
     "crates/eikogram-to-svg",
     "crates/emf-to-eikogram",
+    "crates/emf88-parity",
 ]
