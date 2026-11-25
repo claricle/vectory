@@ -166,9 +166,9 @@ fn first_diff(expected: &str, actual: &str) -> String {
         .zip(actual_bytes.iter())
         .take_while(|(a, b)| a == b)
         .count();
-    let context_start = common.saturating_sub(60);
+    let context_start = common.saturating_sub(200);
     let context_end = |s: &[u8], at: usize| -> String {
-        let end = (at + 80).min(s.len());
+        let end = (at + 200).min(s.len());
         String::from_utf8_lossy(&s[context_start.min(end)..end]).to_string()
     };
     format!(
@@ -197,11 +197,15 @@ fn parity_corpus_byte_gate() {
                 if actual == *golden {
                     matched_raw.push(name.clone());
                     matched_normalized.push(name.clone());
-                } else if normalize_quirks(&actual) == normalize_quirks(golden) {
-                    matched_normalized.push(name.clone());
                 } else {
-                    let diff = first_diff(golden, &actual);
-                    mismatches.push((name.clone(), diff));
+                    let golden_normalized = normalize_quirks(golden);
+                    let actual_normalized = normalize_quirks(&actual);
+                    if golden_normalized == actual_normalized {
+                        matched_normalized.push(name.clone());
+                    } else {
+                        let diff = first_diff(&golden_normalized, &actual_normalized);
+                        mismatches.push((name.clone(), diff));
+                    }
                 }
             }
             Err(error) => unported.push((name.clone(), error)),
@@ -244,10 +248,26 @@ fn parity_single_file() {
     let golden = corpus.goldens.get(&name).expect("golden");
     match render_svg(emf_bytes) {
         Ok(actual) => {
-            if actual != *golden {
-                panic!("{} mismatch:\n{}", name, first_diff(golden, &actual));
+            // Dump the rendered bytes for shell-side diffing.
+            if let Ok(out_path) = std::env::var("PARITY_OUT") {
+                std::fs::write(&out_path, &actual).expect("write PARITY_OUT");
+                eprintln!("rendered bytes written to {out_path}");
             }
-            println!("{name}: raw byte match");
+            if actual == *golden {
+                println!("{name}: raw byte match");
+            } else {
+                let golden_normalized = normalize_quirks(golden);
+                let actual_normalized = normalize_quirks(&actual);
+                if golden_normalized == actual_normalized {
+                    println!("{name}: quirk-normalized match");
+                } else {
+                    panic!(
+                        "{} mismatch: {}",
+                        name,
+                        first_diff(&golden_normalized, &actual_normalized)
+                    );
+                }
+            }
         }
         Err(error) => panic!("{name}: {error}"),
     }

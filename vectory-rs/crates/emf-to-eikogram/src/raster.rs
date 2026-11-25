@@ -484,7 +484,7 @@ fn optimize_cmf(data: &mut [u8], data_size: u64) {
 
 /// zlib deflate through stock zlib with libpng's write parameters.
 fn zlib_compress(input: &[u8], level: i32, window_bits: i32) -> Result<Vec<u8>, String> {
-    use std::os::raw::{c_char, c_int};
+    use std::os::raw::c_int;
 
     type ZStream = libz_sys::z_stream;
     const Z_NO_FLUSH: c_int = 0;
