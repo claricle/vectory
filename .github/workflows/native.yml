@@ -51,7 +51,7 @@ jobs:
           VECTORY_RUNTIME: native
         run: >-
           bundle exec rspec spec/vectory/runtime_spec.rb
-          spec/vectory/native_ledger_spec.rb
+          spec/vectory/runtime_native_ledger_spec.rb
 
       - name: Per-platform smoke manipulates one corpus SVG natively
         env:
