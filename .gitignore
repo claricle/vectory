@@ -3,6 +3,12 @@ Gemfile.lock
 .rspec_status
 .rubocop-*
 
+# The vendored vectory-ffi cdylib (platform-gem builds) and built gems
+/lib/vectory/native/*.dylib
+/lib/vectory/native/*.so
+/lib/vectory/native/*.dll
+/pkg/
+
 .sass-cache
 _site
 CLAUDE.md

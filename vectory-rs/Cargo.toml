@@ -26,4 +26,5 @@ members = [
     "crates/eikogram-to-svg",
     "crates/emf-to-eikogram",
     "crates/emf88-parity",
+    "crates/vectory-ffi",
 ]
