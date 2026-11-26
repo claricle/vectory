@@ -395,6 +395,12 @@ pub mod debug {
         crate::provenance::canonical_pattern(node, root, selected).is_some()
     }
 
+    /// The canonical text rotation recovery result, for parity debugging.
+    #[must_use]
+    pub fn debug_canonical_rotation(node: &vectory::Element) -> Option<crate::text::Rotation> {
+        crate::text::canonical_rotation(node)
+    }
+
     /// Builds the debug tree for a source document.
     pub fn debug_tree(document: &vectory::Document, source: &str) -> DebugTree {
         let tree = crate::elements::build_tree(document, source).expect("tree");

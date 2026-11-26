@@ -156,34 +156,58 @@ fn attr_rational(value: Option<&str>, default: f64) -> Option<Rational> {
 pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
     if node.attribute("dx").is_some() || node.attribute("dy").is_some() {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: dx/dy present"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: dx/dy present");
+            }
+        }
         return None;
     }
     // `rotate\((0|-?[1-9]\d*), DEC, DEC\) translate\(0, DEC\)`
     let transform = node.attribute("transform")?;
     let Some((angle, x, pivot, offset)) = parse_rotation_spelling(transform) else {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: spelling parse failed for {transform:?}"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: spelling parse failed for {transform:?}");
+            }
+        }
         return None;
     };
     if !(-359..=359).contains(&angle) {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: angle out of range {angle}"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: angle out of range {angle}");
+            }
+        }
         return None;
     }
     if x != attr_rational(node.attribute("x"), 0.0)? {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: x mismatch {x:?}"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: x mismatch {x:?}");
+            }
+        }
         return None;
     }
     let Some(y) = attr_rational(node.attribute("y"), 0.0) else {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: y parse failed"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: y parse failed");
+            }
+        }
         return None;
     };
     let Some(height) = attr_rational(node.attribute("font-size"), 12.0) else {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: height parse failed"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: height parse failed");
+            }
+        }
         return None;
     };
 
@@ -197,7 +221,11 @@ pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
     let high = min_of(high_a, high_b);
     if !low.less(high) {
         #[allow(clippy::print_stderr)]
-        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: empty interval"); } }
+        {
+            if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                eprintln!("rot: empty interval");
+            }
+        }
         return None;
     }
 
@@ -214,7 +242,11 @@ pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
             Alignment::Baseline
         } else {
             #[allow(clippy::print_stderr)]
-            { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: no alignment"); } }
+            {
+                if std::env::var("EMF_DEBUG_ROTATION").is_ok() {
+                    eprintln!("rot: no alignment");
+                }
+            }
             return None;
         }
     };
