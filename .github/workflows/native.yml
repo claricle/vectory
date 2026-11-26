@@ -43,11 +43,11 @@ jobs:
 
       - name: Build the pinned vectory-ffi cdylib
         run: cargo build --release --locked -p vectory-ffi
-        working-directory: vectory-rs-pinned
+        working-directory: vectory-rs-pinned/vectory-rs
 
       - name: Native ledger and runtime-switch specs under the demanded engine
         env:
-          VECTORY_NATIVE_LIB: ${{ github.workspace }}/vectory-rs-pinned/target/release/libvectory_ffi.so
+          VECTORY_NATIVE_LIB: ${{ github.workspace }}/vectory-rs-pinned/vectory-rs/target/release/libvectory_ffi.so
           VECTORY_RUNTIME: native
         run: >-
           bundle exec rspec spec/vectory/runtime_spec.rb
