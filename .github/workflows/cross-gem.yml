@@ -1,0 +1,171 @@
+# The cross-gem matrix (claricle/vectory#109): platform gems of vectory
+# carrying the vendored vectory-ffi cdylib, on the etassia-rs shape —
+# one rb-sys-dock container job per rakelib/native.rake table platform
+# (all builds on ubuntu runners; rb-sys-dock ships the cross toolchains),
+# then a native smoke per platform on a matching-architecture runner and
+# the packaged gems attached to the tag's GitHub release.
+#
+# Triggers mirror the repo's release flow: the maintainer pushes the
+# v-tag, rake.yml gates it and dispatches do-release (release.yml
+# publishes the source gem), and this workflow cross-builds the five
+# platform gems and attaches them to that release. workflow_dispatch
+# runs build + smoke only. Pull requests touching the lane run the full
+# matrix as the CI gate.
+#
+# Windows: rb-sys-dock builds x64-mingw-ucrt with rustc's windows-gnu
+# target, whose self-contained linking statically links the CRT and the
+# gcc runtime — the vendored DLL declares no libgcc/mingw runtime DLL
+# imports. The native smoke below is the proof: a dynamically-linked
+# runtime DLL would fail to load on the plain windows runner.
+#
+# Musl (x86_64/aarch64-linux-musl, the svgpng seven-target list's two
+# extra triples) is buildable — the rb-sys toolchain table carries both
+# rust-targets — but its smoke needs musl execution (svgpng runs an
+# alpine container for that); left for a follow-up lane. The five here
+# are the #109 acceptance table.
+name: cross-gem
+
+on:
+  push:
+    tags: [ "v*" ]
+  pull_request:
+    paths:
+      - ".github/workflows/cross-gem.yml"
+      - "Rakefile"
+      - "rakelib/native.rake"
+      - "vectory.gemspec"
+      - "scripts/smoke_native.rb"
+      - "vectory-rs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-gem-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Cross-build ${{ matrix.platform }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ x86_64-linux, aarch64-linux, x86_64-darwin, arm64-darwin, x64-mingw-ucrt ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      # Drives `rake native:$RUBY_TARGET gem` inside the rb-sys-dock
+      # container (the vendored-cdylib tasks set VECTORY_VENDOR_CDYLIB
+      # themselves); VECTORY_VENDOR_CDYLIB here documents the intent on
+      # the host side, as the etassia-rs workflow does.
+      - uses: oxidize-rb/actions/cross-gem@v1
+        id: cross-gem
+        env:
+          VECTORY_VENDOR_CDYLIB: "1"
+        with:
+          platform: ${{ matrix.platform }}
+          ruby-versions: "3.4"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cross-gem-${{ matrix.platform }}
+          path: pkg/*-${{ matrix.platform }}.gem
+          if-no-files-found: error
+
+  smoke:
+    name: Smoke ${{ matrix.platform }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: x86_64-linux, os: ubuntu-22.04 }
+          - { platform: aarch64-linux, os: ubuntu-22.04-arm }
+          - { platform: x86_64-darwin, os: macos-15-intel }
+          - { platform: arm64-darwin, os: macos-15 }
+          - { platform: x64-mingw-ucrt, os: windows-2022 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cross-gem-${{ matrix.platform }}
+          path: pkg
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      # Installed-gem context, no bundler (the per-platform smoke lane):
+      # the gem's own dependencies resolve from rubygems.org.
+      - name: Install the packaged platform gem
+        shell: bash
+        run: |
+          set -euo pipefail
+          gem install --no-document pkg/vectory-*-${{ matrix.platform }}.gem
+          gem install --no-document -v "~> 0.1.7" canon
+
+      # The vendored cdylib must be inside the installed gem and must be
+      # the engine Vectory::Native picks up (etassia-rs's installed-gem
+      # check).
+      - name: Verify the engine loads from inside the installed gem
+        shell: bash
+        run: |
+          ruby -e '
+            require "vectory"
+            spec = Gem.loaded_specs.fetch("vectory")
+            abort "FAIL: installed platform is #{spec.platform}, expected ${{ matrix.platform }}" unless spec.platform.to_s == "${{ matrix.platform }}"
+            path = Vectory::Native.library_path or abort "FAIL: no vendored cdylib in the installed gem"
+            unless File.expand_path(path).start_with?(File.expand_path(spec.full_gem_path))
+              abort "FAIL: engine #{path} is not inside #{spec.full_gem_path}"
+            end
+            puts "vendored engine: #{path}"'
+
+      # scripts/smoke_native.rb roundtrips one corpus SVG byte-exactly
+      # against the Ruby lane and runs the svg_cleanup manipulation
+      # canon-equal — through the vendored engine, never a checkout.
+      - name: Smoke one corpus SVG natively (roundtrip + svg_cleanup)
+        shell: bash
+        env:
+          VECTORY_RUNTIME: auto
+        run: |
+          set -euo pipefail
+          dylib=$(ruby -r vectory -e 'puts Vectory::Native.library_path')
+          ruby scripts/smoke_native.rb "$dylib" \
+            spec/fixtures/svg_transform/pipeline_inputs/selected.svg \
+            spec/fixtures/svg_transform/pipeline_inputs/selected.svg
+
+  # The packaged gems ride the release as assets (the rubygems publish
+  # itself stays in release.yml — trusted publishing is registered per
+  # workflow name, an owner decision).
+  attach:
+    name: Attach platform gems to the release
+    needs: [ build, smoke ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cross-gem-*
+          merge-multiple: true
+          path: pkg
+
+      - name: Attach the platform gems to the tag's release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
+          artifacts: pkg/*.gem
+          artifactContentType: application/octet-stream
