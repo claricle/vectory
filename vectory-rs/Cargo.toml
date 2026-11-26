@@ -17,7 +17,15 @@
 #   emf-to-eikogram — the EMF-model → VIM transformer (the conversion
 #                  hub's EMF lane; emf-core is a pinned git dependency on
 #                  claricle/emf@main until it publishes)
+#   svg-to-eikogram — the SVG-model → VIM transformer (the reverse lane,
+#                  claricle/emf#90: ingests the SVG model into the VIM with
+#                  the Ruby translation's exact choices)
+#   eikogram-to-emf — the VIM → EMF-model transformer (the reverse lane:
+#                  lowers drawings onto the emf-core model, whose serializer
+#                  writes the bytes)
 #   emf88-parity  — the byte-parity acceptance harness (the emf#88 gate)
+#   emf90-parity  — the round-trip acceptance harness (the emf#90 gate:
+#                  EMF → VIM → SVG → VIM → EMF against the Ruby pipeline)
 [workspace]
 resolver = "2"
 members = [
@@ -25,6 +33,9 @@ members = [
     "crates/eikogram",
     "crates/eikogram-to-svg",
     "crates/emf-to-eikogram",
+    "crates/svg-to-eikogram",
+    "crates/eikogram-to-emf",
     "crates/emf88-parity",
+    "crates/emf90-parity",
     "crates/vectory-ffi",
 ]

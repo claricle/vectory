@@ -1,0 +1,13 @@
+[package]
+name = "emf90-parity"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The claricle/emf#90 round-trip acceptance harness: EMF -> VIM -> SVG -> VIM -> EMF and direct SVG -> EMF, compared file-by-file against the Ruby pipeline's bytes"
+
+[dev-dependencies]
+emf-to-eikogram = { path = "../emf-to-eikogram" }
+eikogram-to-svg = { path = "../eikogram-to-svg" }
+svg-to-eikogram = { path = "../svg-to-eikogram" }
+eikogram-to-emf = { path = "../eikogram-to-emf" }
+emf-core = { git = "https://github.com/claricle/emf", rev = "0a4f7ab6e6ba79407917cc3fdec226cb798fb748" }

@@ -57,13 +57,14 @@ pub mod raster;
 pub mod text;
 
 pub use drawing::{
-    BareRect, Canvas, ClipDef, ClipShape, Draw, DrawBody, Drawing, HatchPatternDef,
-    ImageArrangement, ImageDraw, Item, PathDraw, Preamble, RasterPatternDef, ShapeDraw, ShapeKind,
+    ArcForm, ArcKind, BareRect, Canvas, ClipDef, ClipShape, DevicePoint, DeviceRect, Draw,
+    DrawBody, Drawing, FigurePaint, HatchPatternDef, ImageArrangement, ImageDraw, Item,
+    PathDraw, PathProgram, Preamble, Provenance, RasterPatternDef, ShapeDraw, ShapeKind,
 };
 pub use geometry::{CoordJoin, Matrix, PathGeometry, Segment};
 pub use paint::{
-    Arrangement, Color, Dash, Fill, FillStyle, HatchStyle, LineCap, LineJoin, PathPaint, Stroke,
-    Width,
+    Arrangement, Color, Dash, DeviceBrush, DevicePaint, DevicePen, Fill, FillStyle, HatchStyle,
+    LineCap, LineJoin, PathPaint, Stroke, Width,
 };
 pub use raster::{Raster, RasterFormat};
-pub use text::{BaselineMode, TextAnchor, TextDraw};
+pub use text::{BaselineMode, TextAnchor, TextDraw, TextNative, TextRun};

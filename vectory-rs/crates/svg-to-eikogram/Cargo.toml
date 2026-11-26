@@ -1,0 +1,10 @@
+[package]
+name = "svg-to-eikogram"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The SVG-model → VIM transformer (claricle/emf#90): ingests the vectory SVG model into the Vector Image Model with the Ruby translation's exact choices"
+
+[dependencies]
+eikogram = { path = "../eikogram" }
+vectory = { path = "../vectory" }

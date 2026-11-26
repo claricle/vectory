@@ -80,6 +80,7 @@ pub fn render(
             },
             degenerate_y_repair: fix_broken_y,
             alias_namespace: options.namespace.as_deref() == Some("svg"),
+            scale: 1,
         },
         fix_broken_y,
         scaling,
@@ -442,12 +443,12 @@ impl Walker {
                     y: self.cal_y(i64::from(origin.y)),
                 });
                 self.items.push(Item::Draw(Draw {
-                    body: DrawBody::Path(PathDraw { geometry }),
+                    body: DrawBody::Path(PathDraw { geometry, program: None }),
                     paint: self.paint_now(),
                     arrangement: Arrangement::ContourOpen {
                         leading_fill_space: true,
                     },
-                }));
+                }..Default::default()));
                 self.current_x = f64::from(origin.x);
                 self.current_y = f64::from(origin.y);
             }
@@ -1180,7 +1181,7 @@ impl Walker {
             body: DrawBody::Shape(ShapeDraw { kind }),
             paint,
             arrangement: Arrangement::RegionFillFirst,
-        }));
+        }..Default::default()));
     }
 
     fn start_standalone(&mut self) -> PathGeometry {
@@ -1212,10 +1213,10 @@ impl Walker {
             stroke_from_fill: false,
         };
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint,
             arrangement: Arrangement::DeferredPath,
-        }));
+        }..Default::default()));
     }
 
     // --- poly families ---
@@ -1274,7 +1275,7 @@ impl Walker {
             });
         }
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: self.paint_now(),
             arrangement: if closed {
                 Arrangement::RegionStrokeFirst
@@ -1283,7 +1284,7 @@ impl Walker {
                     leading_fill_space: false,
                 }
             },
-        }));
+        }..Default::default()));
         let (xl, yl) = points[points.len() - 1];
         self.current_x = f64::from(xl);
         self.current_y = f64::from(yl);
@@ -1332,12 +1333,12 @@ impl Walker {
             });
         }
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen {
                 leading_fill_space: true,
             },
-        }));
+        }..Default::default()));
         let (xl, yl) = points[points.len() - 1];
         self.current_x = f64::from(xl);
         self.current_y = f64::from(yl);
@@ -1398,12 +1399,12 @@ impl Walker {
         };
         push_bezier_triplets(&mut geometry, ctrls);
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen {
                 leading_fill_space: true,
             },
-        }));
+        }..Default::default()));
         let (xl, yl) = points[points.len() - 1];
         self.current_x = f64::from(xl);
         self.current_y = f64::from(yl);
@@ -1467,7 +1468,7 @@ impl Walker {
             // resolution (fmt'd widths), not the attribute-map family.
             let paint = self.paint_now();
             self.items.push(Item::Draw(Draw {
-                body: DrawBody::Path(PathDraw { geometry }),
+                body: DrawBody::Path(PathDraw { geometry, program: None }),
                 paint,
                 arrangement: if closed {
                     Arrangement::RegionFillFirst
@@ -1476,7 +1477,7 @@ impl Walker {
                         leading_fill_space: false,
                     }
                 },
-            }));
+            }..Default::default()));
         }
         if let Some((xl, yl)) = last {
             self.current_x = f64::from(xl);
@@ -1536,7 +1537,7 @@ impl Walker {
         let fill = self.resolve_attrmap_fill();
         let stroke = self.resolve_attrmap_stroke();
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: PathPaint {
                 fill,
                 stroke: Some(stroke),
@@ -1544,7 +1545,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::AttrMap,
-        }));
+        }..Default::default()));
     }
 
     // --- arcs ---
@@ -1586,12 +1587,12 @@ impl Walker {
             y: self.cal_y_f(ey_raw),
         });
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: self.paint_now(),
             arrangement: Arrangement::ContourOpen {
                 leading_fill_space: true,
             },
-        }));
+        }..Default::default()));
     }
 
     fn emit_arc(
@@ -1644,31 +1645,31 @@ impl Walker {
                 });
                 geometry.push(Segment::Close);
                 self.items.push(Item::Draw(Draw {
-                    body: DrawBody::Path(PathDraw { geometry }),
+                    body: DrawBody::Path(PathDraw { geometry, program: None }),
                     paint: self.paint_now(),
                     arrangement: Arrangement::FormClosed,
-                }));
+                }..Default::default()));
                 self.current_x = center_x;
                 self.current_y = center_y;
             }
             ArcMode::Chord => {
                 geometry.push(Segment::Close);
                 self.items.push(Item::Draw(Draw {
-                    body: DrawBody::Path(PathDraw { geometry }),
+                    body: DrawBody::Path(PathDraw { geometry, program: None }),
                     paint: self.paint_now(),
                     arrangement: Arrangement::FormClosed,
-                }));
+                }..Default::default()));
                 self.current_x = end_pt.0;
                 self.current_y = end_pt.1;
             }
             ArcMode::Arc => {
                 self.items.push(Item::Draw(Draw {
-                    body: DrawBody::Path(PathDraw { geometry }),
+                    body: DrawBody::Path(PathDraw { geometry, program: None }),
                     paint: self.paint_now(),
                     arrangement: Arrangement::ContourOpen {
                         leading_fill_space: true,
                     },
-                }));
+                }..Default::default()));
                 self.current_x = end_pt.0;
                 self.current_y = end_pt.1;
             }
@@ -1776,7 +1777,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::RegionFillFirst,
-        }));
+        }..Default::default()));
     }
 
     fn emit_ext_text_a(&mut self, text: &emf_core::ExtTextOut<u8>) {
@@ -2045,7 +2046,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::RegionFillFirst,
-        }));
+        }..Default::default()));
     }
 
     /// BitBlt/StretchBlt image emission through the calibrated placement
@@ -2096,7 +2097,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::RegionFillFirst,
-        }));
+        }..Default::default()));
     }
 
     /// AlphaBlend/TransparentBlt/StretchBlt fallback: the bitmap is decoded
@@ -2148,7 +2149,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::RegionFillFirst,
-        }));
+        }..Default::default()));
     }
 
     /// BitBlt with no source bitmap: a brush-filled rectangle path.
@@ -2199,7 +2200,7 @@ impl Walker {
                         stroke_from_fill: false,
                     },
                     arrangement: Arrangement::BareShape,
-                }));
+                }..Default::default()));
                 return;
             }
         }
@@ -2226,7 +2227,7 @@ impl Walker {
             y: pos_y + size_y,
         });
         self.items.push(Item::Draw(Draw {
-            body: DrawBody::Path(PathDraw { geometry }),
+            body: DrawBody::Path(PathDraw { geometry, program: None }),
             paint: PathPaint {
                 fill: Some(Fill {
                     style: FillStyle::Solid { color },
@@ -2236,7 +2237,7 @@ impl Walker {
                 stroke_from_fill: false,
             },
             arrangement: Arrangement::SolidRectFill,
-        }));
+        }..Default::default()));
     }
 
     /// CreateMonoBrush / CreateDibPatternBrushPt: extract the embedded DIB,

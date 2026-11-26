@@ -1,6 +1,8 @@
-//! Painting vocabulary: fills, strokes, hatch fills, and the arrangement a
-//! drawn shape's paint attaches to its geometry with.
+//! Painting vocabulary: fills, strokes, hatch fills, resolved device paint,
+//! and the arrangement a drawn shape's paint attaches to its geometry with.
 #![allow(dead_code)]
+
+use crate::drawing::{DevicePoint, DeviceRect};
 
 /// An opaque sRGB colour carried channel-wise; alpha lives outside the
 /// reference paint model (colour emission is channel-hex).
@@ -147,6 +149,43 @@ pub struct PathPaint {
     /// set, the stroke colour is the fill colour and the width is the
     /// one-pixel form.
     pub stroke_from_fill: bool,
+}
+
+/// The resolved device paint a drawn run selects. Every value is final:
+/// the producing transformer resolved units, origin shifts, and style bits,
+/// so a lowering emits them as the run's selected state without further
+/// arithmetic. The pen and brush are both always carried for a run that
+/// selects state (a null pen or brush carries the null form); the miter
+/// limit rides along when the run sets one.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct DevicePaint {
+    pub pen: Option<DevicePen>,
+    pub brush: Option<DeviceBrush>,
+    /// The miter limit value the run sets, in its wire form.
+    pub miter_limit: Option<f32>,
+}
+
+/// A resolved device pen: the style bits, the width in device units, and
+/// the colour (a null pen carries the null colour form).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DevicePen {
+    pub style: u32,
+    pub width: DevicePoint,
+    pub color: Color,
+}
+
+/// The resolved device brush: a solid (or null) colour form, or a reference
+/// to a defined raster pattern the run selects (definitions keep their
+/// handles; a referenced brush is not deleted with the run).
+#[derive(Clone, Debug, PartialEq)]
+pub enum DeviceBrush {
+    Solid {
+        style: u32,
+        color: Color,
+    },
+    Pattern {
+        id: String,
+    },
 }
 
 /// How a drawn shape's paint attaches to its geometry. Each value is a

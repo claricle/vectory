@@ -169,6 +169,14 @@ impl<'a> Emitter<'a> {
             Item::DefineHatchPattern(def) => {
                 self.emit_hatch_pattern(&def.id, def.style, def.foreground, def.background);
             }
+            // The canvas-state and clip-bracket items are the reverse lane's
+            // resolved lowering structure; the SVG projection carries them
+            // through the drawn content they bracket, so they emit nothing.
+            Item::StatePush
+            | Item::StatePop
+            | Item::ClipRectangle(_)
+            | Item::ClipReset
+            | Item::ClipFromPath => {}
             Item::Draw(draw) => match &draw.body {
                 DrawBody::Shape(shape) => {
                     self.emit_shape(shape.kind, &draw.paint, draw.arrangement)
