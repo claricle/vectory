@@ -50,6 +50,11 @@ module DepDirection
       note: "the claricle/emf#88 byte-parity acceptance harness; binds the two transformers to compare final bytes against the Ruby renderer",
       allowed: %w[emf-to-eikogram eikogram-to-svg],
     },
+    "vectory-ffi" => {
+      role: "binding",
+      note: "the C ABI over the SVG model for the Ruby gem's native engine (lane 3); surfaces the vectory crate only",
+      allowed: %w[vectory],
+    },
   }.freeze
 
   module_function

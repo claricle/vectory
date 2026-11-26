@@ -17,3 +17,6 @@ gem "rubocop-rake"
 gem "rubocop-rspec"
 
 gem "png_conform", "~> 0.1.5", group: :test
+
+# The vendored-cdylib skeleton's platform table (rakelib/native.rake)
+gem "rb_sys", "~> 0.9"

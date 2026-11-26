@@ -23,6 +23,11 @@ module Vectory
   # Core utilities
   autoload :Utils, "vectory/utils"
 
+  # The dual-engine runtime (lane 3): the native SVG model and the switch
+  autoload :Native, "vectory/native"
+  autoload :Runtime, "vectory/runtime"
+  autoload :RuntimeSteps, "vectory/runtime_steps"
+
   # Format classes
   autoload :Configuration, "vectory/configuration"
   autoload :Image, "vectory/image"

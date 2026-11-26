@@ -27,6 +27,15 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
     f.match(%r{^(bin|spec|TODO\.[^/]+)/})
   end
+  # Binaries are never tracked in git, and the ruby (source) gem stays
+  # slim: the vectory-ffi cdylib is vendored ONLY into platform gems by
+  # the cross-gem build (rakelib/native.rake's native:<platform> tasks,
+  # which set VECTORY_VENDOR_CDYLIB=1), never by a plain `gem build`.
+  spec.files.reject! do |f|
+    f =~ /\.(dll|so|dylib)\Z/ &&
+      !(ENV["VECTORY_VENDOR_CDYLIB"] == "1" &&
+        f =~ %r{\Alib/vectory/native/(?:libvectory_ffi|vectory_ffi)\.(?:so|dylib|dll)\Z})
+  end
   spec.required_ruby_version = ">= 3.1.0"
 
   spec.add_dependency "base64"
