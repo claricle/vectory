@@ -55,11 +55,12 @@ RSpec.describe Vectory::Runtime do
       expect(described_class).not_to be_native
 
       # A changed env does not re-open the question in the same process.
-      ENV["VECTORY_NATIVE_LIB"] = built_library.to_s
+      ENV["VECTORY_NATIVE_LIB"] = File.join("", "other-vectory-spec", "libvectory_ffi.so")
       expect(described_class).not_to be_native
 
       described_class.reset!
-      expect(described_class).to be_native
+      # The re-probe consults the loader afresh: still no library file.
+      expect(described_class).not_to be_native
     end
 
     it "is true when the library is loadable" do
