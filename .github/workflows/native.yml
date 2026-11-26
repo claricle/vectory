@@ -1,0 +1,59 @@
+# The native lane (lane 3, claricle/vectory#99): the Rust SVG model from
+# this repository's vectory-rs workspace, built from the pinned workspace
+# rev (VECTORY_RS_REF — the ETASSIA_RS_REF pattern, pointed at claricle/
+# vectory's own rev) and driven through Vectory::Runtime in `native` mode.
+# Every other CI job (the cimas rake workflow) runs without the library
+# and so proves the pure-Ruby path. Linux only: Ruby and Rust must share
+# a libm.
+name: native
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  native-runtime:
+    name: native-runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # The vectory-rs workspace rev the native lane is gated on. Bump it
+      # to the new workspace rev whenever the ABI or the model moves.
+      VECTORY_RS_REF: 7d4d487979baf38a05d19dfe26b99a55b98d0768
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VECTORY_RS_REF }}
+          path: vectory-rs-pinned
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Build the pinned vectory-ffi cdylib
+        run: cargo build --release --locked -p vectory-ffi
+        working-directory: vectory-rs-pinned
+
+      - name: Native ledger and runtime-switch specs under the demanded engine
+        env:
+          VECTORY_NATIVE_LIB: ${{ github.workspace }}/vectory-rs-pinned/target/release/libvectory_ffi.so
+          VECTORY_RUNTIME: native
+        run: >-
+          bundle exec rspec spec/vectory/runtime_spec.rb
+          spec/vectory/native_ledger_spec.rb
+
+      - name: Per-platform smoke manipulates one corpus SVG natively
+        env:
+          VECTORY_RUNTIME: auto
+        run: bundle exec rake native:smoke
