@@ -1,0 +1,23 @@
+[package]
+name = "eikogram-ffi"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "The C ABI over the EMF -> VIM -> SVG conversion (claricle/emf#91): EMF bytes in, emfsvg-profile SVG bytes out, for the Ruby gem's native render engine"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Pinned git dependency on claricle/emf@main (pre-publication cross-repo pin —
+# the same rev emf-to-eikogram pins, so cargo resolves one checkout). Hosts
+# without https access to github can rewrite to ssh per-invocation without
+# config mutation (see emf-to-eikogram/Cargo.toml for the invocation).
+emf-core = { git = "https://github.com/claricle/emf", rev = "0a4f7ab6e6ba79407917cc3fdec226cb798fb748" }
+emf-to-eikogram = { path = "../emf-to-eikogram" }
+eikogram-to-svg = { path = "../eikogram-to-svg" }
+vectory = { path = "../vectory" }
+serde_json = "1"
+
+[dev-dependencies]
+libloading = "0.8"

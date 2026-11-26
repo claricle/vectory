@@ -55,6 +55,11 @@ module DepDirection
       note: "the C ABI over the SVG model for the Ruby gem's native engine (lane 3); surfaces the vectory crate only",
       allowed: %w[vectory],
     },
+    "eikogram-ffi" => {
+      role: "binding",
+      note: "the C ABI over the EMF -> VIM -> SVG conversion for the Ruby gem's native render engine (claricle/emf#91); surfaces the two transformers; emf-core is an external pinned git dependency, not a workspace crate",
+      allowed: %w[emf-to-eikogram eikogram-to-svg vectory],
+    },
   }.freeze
 
   module_function
