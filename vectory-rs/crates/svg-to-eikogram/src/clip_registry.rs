@@ -320,14 +320,12 @@ impl ClipPathRegistry {
             if unused_rectangle_bounds(tree, clip).is_none() {
                 continue;
             }
-            let all_children = (begin..=end)
-                .all(|position| self.interval_child(tree, children[position], clip));
+            let all_children =
+                (begin..=end).all(|position| self.interval_child(tree, children[position], clip));
             if !all_children {
                 if std::env::var("EMF_DEBUG_INTERVALS").is_ok() {
                     let failing = (begin..=end)
-                        .find(|position| {
-                            !self.interval_child(tree, children[*position], clip)
-                        })
+                        .find(|position| !self.interval_child(tree, children[*position], clip))
                         .unwrap_or(begin);
                     eprintln!(
                         "clip{clip} rejected: interval_child fails at child#{failing} ({} clip={:?})",
@@ -336,10 +334,7 @@ impl ClipPathRegistry {
                     );
                     if tree.kind_name(children[failing]) == "defs" {
                         for def_child in tree.children(children[failing]) {
-                            eprintln!(
-                                "    defs child: {}",
-                                tree.kind_name(*def_child)
-                            );
+                            eprintln!("    defs child: {}", tree.kind_name(*def_child));
                         }
                     }
                 }

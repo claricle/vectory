@@ -521,7 +521,11 @@ impl TreeBuilder<'_> {
         })
     }
 
-    fn clip_path(&mut self, node: &vectory::Element, root: &vectory::Element) -> Result<usize, String> {
+    fn clip_path(
+        &mut self,
+        node: &vectory::Element,
+        root: &vectory::Element,
+    ) -> Result<usize, String> {
         // The children build first (their source tags feed the canonical
         // checks), then the clip kind.
         let mut children = Vec::new();

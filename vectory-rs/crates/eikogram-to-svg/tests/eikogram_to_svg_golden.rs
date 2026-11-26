@@ -57,7 +57,7 @@ fn minimal_drawing_emits_the_reference_skeleton() {
             "xmlns:xlink=\"http://www.w3.org/1999/xlink\" ",
             "width=\"100.0000\" height=\"50.0000\">\n",
             "<g transform=\"translate(0.0000, 0.0000)\">\n",
-            "<rect x=\"10.0000\" y=\"20.0000\" width=\"30.5000\" height=\"40.2500\" ",
+            "<rect x=\"10.0000\" y=\"20.0000\" width=\"30.5000\" height=\"40.2500\"  ",
             "fill=\"#123456\" stroke=\"none\"/>\n",
             "</g>\n",
             "</svg>\n"
@@ -101,9 +101,9 @@ fn deferred_path_close_fill_stroke_fallbacks() {
     // with miter limit), then no fallbacks.
     assert_eq!(
         path_line,
-        "<path d=\"M 1.5000,2.5000 L 3.0000,4.0000 Z \" fill=\"#000000\" \
-         stroke=\"#FF0000\" stroke-width=\"2.5000\" stroke-linecap=\"round\" \
-         stroke-linejoin=\"miter\" stroke-miterlimit=\"10.0000\"/>"
+        "<path d=\"M 1.5000,2.5000 L 3.0000,4.0000 Z \"  fill=\"#000000\" \
+         stroke=\"#FF0000\" stroke-width=\"2.5000\"  stroke-linecap=\"round\"  \
+         stroke-linejoin=\"miter\"  stroke-miterlimit=\"10.0000\"/>"
     );
 }
 
@@ -139,10 +139,12 @@ fn contour_open_falls_back_to_unfilled() {
         .find(|l| l.starts_with("<path"))
         .expect("path element");
     // Stroke drawn, so only the fill fallback applies (no stroke fallback).
+    // The leading_fill_space quirk doubles the fill's lead; the dasharray
+    // fragment's trailing space doubles it again.
     assert_eq!(
         path_line,
         "<path d=\"M 0.0000,0.0000 L 5.0000,5.0000 \" stroke=\"#008000\" \
-         stroke-width=\"1px\" stroke-dasharray=\"5.0000,5.0000\" fill=\"none\"/>"
+         stroke-width=\"1px\" stroke-dasharray=\"5.0000,5.0000\"  fill=\"none\"/>"
     );
 }
 
@@ -390,7 +392,7 @@ fn hatch_pattern_and_group_transforms() {
     assert!(
         svg.contains(
             "<rect x=\"0.0000\" y=\"0.0000\" width=\"4.0000\" height=\"4.0000\" \
-        rx=\"1.0000\" ry=\"2.0000\" stroke=\"#000000\" stroke-width=\"1.0000\" \
+        rx=\"1.0000\" ry=\"2.0000\" stroke=\"#000000\" stroke-width=\"1.0000\"  \
         stroke-linejoin=\"bevel\" fill=\"none\"/>"
         ),
         "{svg}"

@@ -63,8 +63,8 @@ mod ingest_text {
 pub use clip_registry::ClipPathRegistry;
 pub use debug::{debug_tree, DebugKindRef};
 pub use elements::{build_tree, Tree};
-pub use provenance::line_record_kind;
 pub use ingest::{ingest, IngestFailure, Scaler, Viewport};
+pub use provenance::line_record_kind;
 
 use eikogram::Drawing;
 

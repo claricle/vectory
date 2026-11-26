@@ -3,7 +3,6 @@
 //! exact template match against the raw source tag and the attribute
 //! values, mirroring the reference `Svg::Elements` canonical forms.
 
-use crate::elements::Element;
 use crate::path_data::Command;
 
 fn attrs_names(node: &vectory::Element) -> Vec<&str> {
@@ -504,10 +503,8 @@ fn fill_first_style(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     }
     let d = node.attribute("d").unwrap_or("");
     let miter = node.attribute("stroke-miterlimit");
-    if let Some(miter) = miter {
-        if join != "miter" {
-            return false;
-        }
+    if miter.is_some() && join != "miter" {
+        return false;
     }
     let Some(source) = source_tag else {
         return false;
@@ -830,7 +827,10 @@ fn unused_rectangle_points(d: &str) -> Option<[f64; 4]> {
         [values[6], values[7], left, bottom],
         [values[8], values[9], left, top],
     ];
-    if !same.iter().all(|pair| pair[0] == pair[2] && pair[1] == pair[3]) {
+    if !same
+        .iter()
+        .all(|pair| pair[0] == pair[2] && pair[1] == pair[3])
+    {
         return None;
     }
     if left > right || top > bottom {
@@ -1101,10 +1101,7 @@ mod golden_153 {
         node.set_attribute("stroke-linejoin", "round");
         node.set_attribute("fill", "none");
         assert!(two_point_line(d), "two_point_line");
-        assert!(
-            stroked_path(&node, Some(tag), false, false),
-            "stroked_path"
-        );
+        assert!(stroked_path(&node, Some(tag), false, false), "stroked_path");
         assert!(canonical_polyline(&node, Some(tag)), "canonical_polyline");
     }
 

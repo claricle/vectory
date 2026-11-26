@@ -379,8 +379,11 @@ fn dump_direct_outputs() {
     for (name, golden_svg) in &corpus.goldens {
         match direct(golden_svg) {
             Ok(bytes) => {
-                std::fs::write(std::path::Path::new(&dir).join(format!("{name}.emf")), &bytes)
-                    .expect("write dump");
+                std::fs::write(
+                    std::path::Path::new(&dir).join(format!("{name}.emf")),
+                    &bytes,
+                )
+                .expect("write dump");
                 written += 1;
             }
             Err(error) => {
