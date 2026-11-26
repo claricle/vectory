@@ -1353,8 +1353,7 @@ impl<'a> Ingest<'a> {
             return Ok(Draw::default());
         }
         let transformed = !matrix_identity(&transform);
-        let _ = transformed;
-        let _clip = self.clip_bounds_for_text(id);
+        let clip = self.clip_bounds_for_text(id);
         let rotation = canonical_rotation;
         // The effective text scaler: the finer native grid when the
         // recovery carried a native height and every value survives it.
@@ -1455,11 +1454,17 @@ impl<'a> Ingest<'a> {
             crate::color::SvgColor::Rgb { red, green, blue } => Color::new(red, green, blue),
             crate::color::SvgColor::Null => Color::new(0, 0, 0),
         };
-        // The font-state signature and its adjacency reuse.
+        // The font-state signature and its adjacency reuse. The reference
+        // only reuses the selected font when the run carries NO clip wrap
+        // and NO transform (`reuse: !wrap_with_clip && !transformed`) — a
+        // wrapped run's scope restore follows the deletion, so the
+        // deletion is never the stream tail.
         let signature: TextSignature = (logfont.clone(), color, align);
-        let continuation = self.text_tail.as_ref().is_some_and(|(previous, index)| {
-            *previous == signature && index + 1 == self.items.len()
-        });
+        let wrapped = clip.is_some() || transformed || scale_override.is_some();
+        let continuation = !wrapped
+            && self.text_tail.as_ref().is_some_and(|(previous, index)| {
+                *previous == signature && index + 1 == self.items.len()
+            });
         if continuation {
             self.text_tail = None;
         }

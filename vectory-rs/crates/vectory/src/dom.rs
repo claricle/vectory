@@ -202,6 +202,7 @@ impl Element {
                 name: name.to_string(),
                 value: value.to_string(),
                 namespace_uri: None,
+                lead: 1,
             });
         }
     }
@@ -216,9 +217,26 @@ pub struct Attribute {
     pub name: String,
     pub value: String,
     pub namespace_uri: Option<String>,
+    /// The whitespace quirk: the number of spaces the serializer writes
+    /// before this attribute. Parsing always sets 1 (a parsed document's
+    /// inter-attribute whitespace is not representable); emitters set the
+    /// reference renderer's fragment-composition counts (2 at the raw
+    /// families' double-space sites).
+    pub lead: u8,
 }
 
 impl Attribute {
+    /// Builds an attribute with the plain single-space lead.
+    #[must_use]
+    pub fn new(name: &str, value: &str) -> Self {
+        Attribute {
+            name: name.to_string(),
+            value: value.to_string(),
+            namespace_uri: None,
+            lead: 1,
+        }
+    }
+
     /// The local part of the qualified name (`xlink:href` → `href`).
     #[must_use]
     pub fn local_name(&self) -> &str {

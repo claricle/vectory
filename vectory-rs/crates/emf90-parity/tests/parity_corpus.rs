@@ -362,6 +362,36 @@ fn direct_translation_gate() {
     );
 }
 
+/// Dumps every direct-translation output for offline signature analysis
+/// (run with EMF_DUMP_DIR=<path>; writes <name>.emf per fixture).
+#[test]
+fn dump_direct_outputs() {
+    let Ok(dir) = std::env::var("EMF_DUMP_DIR") else {
+        return;
+    };
+    let Some(corpus) = load_corpus() else {
+        eprintln!("parity corpus not configured; skipping");
+        return;
+    };
+    std::fs::create_dir_all(&dir).expect("create dump dir");
+    let mut written = 0usize;
+    let mut failed = 0usize;
+    for (name, golden_svg) in &corpus.goldens {
+        match direct(golden_svg) {
+            Ok(bytes) => {
+                std::fs::write(std::path::Path::new(&dir).join(format!("{name}.emf")), &bytes)
+                    .expect("write dump");
+                written += 1;
+            }
+            Err(error) => {
+                eprintln!("dump {name}: {error}");
+                failed += 1;
+            }
+        }
+    }
+    eprintln!("dumped {written} outputs ({failed} failures) to {dir}");
+}
+
 /// Per-file gate for a single name (debugging helper; run with
 /// PARITY_ONE=<name> and PARITY_OUT=<path> for byte dumps).
 #[test]

@@ -60,7 +60,10 @@ mod ingest_text {
     pub use crate::text::{canonical_rotation, Rotation};
 }
 
+pub use clip_registry::ClipPathRegistry;
 pub use debug::{debug_tree, DebugKindRef};
+pub use elements::{build_tree, Tree};
+pub use provenance::line_record_kind;
 pub use ingest::{ingest, IngestFailure, Scaler, Viewport};
 
 use eikogram::Drawing;
@@ -380,6 +383,16 @@ pub mod debug {
                 .map(|(id, (kind, _))| (id, format!("{kind:?}")))
                 .collect()
         }
+    }
+
+    /// The defs canonical-pattern recovery result, for parity debugging.
+    #[must_use]
+    pub fn debug_canonical_pattern(
+        node: &vectory::Element,
+        root: &vectory::Element,
+        selected: bool,
+    ) -> bool {
+        crate::provenance::canonical_pattern(node, root, selected).is_some()
     }
 
     /// Builds the debug tree for a source document.

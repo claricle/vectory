@@ -281,6 +281,7 @@ fn bind_target(document: &mut Document, prefix: &str, uri: &str) {
         name,
         value: uri.to_string(),
         namespace_uri: Some(crate::namespace::XMLNS_NAMESPACE_URI.to_string()),
+        lead: 1,
     });
 }
 
@@ -354,6 +355,7 @@ fn remap_element(element: &mut Element, request: &BindingRequest) {
                 name,
                 value,
                 namespace_uri: None,
+                lead: 1,
             });
         }
     }

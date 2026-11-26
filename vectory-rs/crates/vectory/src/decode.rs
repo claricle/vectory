@@ -200,6 +200,7 @@ fn build_element(
                 .map_err(Error::from)?
                 .into_owned(),
             namespace_uri: None,
+            lead: 1,
         });
     }
 

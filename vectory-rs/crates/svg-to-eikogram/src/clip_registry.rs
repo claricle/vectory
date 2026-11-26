@@ -103,6 +103,25 @@ impl ClipPathRegistry {
         self.interval_groups.contains_key(&element)
     }
 
+    /// Debug introspection for the parity iteration (not an API contract):
+    /// the planned interval starts as (element, clip) pairs.
+    #[must_use]
+    pub fn interval_starts_debug(&self) -> Vec<(usize, usize)> {
+        let mut out: Vec<(usize, usize)> = self
+            .interval_starts
+            .iter()
+            .map(|(element, clip)| (*element, *clip))
+            .collect();
+        out.sort();
+        out
+    }
+
+    /// Debug introspection: a clip's planned unused-rectangle bounds.
+    #[must_use]
+    pub fn unused_rectangle_debug(&self, tree: &Tree, clip: usize) -> Option<[f64; 4]> {
+        unused_rectangle_bounds(tree, clip)
+    }
+
     fn plan_selected_clips(&mut self, tree: &Tree, group: usize) {
         for child in tree.children(group).to_vec() {
             self.plan_selected_clips(tree, child);
@@ -253,6 +272,17 @@ impl ClipPathRegistry {
             .map(|clip| (clip, by_clip[&clip].clone()))
             .filter(|(_, indices)| indices.len() >= 2)
             .collect();
+        if std::env::var("EMF_DEBUG_INTERVALS").is_ok() {
+            for (clip, indices) in &candidates {
+                eprintln!(
+                    "candidate clip{clip} n={} first={} last={} bounds={:?}",
+                    indices.len(),
+                    indices[0],
+                    indices[indices.len() - 1],
+                    unused_rectangle_bounds(tree, *clip)
+                );
+            }
+        }
         candidates
             .sort_by_key(|(_, indices)| std::cmp::Reverse(indices[indices.len() - 1] - indices[0]));
         let mut occupied: Vec<(usize, usize)> = Vec::new();
@@ -275,7 +305,10 @@ impl ClipPathRegistry {
                             || self.lookup(tree.kind(children[position]).clip_path()) == Some(clip)
                     });
                     if parents == 0 {
-                        uniform
+                        // The reference accepts a non-uniform outermost
+                        // range (inner clips nest their own scopes) and
+                        // only requires uniformity for nested ranges.
+                        !uniform
                     } else {
                         parents == 1 && uniform
                     }
@@ -287,7 +320,29 @@ impl ClipPathRegistry {
             if unused_rectangle_bounds(tree, clip).is_none() {
                 continue;
             }
-            if !(begin..=end).all(|position| self.interval_child(tree, children[position], clip)) {
+            let all_children = (begin..=end)
+                .all(|position| self.interval_child(tree, children[position], clip));
+            if !all_children {
+                if std::env::var("EMF_DEBUG_INTERVALS").is_ok() {
+                    let failing = (begin..=end)
+                        .find(|position| {
+                            !self.interval_child(tree, children[*position], clip)
+                        })
+                        .unwrap_or(begin);
+                    eprintln!(
+                        "clip{clip} rejected: interval_child fails at child#{failing} ({} clip={:?})",
+                        tree.kind_name(children[failing]),
+                        tree.clip_attr(children[failing])
+                    );
+                    if tree.kind_name(children[failing]) == "defs" {
+                        for def_child in tree.children(children[failing]) {
+                            eprintln!(
+                                "    defs child: {}",
+                                tree.kind_name(*def_child)
+                            );
+                        }
+                    }
+                }
                 continue;
             }
             self.interval_starts.insert(children[begin], clip);

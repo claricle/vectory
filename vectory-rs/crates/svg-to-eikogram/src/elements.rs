@@ -232,6 +232,32 @@ impl Tree {
         &self.elements[id].kind
     }
 
+    /// A short kind name for parity debugging (not an API contract).
+    #[must_use]
+    pub fn kind_name(&self, id: usize) -> &'static str {
+        match &self.elements[id].kind {
+            Kind::Rect { .. } => "rect",
+            Kind::Ellipse { .. } => "ellipse",
+            Kind::Circle { .. } => "circle",
+            Kind::Line { .. } => "line",
+            Kind::Polyline { .. } => "polyline",
+            Kind::Polygon { .. } => "polygon",
+            Kind::Path { .. } => "path",
+            Kind::Group { .. } => "g",
+            Kind::Text { .. } => "text",
+            Kind::Image { .. } => "image",
+            Kind::Defs { .. } => "defs",
+            Kind::ClipPath { .. } => "clipPath",
+            Kind::Open { .. } => "open",
+        }
+    }
+
+    /// The clip-path attribute of a node, for parity debugging.
+    #[must_use]
+    pub fn clip_attr(&self, id: usize) -> Option<&str> {
+        self.elements[id].kind.clip_path()
+    }
+
     /// The child ids of a node.
     #[must_use]
     pub fn children(&self, id: usize) -> &[usize] {
@@ -264,13 +290,9 @@ pub fn build_tree(document: &vectory::Document, source: &str) -> Result<Tree, St
         tags: HashMap::new(),
         source: source_tags,
         tag_index: &mut tag_index,
-        root_node: None,
     };
     let root = match &document.root {
-        Some(root) => {
-            builder.root_node = Some(root.clone());
-            builder.build(root)?
-        }
+        Some(root) => builder.build(root, root)?,
         None => return Err("missing root element".to_string()),
     };
     Ok(Tree {
@@ -285,14 +307,13 @@ struct TreeBuilder<'a> {
     tags: HashMap<usize, Option<String>>,
     source: Vec<String>,
     tag_index: &'a mut usize,
-    root_node: Option<vectory::Element>,
 }
 
 impl TreeBuilder<'_> {
-    fn build(&mut self, node: &vectory::Element) -> Result<usize, String> {
+    fn build(&mut self, node: &vectory::Element, root: &vectory::Element) -> Result<usize, String> {
         let name = node.local_name().to_string();
         if name == "clipPath" {
-            return self.clip_path(node);
+            return self.clip_path(node, root);
         }
         let kind = match name.as_str() {
             "rect" => self.rect(node)?,
@@ -305,17 +326,14 @@ impl TreeBuilder<'_> {
             "g" => self.group(node)?,
             "text" => self.text(node)?,
             "image" => self.image(node)?,
-            "defs" => {
-                let root = self.root_node.clone().expect("root stored before build");
-                self.defs(node, &root)?
-            }
+            "defs" => self.defs(node, root)?,
             other => Kind::Open {
                 name: other.to_string(),
             },
         };
         let mut children = Vec::new();
         for child in node.child_elements() {
-            children.push(self.build(child)?);
+            children.push(self.build(child, root)?);
         }
         let id = self.elements.len();
         self.elements.push(Element { id, kind, children });
@@ -503,12 +521,12 @@ impl TreeBuilder<'_> {
         })
     }
 
-    fn clip_path(&mut self, node: &vectory::Element) -> Result<usize, String> {
+    fn clip_path(&mut self, node: &vectory::Element, root: &vectory::Element) -> Result<usize, String> {
         // The children build first (their source tags feed the canonical
         // checks), then the clip kind.
         let mut children = Vec::new();
         for child in node.child_elements() {
-            children.push(self.build(child)?);
+            children.push(self.build(child, root)?);
         }
         let child_node = node.child_elements().next();
         let unused_rectangle_bounds =
@@ -691,7 +709,7 @@ fn collect_source_tags(source: &str) -> Vec<String> {
         let rest = &source[index..];
         let matches_tag = rest.len() >= 5
             && ((rest.starts_with("<path") && boundary(rest, 5))
-                || (rest.starts_with("<rect") && boundary(rest, 6)));
+                || (rest.starts_with("<rect") && boundary(rest, 5)));
         if !matches_tag {
             index += 1;
             continue;

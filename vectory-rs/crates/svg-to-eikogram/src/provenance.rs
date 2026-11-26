@@ -3,15 +3,8 @@
 //! exact template match against the raw source tag and the attribute
 //! values, mirroring the reference `Svg::Elements` canonical forms.
 
+use crate::elements::Element;
 use crate::path_data::Command;
-fn attrs_are(node: &vectory::Element, expected: &[(&str, &str)]) -> bool {
-    node.attributes.len() == expected.len()
-        && node
-            .attributes
-            .iter()
-            .zip(expected.iter())
-            .all(|(attribute, (name, value))| &attribute.name == name && &attribute.value == value)
-}
 
 fn attrs_names(node: &vectory::Element) -> Vec<&str> {
     node.attributes.iter().map(|a| a.name.as_str()).collect()
@@ -92,7 +85,8 @@ pub fn line_record_kind(
 
 /// `M x,y( L x,y){2,} ` — three or more points, trailing space.
 fn two_points_open(d: &str) -> bool {
-    contour_points(d, 3, false, ' ')
+    // The PolylineTo spelling: M plus two or more L points.
+    contour_points(d, 2, false, ' ')
 }
 
 /// The path's record family from its spelling.
@@ -133,7 +127,7 @@ pub fn path_record_kind(
 /// A NULL pen uses its solid brush to draw open polyline strokes; the
 /// renderer writes `fill=none` even though that brush is set.
 #[must_use]
-pub fn brush_fallback(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+pub fn brush_fallback(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(d) = node.attribute("d") else {
         return false;
     };
@@ -146,31 +140,28 @@ pub fn brush_fallback(node: &vectory::Element, _source_tag: Option<&str>) -> boo
     if !is_hex6_upper(stroke) {
         return false;
     }
-    let d = node.attribute("d").unwrap_or("");
-    attrs_are(
-        node,
-        &[
-            ("d", d),
-            ("stroke-width", "1px"),
-            ("stroke", stroke),
-            ("fill", "none"),
-        ],
-    )
+    let Some(source) = source_tag else {
+        return false;
+    };
+    source == format!("<path d=\"{d}\" stroke-width=\"1px\" stroke=\"{stroke}\" fill=\"none\" />")
 }
 
 /// An EndPath without a painting record: `fill="none" stroke="none"`.
-fn canonical_pending_path(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+fn canonical_pending_path(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(d) = node.attribute("d") else {
         return false;
     };
     if !open_mixed_run(d, false, false) {
         return false;
     }
-    attrs_are(node, &[("d", d), ("fill", "none"), ("stroke", "none")])
+    let Some(source) = source_tag else {
+        return false;
+    };
+    source == format!("<path d=\"{d}\" fill=\"none\" stroke=\"none\" />")
 }
 
 /// A pure cubic FillPath omits PolyBezier's extra current-position move.
-fn canonical_filled_curve(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+fn canonical_filled_curve(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(d) = node.attribute("d") else {
         return false;
     };
@@ -183,12 +174,15 @@ fn canonical_filled_curve(node: &vectory::Element, _source_tag: Option<&str>) ->
     if !is_hex6_upper(fill) {
         return false;
     }
-    attrs_are(node, &[("d", d), ("fill", fill), ("stroke", "none")])
+    let Some(source) = source_tag else {
+        return false;
+    };
+    source == format!("<path d=\"{d}\"  fill=\"{fill}\" stroke=\"none\" />")
 }
 
 /// FillPath retains every closed contour with a fill-first tag and no pen
 /// attributes.
-fn canonical_filled_contours(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+fn canonical_filled_contours(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(d) = node.attribute("d") else {
         return false;
     };
@@ -201,7 +195,10 @@ fn canonical_filled_contours(node: &vectory::Element, _source_tag: Option<&str>)
     if !is_hex6_upper(fill) {
         return false;
     }
-    attrs_are(node, &[("d", d), ("fill", fill), ("stroke", "none")])
+    let Some(source) = source_tag else {
+        return false;
+    };
+    source == format!("<path d=\"{d}\"  fill=\"{fill}\" stroke=\"none\" />")
 }
 
 /// Path painting implicitly closes only the fill, retaining open strokes;
@@ -253,7 +250,7 @@ fn canonical_orphan_or_empty_path(node: &vectory::Element, source_tag: Option<&s
 
 /// Zero-source BitBlt emits a style-first rectangle without a trailing
 /// space after `Z`.
-fn canonical_bitblt(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+fn canonical_bitblt(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(style) = node.attribute("style") else {
         return false;
     };
@@ -269,7 +266,10 @@ fn canonical_bitblt(node: &vectory::Element, _source_tag: Option<&str>) -> bool 
     if !bitblt_rectangle(d) {
         return false;
     }
-    attrs_are(node, &[("style", style), ("d", d)])
+    let Some(source) = source_tag else {
+        return false;
+    };
+    source == format!("<path style=\"{style}\" d=\"{d}\" />")
 }
 
 /// PolylineTo starts at the current position with an extra space before
@@ -375,7 +375,7 @@ fn parse_arc_spelling(d: &str) -> Option<(bool, Option<bool>)> {
 #[allow(clippy::too_many_arguments)]
 fn stroked_path(
     node: &vectory::Element,
-    _source_tag: Option<&str>,
+    source_tag: Option<&str>,
     fill_gap: bool,
     closed: bool,
 ) -> bool {
@@ -423,33 +423,36 @@ fn stroked_path(
             return false;
         }
     }
-    // The renderer's attachment order, without the fill-gap marker: the
-    // gap marker carries no DOM-visible fact (an open path's fill follows
-    // the extras either way), so the sequence decides.
-    let _ = fill_gap;
-    let mut expected: Vec<(&str, String)> = Vec::new();
+    // The reference's exact start-tag template; the whitespace between the
+    // attributes carries the fill-gap and closed distinctions.
+    let Some(source) = source_tag else {
+        return false;
+    };
+    let mut expected = String::from("<path ");
     if let Some(clip) = clip {
-        expected.push(("clip-path", clip.to_string()));
+        expected.push_str(&format!(" clip-path=\"{clip}\" "));
     }
-    expected.push(("d", d.to_string()));
-    expected.push(("stroke", stroke.to_string()));
-    expected.push(("stroke-width", width.to_string()));
+    expected.push_str(&format!(
+        "d=\"{d}\" stroke=\"{stroke}\" stroke-width=\"{width}\" "
+    ));
     if let Some(dash) = dash {
-        expected.push(("stroke-dasharray", dash.to_string()));
+        expected.push_str(&format!("stroke-dasharray=\"{dash}\" "));
     }
-    expected.push(("stroke-linecap", cap.to_string()));
-    expected.push(("stroke-linejoin", join.to_string()));
+    expected.push_str(&format!(
+        " stroke-linecap=\"{cap}\"  stroke-linejoin=\"{join}\" "
+    ));
     if let Some(miter) = miter {
-        expected.push(("stroke-miterlimit", miter.to_string()));
+        expected.push_str(&format!(" stroke-miterlimit=\"{miter}\" "));
     }
-    expected.push(("fill", fill.to_string()));
-    node.attributes.len() == expected.len()
-        && node
-            .attributes
-            .iter()
-            .zip(expected.iter())
-            .all(|(attribute, (name, value))| &attribute.name == name && &attribute.value == value)
-        && (closed || true)
+    if fill_gap {
+        expected.push(' ');
+    }
+    expected.push_str(&format!("fill=\"{fill}\""));
+    if closed {
+        expected.push(' ');
+    }
+    expected.push_str(" />");
+    source == expected
 }
 
 /// PolyPolygon's fill-first start tag with the trailing space after `Z`.
@@ -465,7 +468,7 @@ fn canonical_poly_polygon(node: &vectory::Element, source_tag: Option<&str>) -> 
 
 /// The fill-first template: the exact attribute sequence `d`, fill,
 /// stroke, width, extras (the renderer's fill-first start tag).
-fn fill_first_style(node: &vectory::Element, _source_tag: Option<&str>) -> bool {
+fn fill_first_style(node: &vectory::Element, source_tag: Option<&str>) -> bool {
     let Some(fill) = node.attribute("fill") else {
         return false;
     };
@@ -505,25 +508,20 @@ fn fill_first_style(node: &vectory::Element, _source_tag: Option<&str>) -> bool 
         if join != "miter" {
             return false;
         }
-        let _ = miter;
     }
-    let mut expected: Vec<(&str, String)> = vec![
-        ("d", d.to_string()),
-        ("fill", fill.to_string()),
-        ("stroke", stroke.to_string()),
-        ("stroke-width", width.to_string()),
-        ("stroke-linecap", cap.to_string()),
-        ("stroke-linejoin", join.to_string()),
-    ];
+    let Some(source) = source_tag else {
+        return false;
+    };
+    let mut expected = format!("<path d=\"{d}\"  fill=\"{fill}\" stroke=\"{stroke}\" ");
+    expected.push_str(&format!(
+        "stroke-width=\"{width}\"  stroke-linecap=\"{cap}\" "
+    ));
+    expected.push_str(&format!(" stroke-linejoin=\"{join}\" "));
     if let Some(miter) = miter {
-        expected.push(("stroke-miterlimit", miter.to_string()));
+        expected.push_str(&format!(" stroke-miterlimit=\"{miter}\" "));
     }
-    node.attributes.len() == expected.len()
-        && node
-            .attributes
-            .iter()
-            .zip(expected.iter())
-            .all(|(attribute, (name, value))| &attribute.name == name && &attribute.value == value)
+    expected.push_str("/>");
+    source == expected
 }
 
 /// The canonical matrix group: a lone `transform` attribute holding
@@ -795,33 +793,27 @@ pub fn canonical_unused_rectangle(
         return None;
     }
     let d = path.attribute("d")?;
-    let points = unused_rectangle_points(d)?;
-    let [left, top, right, bottom, left2, top2, right2, bottom2, left3, top3] = points;
-    if [left, top, right, bottom, left, top] != [left2, top2, right2, bottom2, left3, top3] {
-        return None;
-    }
-    if left > right || top > bottom {
-        return None;
-    }
-    Some([left, top, right, bottom])
+    unused_rectangle_points(d)
 }
 
-fn unused_rectangle_points(d: &str) -> Option<[f64; 10]> {
+fn unused_rectangle_points(d: &str) -> Option<[f64; 4]> {
+    // The reference's five-point closed rectangle: M x,y L r,t L r,b L x,b
+    // L x,t Z Z (twelve tokens; the fifth contour point repeats the
+    // first).
     let tokens: Vec<&str> = d.split(' ').filter(|t| !t.is_empty()).collect();
-    // M p1 L p2 L p3 L p4 L p5 Z Z, where p5 == p1 and p2/p4 share x etc.
-    if tokens.len() != 13 || tokens[0] != "M" {
+    if tokens.len() != 12 || tokens[0] != "M" {
         return None;
     }
-    for index in [3, 6, 9, 12] {
+    for index in [2, 4, 6, 8] {
         if tokens.get(index) != Some(&"L") {
             return None;
         }
     }
-    if tokens.get(11) != Some(&"Z") || tokens.get(13).is_some() {
+    if tokens.get(10) != Some(&"Z") || tokens.get(11) != Some(&"Z") || tokens.get(12).is_some() {
         return None;
     }
     let mut values: Vec<f64> = Vec::with_capacity(10);
-    for index in [1, 4, 7, 10, 12] {
+    for index in [1, 3, 5, 7, 9] {
         let token = tokens.get(index)?;
         let (x, y) = token.split_once(',')?;
         if !is_number(x) || !is_number(y) {
@@ -830,15 +822,21 @@ fn unused_rectangle_points(d: &str) -> Option<[f64; 10]> {
         values.push(x.parse::<f64>().ok()?);
         values.push(y.parse::<f64>().ok()?);
     }
-    // The template is `M x,y L r,t L r,b L x,b L x,t Z Z`: the fifth
-    // contour point repeats the first.
-    if tokens[12] != tokens[1] {
+    // Corner consistency: p2=(r,t), p3=(r,b), p4=(l,b), p5=(l,t).
+    let (left, top, right, bottom) = (values[0], values[1], values[2], values[5]);
+    let same = [
+        [values[2], values[3], right, top],
+        [values[4], values[5], right, bottom],
+        [values[6], values[7], left, bottom],
+        [values[8], values[9], left, top],
+    ];
+    if !same.iter().all(|pair| pair[0] == pair[2] && pair[1] == pair[3]) {
         return None;
     }
-    Some([
-        values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
-        values[8], values[9],
-    ])
+    if left > right || top > bottom {
+        return None;
+    }
+    Some([left, top, right, bottom])
 }
 
 fn selected_path_shape(d: &str) -> bool {
@@ -1087,6 +1085,44 @@ mod golden_153 {
         assert!(
             canonical_poly_polygon(&node, Some(TAG)),
             "canonical_poly_polygon"
+        );
+    }
+
+    #[test]
+    fn polyline_provenance_matches_the_one_space_form() {
+        let tag = "<path  clip-path=\"url(#clip-1144108930)\" d=\"M 67.0051,340.0269 L 68.0295,340.0269 \" stroke=\"#FFFFFF\" stroke-width=\"1px\"  stroke-linecap=\"round\"  stroke-linejoin=\"round\" fill=\"none\" />";
+        let d = "M 67.0051,340.0269 L 68.0295,340.0269 ";
+        let mut node = vectory::Element::new("path");
+        node.set_attribute("clip-path", "url(#clip-1144108930)");
+        node.set_attribute("d", d);
+        node.set_attribute("stroke", "#FFFFFF");
+        node.set_attribute("stroke-width", "1px");
+        node.set_attribute("stroke-linecap", "round");
+        node.set_attribute("stroke-linejoin", "round");
+        node.set_attribute("fill", "none");
+        assert!(two_point_line(d), "two_point_line");
+        assert!(
+            stroked_path(&node, Some(tag), false, false),
+            "stroked_path"
+        );
+        assert!(canonical_polyline(&node, Some(tag)), "canonical_polyline");
+    }
+
+    #[test]
+    fn polyline_provenance_rejects_the_two_space_form() {
+        let tag = "<path  clip-path=\"url(#clip-470211272)\" d=\"M 100.9897,332.9769 L 102.0141,332.9769 \" stroke=\"#C0C0C0\" stroke-width=\"1px\"  stroke-linecap=\"round\"  stroke-linejoin=\"round\"  fill=\"none\" />";
+        let d = "M 100.9897,332.9769 L 102.0141,332.9769 ";
+        let mut node = vectory::Element::new("path");
+        node.set_attribute("clip-path", "url(#clip-470211272)");
+        node.set_attribute("d", d);
+        node.set_attribute("stroke", "#C0C0C0");
+        node.set_attribute("stroke-width", "1px");
+        node.set_attribute("stroke-linecap", "round");
+        node.set_attribute("stroke-linejoin", "round");
+        node.set_attribute("fill", "none");
+        assert!(
+            !canonical_polyline(&node, Some(tag)),
+            "canonical_polyline must reject the two-space form"
         );
     }
 }

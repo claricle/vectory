@@ -163,6 +163,7 @@ fn seal_namespaces(
             name: attribute_name,
             value: uri.clone(),
             namespace_uri: Some(crate::namespace::XMLNS_NAMESPACE_URI.to_string()),
+            lead: 1,
         });
     }
     sealed

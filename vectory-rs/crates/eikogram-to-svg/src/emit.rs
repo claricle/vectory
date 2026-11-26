@@ -320,13 +320,19 @@ impl<'a> Emitter<'a> {
             }
         }
         // Shapes attach fill first, then stroke, then clip, then fallbacks.
+        // Leads per the reference's raw fragments: the fill-rule
+        // pseudo-entry doubles the painted fill's lead; the width
+        // fragment's trailing space doubles the cap/join extras; the clip
+        // fragment carries its own leading space.
         if let Some(fill) = &paint.fill {
             apply_raw_fill(&mut element, fill);
+            set_lead(&mut element, "fill", painted_fill_lead(Some(fill)));
         }
         if let Some(stroke) = &paint.stroke {
-            apply_raw_stroke(&mut element, stroke);
+            apply_raw_stroke(&mut element, stroke, true);
         }
         apply_clip(&mut element, paint.clip);
+        set_lead(&mut element, "clip-path", 2);
         if paint.fill.is_none() {
             element.set_attribute("fill", "none");
         }
@@ -354,9 +360,10 @@ impl<'a> Emitter<'a> {
                 // paints are present.
                 if let Some(fill) = &paint.fill {
                     apply_raw_fill(&mut element, fill);
+                    set_lead(&mut element, "fill", painted_fill_lead(Some(fill)));
                 }
                 if let Some(stroke) = &paint.stroke {
-                    apply_raw_stroke(&mut element, stroke);
+                    apply_raw_stroke(&mut element, stroke, true);
                 }
                 if paint.fill.is_none() {
                     element.set_attribute("fill", "none");
@@ -374,10 +381,11 @@ impl<'a> Emitter<'a> {
                 d.push('Z');
                 element.set_attribute("d", &d);
                 if let Some(stroke) = &paint.stroke {
-                    apply_raw_stroke(&mut element, stroke);
+                    apply_raw_stroke(&mut element, stroke, true);
                 }
                 if let Some(fill) = &paint.fill {
                     apply_raw_fill(&mut element, fill);
+                    set_lead(&mut element, "fill", painted_fill_lead(Some(fill)));
                 }
                 if paint.fill.is_none() {
                     element.set_attribute("fill", "none");
@@ -385,6 +393,7 @@ impl<'a> Emitter<'a> {
                 if paint.stroke.is_none() {
                     element.set_attribute("stroke", "none");
                 }
+                set_lead(&mut element, "clip-path", 2);
                 self.push_element(element);
                 self.push_text("\n");
             }
@@ -395,10 +404,11 @@ impl<'a> Emitter<'a> {
                 apply_clip_raw(&mut element, paint.clip);
                 element.set_attribute("d", &path_d(geometry));
                 if let Some(stroke) = &paint.stroke {
-                    apply_raw_stroke(&mut element, stroke);
+                    apply_raw_stroke(&mut element, stroke, true);
                 }
                 if let Some(fill) = &paint.fill {
                     apply_raw_fill(&mut element, fill);
+                    set_lead(&mut element, "fill", painted_fill_lead(Some(fill)));
                 }
                 if paint.fill.is_none() {
                     element.set_attribute("fill", "none");
@@ -406,6 +416,7 @@ impl<'a> Emitter<'a> {
                 if paint.stroke.is_none() {
                     element.set_attribute("stroke", "none");
                 }
+                set_lead(&mut element, "clip-path", 2);
                 self.push_element(element);
                 self.push_text("\n");
             }
@@ -415,9 +426,10 @@ impl<'a> Emitter<'a> {
                 element.set_attribute("d", &path_d(geometry));
                 if let Some(fill) = &paint.fill {
                     apply_raw_fill(&mut element, fill);
+                    set_lead(&mut element, "fill", painted_fill_lead(Some(fill)));
                 }
                 if let Some(stroke) = &paint.stroke {
-                    apply_raw_stroke(&mut element, stroke);
+                    apply_raw_stroke(&mut element, stroke, true);
                 }
                 if paint.fill.is_none() {
                     element.set_attribute("fill", "none");
@@ -425,6 +437,7 @@ impl<'a> Emitter<'a> {
                 if paint.stroke.is_none() {
                     element.set_attribute("stroke", "none");
                 }
+                set_lead(&mut element, "clip-path", 2);
                 self.push_element(element);
                 self.push_text("\n");
             }
@@ -433,13 +446,17 @@ impl<'a> Emitter<'a> {
                 apply_clip_raw(&mut element, paint.clip);
                 element.set_attribute("d", &path_d(geometry));
                 if let Some(stroke) = &paint.stroke {
-                    apply_raw_stroke(&mut element, stroke);
+                    apply_raw_stroke(&mut element, stroke, true);
                 }
-                let _ = leading_fill_space;
+                // The open fallback's lead: the LineTo family prefixes a
+                // space (two with the join fragment's own trailing one);
+                // the Polyline family does not.
                 element.set_attribute("fill", "none");
+                set_lead(&mut element, "fill", if leading_fill_space { 2 } else { 1 });
                 if paint.stroke.is_none() {
                     element.set_attribute("stroke", "none");
                 }
+                set_lead(&mut element, "clip-path", 2);
                 self.push_element(element);
                 self.push_text("\n");
             }
@@ -512,6 +529,7 @@ impl<'a> Emitter<'a> {
     fn emit_text(&mut self, text: &eikogram::TextDraw, paint: &PathPaint) {
         let mut element = Element::new("text");
         apply_clip(&mut element, paint.clip);
+        set_lead(&mut element, "clip-path", 2);
         if let Some(face) = &text.face {
             element.set_attribute("font-family", face);
         }
@@ -580,6 +598,7 @@ impl<'a> Emitter<'a> {
                 element.set_attribute("x", &fmt4(*x));
                 element.set_attribute("y", &fmt4(*y));
                 apply_clip(&mut element, paint.clip);
+                set_lead(&mut element, "clip-path", 2);
                 element.set_attribute("xlink:href", &href);
                 self.push_element(element);
                 self.push_text("\n");
@@ -601,6 +620,7 @@ impl<'a> Emitter<'a> {
                 element.set_attribute("height", &ruby_float_to_s(*height));
                 element.set_attribute("xlink:href", &href);
                 element.set_attribute("preserveAspectRatio", "none");
+                set_lead(&mut element, "preserveAspectRatio", 2);
                 self.push_element(element);
                 // No newline.
             }
@@ -617,6 +637,7 @@ impl<'a> Emitter<'a> {
                 element.set_attribute("height", &ruby_int_to_s(*height as f64));
                 element.set_attribute("xlink:href", &href);
                 element.set_attribute("preserveAspectRatio", "none");
+                set_lead(&mut element, "preserveAspectRatio", 2);
                 self.push_element(element);
                 // No newline.
             }
@@ -696,6 +717,14 @@ fn append_point(out: &mut String, x: f64, y: f64, tuple: bool) {
     }
 }
 
+/// Sets an attribute's lead-space quirk (the reference renderer's raw
+/// fragment-composition counts; the DOM model carries them as data).
+fn set_lead(element: &mut Element, name: &str, lead: u8) {
+    if let Some(attr) = element.attributes.iter_mut().find(|a| a.name == name) {
+        attr.lead = lead;
+    }
+}
+
 /// The raw-stream fill attachment (fill_draw): the solid fill's leading
 /// space is the reference fill-rule quirk.
 fn apply_raw_fill(element: &mut Element, fill: &eikogram::Fill) {
@@ -717,8 +746,19 @@ fn apply_raw_fill(element: &mut Element, fill: &eikogram::Fill) {
     }
 }
 
-/// The raw-stream stroke attachment (stroke_draw).
-fn apply_raw_stroke(element: &mut Element, stroke: &Stroke) {
+/// The painted-fill lead: the SOLID branch's fill-rule pseudo-entry makes
+/// two spaces; the NULL branch's bare `fill="none"` makes one.
+fn painted_fill_lead(fill: Option<&eikogram::Fill>) -> u8 {
+    match fill.map(|f| &f.style) {
+        Some(eikogram::FillStyle::Solid { .. } | eikogram::FillStyle::PatternRef { .. }) => 2,
+        _ => 1,
+    }
+}
+
+/// The raw-stream stroke attachment (stroke_draw). `quirk_leads` marks the
+/// cap/join/miter extras with the reference's double-space leads (the
+/// width fragment's trailing space composes with their leading spaces).
+fn apply_raw_stroke(element: &mut Element, stroke: &Stroke, quirk_leads: bool) {
     match stroke {
         Stroke::NoneWithZeroWidth => {
             element.set_attribute("stroke", "none");
@@ -747,6 +787,7 @@ fn apply_raw_stroke(element: &mut Element, stroke: &Stroke) {
                 }
                 element.set_attribute("stroke-dasharray", &value);
             }
+            let extra_lead = if quirk_leads { 2 } else { 1 };
             if let Some(cap) = cap {
                 element.set_attribute(
                     "stroke-linecap",
@@ -756,6 +797,7 @@ fn apply_raw_stroke(element: &mut Element, stroke: &Stroke) {
                         LineCap::Butt => "butt",
                     },
                 );
+                set_lead(element, "stroke-linecap", extra_lead);
             }
             if let Some(join) = join {
                 match join {
@@ -765,6 +807,10 @@ fn apply_raw_stroke(element: &mut Element, stroke: &Stroke) {
                         element.set_attribute("stroke-linejoin", "miter");
                         element.set_attribute("stroke-miterlimit", &fmt4(*limit));
                     }
+                }
+                set_lead(element, "stroke-linejoin", extra_lead);
+                if matches!(join, LineJoin::Miter { .. }) {
+                    set_lead(element, "stroke-miterlimit", extra_lead);
                 }
             }
         }

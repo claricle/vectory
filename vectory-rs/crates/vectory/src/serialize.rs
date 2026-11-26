@@ -121,7 +121,11 @@ fn write_element(out: &mut String, element: &Element, profile: Profile) {
 }
 
 fn write_attribute(out: &mut String, attribute: &crate::dom::Attribute, profile: Profile) {
-    out.push(' ');
+    // The attribute's lead whitespace (the reference renderer's
+    // fragment-composition quirk; parsed documents carry 1).
+    for _ in 0..attribute.lead.max(1) {
+        out.push(' ');
+    }
     out.push_str(&attribute.name);
     out.push_str("=\"");
     escape_attribute(out, &attribute.value, profile);
