@@ -215,7 +215,17 @@ impl Lowerer {
                     ..
                 }))
             );
-            self.item(item, base_scale, next_continues);
+            // A clip scope survives across adjacent joined runs: the run
+            // that opens the bracket defers its RestoreDC to the chain's
+            // last joined run.
+            let next_joins = matches!(
+                drawing.items.get(index + 1),
+                Some(Item::Draw(Draw {
+                    clip_join: true,
+                    ..
+                }))
+            );
+            self.item(item, base_scale, next_continues, next_joins);
         }
         if let Some(handle) = self.text_font.take() {
             self.emit(emf_core::RecordData::DeleteObject { ih_object: handle });
@@ -223,7 +233,7 @@ impl Lowerer {
         self.emit(wire::eof());
     }
 
-    fn item(&mut self, item: &Item, base_scale: u64, next_continues: bool) {
+    fn item(&mut self, item: &Item, base_scale: u64, next_continues: bool, next_joins: bool) {
         match item {
             Item::GroupOpen { transform } => {
                 self.emit(emf_core::RecordData::SaveDc);
@@ -277,11 +287,11 @@ impl Lowerer {
                 // hatch fills carry their geometry through the runs that
                 // use them.
             }
-            Item::Draw(draw) => self.draw(draw, base_scale, next_continues),
+            Item::Draw(draw) => self.draw(draw, base_scale, next_continues, next_joins),
         }
     }
 
-    fn draw(&mut self, draw: &Draw, base_scale: u64, next_continues: bool) {
+    fn draw(&mut self, draw: &Draw, base_scale: u64, next_continues: bool, next_joins: bool) {
         // The complete-run GDI lifecycle: state push, miter, pen, brush,
         // clip intersect, the run, deletes, state pop.
         if draw.clip_bracket.is_some() {
@@ -398,7 +408,11 @@ impl Lowerer {
         if let Some(handle) = brush_handle {
             self.emit(emf_core::RecordData::DeleteObject { ih_object: handle });
         }
-        if draw.clip_bracket.is_some() {
+        // The scope's RestoreDC lands after the chain's last joined run:
+        // the opening run defers it while a join follows; a joined run
+        // closes the scope when no further join follows.
+        let scope_open = draw.clip_bracket.is_some();
+        if (scope_open || draw.clip_join) && !next_joins {
             self.emit(emf_core::RecordData::RestoreDc { saved_dc: -1 });
         }
     }

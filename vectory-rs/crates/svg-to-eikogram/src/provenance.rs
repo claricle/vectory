@@ -79,7 +79,9 @@ pub fn line_record_kind(
     if !two_points_open(d) {
         return None;
     }
-    stroked_path(node, source_tag, false, false).then_some(crate::elements::LineKind::PolylineTo)
+    // The PolylineTo spelling carries the fill gap (the two-space form);
+    // the one-space form stays with the plain Polyline family.
+    stroked_path(node, source_tag, true, false).then_some(crate::elements::LineKind::PolylineTo)
 }
 
 /// `M x,y( L x,y){2,} ` — three or more points, trailing space.

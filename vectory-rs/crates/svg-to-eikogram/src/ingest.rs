@@ -1619,11 +1619,12 @@ fn push_cubic(
     points: &[(f64, f64)],
     ingest: &Ingest<'_>,
 ) -> Result<(), IngestFailure> {
-    if points.len() < 6 {
+    // The flattener stores a cubic as its three (x, y) tuples.
+    if points.len() < 3 {
         return Ok(());
     }
     let mut device = Vec::new();
-    for (x, y) in points.iter().take(6) {
+    for (x, y) in points.iter().take(3) {
         device.push(ingest.point(*x, *y)?);
     }
     geometry.push(Segment::CubicTo {

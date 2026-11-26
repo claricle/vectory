@@ -16,6 +16,15 @@ impl Rational {
     pub fn new(num: i128, den: i128) -> Self {
         let den = if den < 0 { -den } else { den };
         let num = if den < 0 { -num } else { num };
+        // Reduce: equality must compare VALUE, not the raw fraction (the
+        // spellings carry 4-decimal denominators; the attr rationals
+        // carry shortest-decimal ones).
+        let gcd = gcd(num.unsigned_abs(), den.unsigned_abs());
+        let (num, den) = if gcd == 0 {
+            (num, den)
+        } else {
+            (num / gcd as i128, den / gcd as i128)
+        };
         Rational { num, den }
     }
 
@@ -146,19 +155,37 @@ fn attr_rational(value: Option<&str>, default: f64) -> Option<Rational> {
 #[must_use]
 pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
     if node.attribute("dx").is_some() || node.attribute("dy").is_some() {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: dx/dy present"); } }
         return None;
     }
     // `rotate\((0|-?[1-9]\d*), DEC, DEC\) translate\(0, DEC\)`
     let transform = node.attribute("transform")?;
-    let (angle, x, pivot, offset) = parse_rotation_spelling(transform)?;
+    let Some((angle, x, pivot, offset)) = parse_rotation_spelling(transform) else {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: spelling parse failed for {transform:?}"); } }
+        return None;
+    };
     if !(-359..=359).contains(&angle) {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: angle out of range {angle}"); } }
         return None;
     }
     if x != attr_rational(node.attribute("x"), 0.0)? {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: x mismatch {x:?}"); } }
         return None;
     }
-    let y = attr_rational(node.attribute("y"), 0.0)?;
-    let height = attr_rational(node.attribute("font-size"), 12.0)?;
+    let Some(y) = attr_rational(node.attribute("y"), 0.0) else {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: y parse failed"); } }
+        return None;
+    };
+    let Some(height) = attr_rational(node.attribute("font-size"), 12.0) else {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: height parse failed"); } }
+        return None;
+    };
 
     let half = Rational::new(1, 20_000);
     let ratio = Rational::new(9, 10);
@@ -169,6 +196,8 @@ pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
     let high_b = offset.add(half);
     let high = min_of(high_a, high_b);
     if !low.less(high) {
+        #[allow(clippy::print_stderr)]
+        { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: empty interval"); } }
         return None;
     }
 
@@ -184,12 +213,17 @@ pub fn canonical_rotation(node: &vectory::Element) -> Option<Rotation> {
         if inner_low.less(inner_high) {
             Alignment::Baseline
         } else {
+            #[allow(clippy::print_stderr)]
+            { if std::env::var("EMF_DEBUG_ROTATION").is_ok() { eprintln!("rot: no alignment"); } }
             return None;
         }
     };
 
+    // The reference keeps the rotation even when the baseline recovery
+    // declines (its early return leaves nil natives); only the escapement
+    // and alignment ride the LOGFONT then.
     let (native_height, native_y) = if alignment == Alignment::Baseline {
-        recover_baseline(height, y, pivot, offset)?
+        recover_baseline(height, y, pivot, offset).unwrap_or((None, None))
     } else {
         (None, None)
     };
@@ -333,4 +367,26 @@ fn recover_baseline(
         return None;
     }
     Some((Some(native_height_f), Some(native_y_f)))
+}
+
+/// The binary GCD (Stein) for the rational reduction.
+fn gcd(mut a: u128, mut b: u128) -> u128 {
+    if a == 0 {
+        return b;
+    }
+    if b == 0 {
+        return a;
+    }
+    let shift = (a | b).trailing_zeros();
+    a >>= a.trailing_zeros();
+    loop {
+        b >>= b.trailing_zeros();
+        if a > b {
+            std::mem::swap(&mut a, &mut b);
+        }
+        b -= a;
+        if b == 0 {
+            return a << shift;
+        }
+    }
 }
