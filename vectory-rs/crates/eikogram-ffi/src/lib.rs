@@ -74,8 +74,8 @@
 use std::ffi::c_char;
 use std::slice;
 
-use emf_to_eikogram::{render, RenderFailure, RenderOptions};
 use eikogram_to_svg::drawing_to_svg_string;
+use emf_to_eikogram::{render, RenderFailure, RenderOptions};
 
 /// Statuses the ABI answers with. Distinct from the JSON error body so the
 /// loader can raise named Ruby classes without string-matching.
