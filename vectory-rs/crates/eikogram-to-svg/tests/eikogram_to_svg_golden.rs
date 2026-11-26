@@ -19,6 +19,7 @@ fn canvas(width: f64, height: f64) -> Canvas {
         preamble: Preamble { tx: 0.0, ty: 0.0 },
         degenerate_y_repair: false,
         alias_namespace: false,
+        scale: 1,
     }
 }
 
@@ -45,6 +46,7 @@ fn minimal_drawing_emits_the_reference_skeleton() {
         }),
         paint: solid_paint(Some(Fill::solid(Color::new(0x12, 0x34, 0x56))), None),
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     assert_eq!(
@@ -71,7 +73,10 @@ fn deferred_path_close_fill_stroke_fallbacks() {
     geometry.push(Segment::LineTo { x: 3.0, y: 4.0 });
     geometry.push(Segment::Close);
     drawing.items.push(Item::Draw(Draw {
-        body: DrawBody::Path(PathDraw { geometry }),
+        body: DrawBody::Path(PathDraw {
+            geometry,
+            program: None,
+        }),
         paint: PathPaint {
             fill: Some(Fill::solid(Color::new(0, 0, 0))),
             stroke: Some(Stroke::Solid {
@@ -85,6 +90,7 @@ fn deferred_path_close_fill_stroke_fallbacks() {
             stroke_from_fill: false,
         },
         arrangement: Arrangement::DeferredPath,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     let path_line = svg
@@ -108,7 +114,10 @@ fn contour_open_falls_back_to_unfilled() {
     geometry.push(Segment::MoveTo { x: 0.0, y: 0.0 });
     geometry.push(Segment::LineTo { x: 5.0, y: 5.0 });
     drawing.items.push(Item::Draw(Draw {
-        body: DrawBody::Path(PathDraw { geometry }),
+        body: DrawBody::Path(PathDraw {
+            geometry,
+            program: None,
+        }),
         paint: solid_paint(
             None,
             Some(Stroke::Solid {
@@ -122,6 +131,7 @@ fn contour_open_falls_back_to_unfilled() {
         arrangement: Arrangement::ContourOpen {
             leading_fill_space: true,
         },
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     let path_line = svg
@@ -143,7 +153,10 @@ fn attr_map_path_carries_geometry_last_without_newline() {
     geometry.push(Segment::MoveTo { x: 1.0, y: 2.0 });
     geometry.push(Segment::LineTo { x: 3.0, y: 4.0 });
     drawing.items.push(Item::Draw(Draw {
-        body: DrawBody::Path(PathDraw { geometry }),
+        body: DrawBody::Path(PathDraw {
+            geometry,
+            program: None,
+        }),
         paint: solid_paint(
             Some(Fill::solid(Color::new(0, 0, 255))),
             Some(Stroke::Solid {
@@ -155,6 +168,7 @@ fn attr_map_path_carries_geometry_last_without_newline() {
             }),
         ),
         arrangement: Arrangement::AttrMap,
+        ..Default::default()
     }));
     drawing.items.push(Item::Draw(Draw {
         body: DrawBody::Shape(ShapeDraw {
@@ -167,6 +181,7 @@ fn attr_map_path_carries_geometry_last_without_newline() {
         }),
         paint: solid_paint(Some(Fill::none()), None),
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     let path_line = svg
@@ -214,6 +229,7 @@ fn clip_def_and_reference() {
             stroke_from_fill: false,
         },
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     // The bounds geometry carries its Close segment, and the clip def appends
@@ -244,9 +260,13 @@ fn text_run_carries_the_attribute_sequence() {
             anchor: TextAnchor::Middle,
             baseline: BaselineMode::Raised,
             content: "hi".to_string(),
+            native: None,
+            font_continuation: false,
+            device_run: None,
         }),
         paint: solid_paint(None, None),
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     let text_line = svg
@@ -293,6 +313,7 @@ fn raster_pattern_def_and_calibrated_image() {
         }),
         paint: solid_paint(None, None),
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     assert!(svg.contains("<defs><image id=\"img-1\" x=\"0\" y=\"0\" width=\"4\" height=\"3\" "));
@@ -354,6 +375,7 @@ fn hatch_pattern_and_group_transforms() {
             }),
         ),
         arrangement: Arrangement::RegionFillFirst,
+        ..Default::default()
     }));
     drawing.items.push(Item::GroupClose);
     let svg = drawing_to_svg(&drawing);
@@ -394,9 +416,13 @@ fn solid_rect_fill_and_bare_shape_continue_in_stream() {
     geometry.push(Segment::LineTo { x: 4.0, y: 4.0 });
     geometry.push(Segment::LineTo { x: 0.0, y: 4.0 });
     drawing.items.push(Item::Draw(Draw {
-        body: DrawBody::Path(PathDraw { geometry }),
+        body: DrawBody::Path(PathDraw {
+            geometry,
+            program: None,
+        }),
         paint: solid_paint(Some(Fill::solid(Color::new(0xAB, 0xCD, 0xEF))), None),
         arrangement: Arrangement::SolidRectFill,
+        ..Default::default()
     }));
     drawing.items.push(Item::Draw(Draw {
         body: DrawBody::BareRect(eikogram::BareRect {
@@ -408,6 +434,7 @@ fn solid_rect_fill_and_bare_shape_continue_in_stream() {
         }),
         paint: solid_paint(None, None),
         arrangement: Arrangement::BareShape,
+        ..Default::default()
     }));
     let svg = drawing_to_svg(&drawing);
     // Neither family emits a newline: they run together on one line. The

@@ -44,6 +44,8 @@ struct Lowerer {
     /// The currently selected shared font handle (adjacent runs with
     /// identical font state reuse it; the deletion lands after the last).
     text_font: Option<u32>,
+    /// The current figure contour's bounds (its cubic runs carry them).
+    figure_bounds: Option<emf_core::Rect>,
 }
 
 /// The record families a provenance comment attaches to.
@@ -95,10 +97,15 @@ pub fn drawing_to_emf(drawing: &Drawing) -> Result<Vec<u8>, LoweringFailure> {
         records: Vec::new(),
         pending_provenance: None,
         text_font: None,
+        figure_bounds: None,
     };
     lowerer.walk(drawing);
     let n_handles = lowerer.next_handle;
-    let header = header_bytes(drawing, u32::try_from(lowerer.records.len() + 1).unwrap_or(u32::MAX), n_handles);
+    let header = header_bytes(
+        drawing,
+        u32::try_from(lowerer.records.len() + 1).unwrap_or(u32::MAX),
+        n_handles,
+    );
     wire::frame_document(&header, &lowerer.records).map_err(|failure| match failure {
         crate::wire::FrameFailure::SizeOverflow | crate::wire::FrameFailure::Unsupported => {
             LoweringFailure::SizeOverflow
@@ -112,13 +119,23 @@ fn header_bytes(drawing: &Drawing, n_records: u32, n_handles: u32) -> Vec<u8> {
     // The reference header builder: bounds from the preamble anchor (the
     // header translate group's negated offsets), the frame from the 96-dpi
     // device mapping, and the canvas dimensions truncated to integers.
-    let min_x = -canvas.preamble.tx;
-    let min_y = -canvas.preamble.ty;
-    let bounds = emf_core::Rect {
-        left: trunc_i32(min_x),
-        top: trunc_i32(min_y),
-        right: trunc_i32(min_x + canvas.width),
-        bottom: trunc_i32(min_y + canvas.height),
+    let bounds = if canvas.degenerate_y_repair {
+        // The legacy broken-Y canonical equivalent.
+        emf_core::Rect {
+            left: -1,
+            top: -1,
+            right: trunc_i32(canvas.width) - 2,
+            bottom: trunc_i32(canvas.height) - 2,
+        }
+    } else {
+        let min_x = -canvas.preamble.tx;
+        let min_y = -canvas.preamble.ty;
+        emf_core::Rect {
+            left: trunc_i32(min_x),
+            top: trunc_i32(min_y),
+            right: trunc_i32(min_x + canvas.width),
+            bottom: trunc_i32(min_y + canvas.height),
+        }
     };
     let units_per_pixel = 100.0 * 25.4 / 96.0;
     let frame = emf_core::Rect {
@@ -184,6 +201,7 @@ impl Lowerer {
                 extent: emf_core::Size { cx: 1, cy: 1 },
             });
         }
+        let base_scale = scale;
         for (index, item) in drawing.items.iter().enumerate() {
             // A shared font state survives only across adjacent
             // continuation runs; anything else ends the lifetime.
@@ -197,7 +215,7 @@ impl Lowerer {
                     ..
                 }))
             );
-            self.item(item, next_continues);
+            self.item(item, base_scale, next_continues);
         }
         if let Some(handle) = self.text_font.take() {
             self.emit(emf_core::RecordData::DeleteObject { ih_object: handle });
@@ -205,7 +223,7 @@ impl Lowerer {
         self.emit(wire::eof());
     }
 
-    fn item(&mut self, item: &Item, next_continues: bool) {
+    fn item(&mut self, item: &Item, base_scale: u64, next_continues: bool) {
         match item {
             Item::GroupOpen { transform } => {
                 self.emit(emf_core::RecordData::SaveDc);
@@ -259,24 +277,21 @@ impl Lowerer {
                 // hatch fills carry their geometry through the runs that
                 // use them.
             }
-            Item::Draw(draw) => self.draw(draw, next_continues),
+            Item::Draw(draw) => self.draw(draw, base_scale, next_continues),
         }
     }
 
-    fn draw(&mut self, draw: &Draw, next_continues: bool) {
+    fn draw(&mut self, draw: &Draw, base_scale: u64, next_continues: bool) {
         // The complete-run GDI lifecycle: state push, miter, pen, brush,
         // clip intersect, the run, deletes, state pop.
         if draw.clip_bracket.is_some() {
             self.emit(emf_core::RecordData::SaveDc);
         }
-        let paint = draw
-            .device_paint
-            .clone()
-            .unwrap_or(DevicePaint {
-                pen: None,
-                brush: None,
-                miter_limit: None,
-            });
+        let paint = draw.device_paint.clone().unwrap_or(DevicePaint {
+            pen: None,
+            brush: None,
+            miter_limit: None,
+        });
         if let Some(limit) = paint.miter_limit {
             self.emit(emf_core::RecordData::SetMiterLimit {
                 miter_limit: emf_core::Float32::from_f32(limit),
@@ -318,11 +333,15 @@ impl Lowerer {
             }
         }
         if let Some(clip) = draw.clip_bracket {
-            self.emit(emf_core::RecordData::IntersectClipRect { clip: rect_of(clip) });
+            self.emit(emf_core::RecordData::IntersectClipRect {
+                clip: rect_of(clip),
+            });
         }
+        let mut scale_bracket = false;
         if let Some(fine) = draw.scale {
             // The finer-mapping bracket: extents stay outside the saved
             // drawing state, so the canvas mapping is restored explicitly.
+            scale_bracket = true;
             self.emit(emf_core::RecordData::SaveDc);
             self.emit(emf_core::RecordData::SetWindowExtEx {
                 extent: emf_core::Size {
@@ -331,10 +350,21 @@ impl Lowerer {
                 },
             });
         }
-        if draw.origin.is_some() {
+        let mut transform_bracket = false;
+        if let Some(matrix) = draw.world_transform {
+            if draw.clip_bracket.is_none() && !scale_bracket {
+                // The transformed run owns its state push.
+                transform_bracket = true;
+                self.emit(emf_core::RecordData::SaveDc);
+            }
+            self.emit(emf_core::RecordData::SetWorldTransform {
+                xform: xform_of(&matrix),
+            });
+        }
+        if let Some(origin) = draw.origin {
             self.emit(emf_core::RecordData::SaveDc);
             self.emit(emf_core::RecordData::SetViewportOrgEx {
-                origin: point_of(draw.origin.expect("checked above")),
+                origin: point_of(origin),
             });
         }
         self.pending_provenance = draw.provenance.clone();
@@ -350,9 +380,15 @@ impl Lowerer {
             let _ = origin;
             self.emit(emf_core::RecordData::RestoreDc { saved_dc: -1 });
         }
-        if draw.scale.is_some() {
+        if transform_bracket {
+            self.emit(emf_core::RecordData::RestoreDc { saved_dc: -1 });
+        }
+        if scale_bracket {
             self.emit(emf_core::RecordData::SetWindowExtEx {
-                extent: emf_core::Size { cx: 1, cy: 1 },
+                extent: emf_core::Size {
+                    cx: base_scale as i32,
+                    cy: base_scale as i32,
+                },
             });
             self.emit(emf_core::RecordData::RestoreDc { saved_dc: -1 });
         }
@@ -463,6 +499,19 @@ impl Lowerer {
         };
         let contours = contours(&path.geometry);
         match program {
+            PathProgram::PolyBezier { prefix } => {
+                let Some(first) = contours.first() else {
+                    return;
+                };
+                let points = flat_points(first);
+                if let Some(prefix) = prefix {
+                    self.emit_drawn(emf_core::RecordData::MoveToEx {
+                        origin: point_of(prefix),
+                    });
+                }
+                let bounds = bounds_of(&points);
+                self.emit_drawn(emf_core::RecordData::PolyBezier { bounds, points });
+            }
             PathProgram::Polygon | PathProgram::Polyline => {
                 let Some(first) = contours.first() else {
                     return;
@@ -484,7 +533,10 @@ impl Lowerer {
                     self.emit_drawn(emf_core::RecordData::MoveToEx { origin: first });
                     let rest = points[1..].to_vec();
                     let bounds = bounds_of(&rest);
-                    self.emit_drawn(emf_core::RecordData::PolyBezierTo { bounds, points: rest });
+                    self.emit_drawn(emf_core::RecordData::PolyBezierTo {
+                        bounds,
+                        points: rest,
+                    });
                 }
             }
             PathProgram::LineFromCurrent | PathProgram::CurveFromCurrent => {
@@ -501,9 +553,15 @@ impl Lowerer {
                 let rest = points[1..].to_vec();
                 let bounds = bounds_of(&rest);
                 self.emit_drawn(if matches!(program, PathProgram::LineFromCurrent) {
-                    emf_core::RecordData::PolylineTo { bounds, points: rest }
+                    emf_core::RecordData::PolylineTo {
+                        bounds,
+                        points: rest,
+                    }
                 } else {
-                    emf_core::RecordData::PolyBezierTo { bounds, points: rest }
+                    emf_core::RecordData::PolyBezierTo {
+                        bounds,
+                        points: rest,
+                    }
                 });
             }
             PathProgram::MultiContour { closed } => {
@@ -529,7 +587,11 @@ impl Lowerer {
                     }
                 });
             }
-            PathProgram::Figure { paint, pending } => {
+            PathProgram::Figure {
+                paint,
+                pending,
+                closed_regions: _,
+            } => {
                 self.emit(emf_core::RecordData::BeginPath);
                 let mut combined = Vec::new();
                 for contour in &contours {
@@ -554,7 +616,7 @@ impl Lowerer {
                     self.figure_segments(contour);
                 }
             }
-            PathProgram::Blit => {
+            PathProgram::Blit { extent } => {
                 let Some(first) = contours.first() else {
                     return;
                 };
@@ -577,10 +639,7 @@ impl Lowerer {
                                 x: left as i32,
                                 y: top as i32,
                             },
-                            destination_extent: emf_core::Point {
-                                x: (right - left) as i32,
-                                y: (bottom - top) as i32,
-                            },
+                            destination_extent: point_of(extent),
                             source: source_default(),
                             buffers: emf_core::BitmapBuffers::default(),
                         },
@@ -662,7 +721,8 @@ impl Lowerer {
                             y: *y as i32,
                         },
                     ];
-                    let bounds = bounds_of(&points);
+                    // The figure's cubic runs carry their contour bounds.
+                    let bounds = self.figure_bounds.unwrap_or_else(|| bounds_of(&points));
                     self.emit_drawn(emf_core::RecordData::PolyBezierTo { bounds, points });
                 }
                 eikogram::Segment::ArcTo { .. } => {}
@@ -883,7 +943,10 @@ fn contours(geometry: &eikogram::PathGeometry) -> Vec<eikogram::PathGeometry> {
         if matches!(segment, eikogram::Segment::MoveTo { .. }) || out.is_empty() {
             out.push(eikogram::PathGeometry::new(geometry.join));
         }
-        out.last_mut().expect("pushed above").segments.push(*segment);
+        out.last_mut()
+            .expect("pushed above")
+            .segments
+            .push(*segment);
     }
     out
 }

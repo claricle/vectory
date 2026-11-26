@@ -58,8 +58,8 @@ pub mod text;
 
 pub use drawing::{
     ArcForm, ArcKind, BareRect, Canvas, ClipDef, ClipShape, DevicePoint, DeviceRect, Draw,
-    DrawBody, Drawing, FigurePaint, HatchPatternDef, ImageArrangement, ImageDraw, Item,
-    PathDraw, PathProgram, Preamble, Provenance, RasterPatternDef, ShapeDraw, ShapeKind,
+    DrawBody, Drawing, FigurePaint, HatchPatternDef, ImageArrangement, ImageDraw, Item, PathDraw,
+    PathProgram, Preamble, Provenance, RasterPatternDef, ShapeDraw, ShapeKind,
 };
 pub use geometry::{CoordJoin, Matrix, PathGeometry, Segment};
 pub use paint::{

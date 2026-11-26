@@ -584,6 +584,10 @@ impl<'a> Emitter<'a> {
                 self.push_element(element);
                 self.push_text("\n");
             }
+            ImageArrangement::Device { .. } => {
+                // The reverse lane's device-resolved placement; the SVG
+                // projection never produces it.
+            }
             ImageArrangement::Placed {
                 x,
                 y,

@@ -25,7 +25,8 @@ pub fn image_dib(raster: &Raster) -> Result<Vec<u8>, String> {
             Ok(dib)
         }
         RasterFormat::Jpeg { .. } => {
-            let (width, height) = jpeg_dims(&raster.payload).ok_or_else(|| "no JPEG frame".to_string())?;
+            let (width, height) =
+                jpeg_dims(&raster.payload).ok_or_else(|| "no JPEG frame".to_string())?;
             let mut dib = dib_header(width, height, 4, raster.payload.len() as u32);
             dib.extend_from_slice(&raster.payload);
             Ok(dib)
@@ -132,7 +133,7 @@ fn bgra_bottom_up(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
     for src_row in (0..height as usize).rev() {
         let start = src_row * row;
         let src = &rgba[start..start + row];
-        for pixel in src.chunks_exact(4) {
+        for pixel in src.as_chunks::<4>().0 {
             out.push(pixel[2]);
             out.push(pixel[1]);
             out.push(pixel[0]);
@@ -168,8 +169,7 @@ pub fn jpeg_dims(bytes: &[u8]) -> Option<(u32, u32)> {
         if offset + 2 >= bytes.len() {
             return None;
         }
-        let length =
-            u16::from_be_bytes([bytes[offset + 1], bytes[offset + 2]]) as usize;
+        let length = u16::from_be_bytes([bytes[offset + 1], bytes[offset + 2]]) as usize;
         if length < 2 || offset + 1 + length > bytes.len() {
             return None;
         }
@@ -220,12 +220,6 @@ fn png_header(bytes: &[u8]) -> Result<(u32, u32, u8, u8, bool), String> {
     Ok((width, height, depth, color, interlace != 0))
 }
 
-struct DecodedPng {
-    width: u32,
-    height: u32,
-    rgba: Vec<u8>,
-}
-
 /// Decodes a PNG payload to packed RGBA bytes.
 ///
 /// # Errors
@@ -259,7 +253,9 @@ pub fn decode_png_rgba(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
         match kind {
             b"PLTE" => {
                 palette = bytes[data_at..data_at + length]
-                    .chunks_exact(3)
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
                     .map(|c| [c[0], c[1], c[2]])
                     .collect();
             }
@@ -273,7 +269,11 @@ pub fn decode_png_rgba(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), String> {
     let raw_len = (stride + 1) * height as usize;
     let raw = inflate(&idat, raw_len)?;
     let pixels = defilter(&raw, width as usize, height as usize, channels)?;
-    Ok((width, height, to_rgba(pixels, width as usize, height as usize, channels, &palette)))
+    Ok((
+        width,
+        height,
+        to_rgba(pixels, width as usize, height as usize, channels, &palette),
+    ))
 }
 
 fn to_rgba(
@@ -325,9 +325,17 @@ fn defilter(raw: &[u8], width: usize, height: usize, channels: usize) -> Result<
         let line = &raw[at + 1..at + 1 + stride];
         let mut target = vec![0u8; stride];
         for index in 0..stride {
-            let a = if index >= channels { target[index - channels] } else { 0 };
+            let a = if index >= channels {
+                target[index - channels]
+            } else {
+                0
+            };
             let b = previous.get(index).copied().unwrap_or(0);
-            let c = if index >= channels { previous[index - channels] } else { 0 };
+            let c = if index >= channels {
+                previous.get(index - channels).copied().unwrap_or(0)
+            } else {
+                0
+            };
             target[index] = match filter {
                 0 => line[index],
                 1 => line[index].wrapping_add(a),

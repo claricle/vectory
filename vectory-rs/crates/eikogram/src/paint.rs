@@ -2,7 +2,7 @@
 //! and the arrangement a drawn shape's paint attaches to its geometry with.
 #![allow(dead_code)]
 
-use crate::drawing::{DevicePoint, DeviceRect};
+use crate::drawing::DevicePoint;
 
 /// An opaque sRGB colour carried channel-wise; alpha lives outside the
 /// reference paint model (colour emission is channel-hex).
@@ -179,13 +179,8 @@ pub struct DevicePen {
 /// handles; a referenced brush is not deleted with the run).
 #[derive(Clone, Debug, PartialEq)]
 pub enum DeviceBrush {
-    Solid {
-        style: u32,
-        color: Color,
-    },
-    Pattern {
-        id: String,
-    },
+    Solid { style: u32, color: Color },
+    Pattern { id: String },
 }
 
 /// How a drawn shape's paint attaches to its geometry. Each value is a

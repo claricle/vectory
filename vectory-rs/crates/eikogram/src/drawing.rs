@@ -99,6 +99,14 @@ pub struct Draw {
     /// device units; the lowering opens state, intersects the rectangle,
     /// and closes state around the run).
     pub clip_bracket: Option<DeviceRect>,
+    /// The run joins the previous run's clip bracket (identical resolved
+    /// bounds and complete-draw facts, adjacent in the list), so the
+    /// lowering emits no state records of its own for this run.
+    pub clip_join: bool,
+    /// A world transform the run applies to its own geometry (a carried
+    /// element transform; the lowering selects it after the run's state
+    /// push).
+    pub world_transform: Option<Matrix>,
     /// The run's drawing provenance payload, in the producing provenance's
     /// exact carried values.
     pub provenance: Option<Provenance>,
@@ -123,6 +131,8 @@ impl Default for Draw {
             origin: None,
             scale: None,
             clip_bracket: None,
+            clip_join: false,
+            world_transform: None,
             provenance: None,
             device_paint: None,
         }
@@ -240,19 +250,23 @@ pub enum PathProgram {
     /// A cubic run continued from the carried current position.
     CurveFromCurrent,
     /// A multi-contour region run.
-    MultiContour {
-        closed: bool,
-    },
+    MultiContour { closed: bool },
     /// A deferred figure set, painted by a closing action (`pending` leaves
-    /// the figure unpainted).
+    /// the figure unpainted; `closed_regions` carries the contours as one
+    /// multi-contour region inside the figure instead of as segments).
     Figure {
         paint: FigurePaint,
         pending: bool,
+        closed_regions: bool,
     },
     /// Absolute segments, each from its own move.
     Segments,
-    /// A solid rectangle painted directly.
-    Blit,
+    /// A solid rectangle painted directly (its extent is the raw
+    /// difference, unscaled by any origin shift).
+    Blit { extent: DevicePoint },
+    /// Cubic contours in one poly-cubic record, after an explicit
+    /// current-position move.
+    PolyBezier { prefix: Option<DevicePoint> },
     /// A native circular arc form, fully resolved in device units.
     Circular(ArcForm),
 }
@@ -330,6 +344,7 @@ pub struct ImageDraw {
 }
 
 /// One display-list item.
+#[allow(clippy::large_enum_variant)] // the drawn run dominates by design
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item {
     /// Open a transform group; all content until the matching

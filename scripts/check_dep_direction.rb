@@ -45,10 +45,25 @@ module DepDirection
       note: "the EMF-model -> VIM transformer; emf-core is an external pinned git dependency, not a workspace crate",
       allowed: %w[eikogram],
     },
+    "svg-to-eikogram" => {
+      role: "transformer",
+      note: "the SVG-model -> VIM transformer (the reverse lane, claricle/emf#90); the only bridge between the SVG model and the drawing model in that direction",
+      allowed: %w[vectory eikogram],
+    },
+    "eikogram-to-emf" => {
+      role: "transformer",
+      note: "the VIM -> EMF-model transformer (the reverse lane, claricle/emf#90); emf-core is an external pinned git dependency, not a workspace crate",
+      allowed: %w[eikogram],
+    },
     "emf88-parity" => {
       role: "binding",
       note: "the claricle/emf#88 byte-parity acceptance harness; binds the two transformers to compare final bytes against the Ruby renderer",
       allowed: %w[emf-to-eikogram eikogram-to-svg],
+    },
+    "emf90-parity" => {
+      role: "binding",
+      note: "the claricle/emf#90 round-trip acceptance harness; binds all four transformers to compare final bytes against the Ruby pipeline",
+      allowed: %w[emf-to-eikogram eikogram-to-svg svg-to-eikogram eikogram-to-emf],
     },
     "vectory-ffi" => {
       role: "binding",

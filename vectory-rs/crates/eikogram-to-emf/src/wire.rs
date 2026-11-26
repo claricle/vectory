@@ -263,7 +263,6 @@ pub fn payload_bytes(record: &RecordData) -> Result<Vec<u8>, FrameFailure> {
             off_pal_entries,
             n_size_last,
         }) => {
-            word(&mut out, 12);
             word(&mut out, *n_pal_entries);
             word(&mut out, *off_pal_entries);
             word(&mut out, *n_size_last);
@@ -291,9 +290,13 @@ pub fn payload_bytes(record: &RecordData) -> Result<Vec<u8>, FrameFailure> {
         RecordData::OffsetClipRgn { offset } => point_bytes(&mut out, *offset),
         RecordData::SetMapMode { map_mode }
         | RecordData::SetBkMode { bk_mode: map_mode }
-        | RecordData::SetPolyFillMode { poly_fill_mode: map_mode }
+        | RecordData::SetPolyFillMode {
+            poly_fill_mode: map_mode,
+        }
         | RecordData::SetRop2 { rop2: map_mode }
-        | RecordData::SetStretchBltMode { stretch_mode: map_mode }
+        | RecordData::SetStretchBltMode {
+            stretch_mode: map_mode,
+        }
         | RecordData::SetTextAlign {
             text_align_mode: map_mode,
         }
@@ -387,7 +390,10 @@ pub fn payload_bytes(record: &RecordData) -> Result<Vec<u8>, FrameFailure> {
             color_bytes(&mut out, *color);
             word(&mut out, *brush_hatch);
         }
-        RecordData::ExtSelectClipRgn { region_mode, region } => {
+        RecordData::ExtSelectClipRgn {
+            region_mode,
+            region,
+        } => {
             let data_len = region
                 .as_ref()
                 .map_or(0, |r| 32 + r.rectangles.len() * 16 + r.trailing_bytes.len());
@@ -424,10 +430,7 @@ fn region_bytes(out: &mut Vec<u8>, region: &emf_core::RegionData) {
     out.extend_from_slice(&region.trailing_bytes);
 }
 
-fn font_bytes(
-    out: &mut Vec<u8>,
-    font_record: &emf_core::FontRecord,
-) -> Result<(), FrameFailure> {
+fn font_bytes(out: &mut Vec<u8>, font_record: &emf_core::FontRecord) -> Result<(), FrameFailure> {
     let emf_core::Font::LogFont(log_font) = &font_record.font else {
         return Err(FrameFailure::Unsupported);
     };
@@ -578,7 +581,9 @@ fn bitmap_bytes(out: &mut Vec<u8>, bitmap: &BitmapRecord) -> Result<(), FrameFai
     let off = |at: Option<usize>| at.map_or(0, |value| value as u32);
 
     match bitmap {
-        BitmapRecord::CreateDibPatternBrushPt { ih_brush, usage, .. } => {
+        BitmapRecord::CreateDibPatternBrushPt {
+            ih_brush, usage, ..
+        } => {
             word(out, *ih_brush);
             word(out, *usage);
             word(out, off(info_offset));
@@ -622,11 +627,13 @@ fn bitmap_bytes(out: &mut Vec<u8>, bitmap: &BitmapRecord) -> Result<(), FrameFai
         }
         _ => return Err(FrameFailure::Unsupported),
     }
-    for buffer in [buffers.source_info.as_ref(), buffers.source_bits.as_ref()] {
-        if let Some(BitmapBuffer { padding, data }) = buffer {
-            out.resize(out.len() + padding.len(), 0);
-            out.extend_from_slice(data);
-        }
+    for BitmapBuffer { padding, data } in
+        [buffers.source_info.as_ref(), buffers.source_bits.as_ref()]
+            .into_iter()
+            .flatten()
+    {
+        out.resize(out.len() + padding.len(), 0);
+        out.extend_from_slice(data);
     }
     Ok(())
 }
@@ -661,12 +668,7 @@ fn color_bytes(out: &mut Vec<u8>, color: emf_core::ColorRef) {
 
 fn xform_bytes(out: &mut Vec<u8>, xform: &emf_core::XForm) {
     for value in [
-        xform.m11,
-        xform.m12,
-        xform.m21,
-        xform.m22,
-        xform.dx,
-        xform.dy,
+        xform.m11, xform.m12, xform.m21, xform.m22, xform.dx, xform.dy,
     ] {
         word(out, value.to_bits());
     }
