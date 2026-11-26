@@ -99,10 +99,14 @@ fn library_path() -> Option<PathBuf> {
     let target = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
     ["release", "debug"].into_iter().find_map(|profile| {
         let base = target.join(profile);
-        ["libeikogram_ffi.dylib", "libeikogram_ffi.so", "eikogram_ffi.dll"]
-            .into_iter()
-            .map(|name| base.join(name))
-            .find(|path| path.is_file())
+        [
+            "libeikogram_ffi.dylib",
+            "libeikogram_ffi.so",
+            "eikogram_ffi.dll",
+        ]
+        .into_iter()
+        .map(|name| base.join(name))
+        .find(|path| path.is_file())
     })
 }
 
@@ -181,7 +185,8 @@ fn the_boundary_is_byte_transparent_over_the_corpus_subset() {
     assert!(subset.len() >= 10, "corpus subset expected 10+ files");
     assert!(
         subset.iter().any(|path| {
-            path.parent().is_some_and(|parent| parent.ends_with("emf-ea"))
+            path.parent()
+                .is_some_and(|parent| parent.ends_with("emf-ea"))
         }),
         "the subset must include an EMF+ (emf-ea) file"
     );
