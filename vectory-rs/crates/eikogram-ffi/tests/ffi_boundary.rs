@@ -6,9 +6,10 @@
 //!
 //! The cdylib is resolved in this order: `EIKOGRAM_FFI_TEST_LIBRARY`
 //! (exact path), then the workspace's `target/release`, then
-//! `target/debug`. `cargo test` does not build cdylib artifacts, so run
-//! `cargo build -p eikogram-ffi` first (CI and the local flow both do);
-//! the boundary tests skip with a loud message when no library exists.
+//! `target/debug`. `cargo test` does not build cdylib artifacts, so the
+//! boundary examples skip loudly when no library exists — build with
+//! `cargo build -p eikogram-ffi` (CI's native-runtime job and the local
+//! flow do) to exercise them.
 //! The corpus test additionally skips unless EMF_FIXTURE_ROOT names the
 //! pinned external emf checkout (CI without the pinned corpus is not a
 //! failure).
@@ -120,24 +121,36 @@ fn direct_render(emf: &[u8]) -> Result<String, String> {
     Ok(eikogram_to_svg::drawing_to_svg(&drawing))
 }
 
-fn open_binding() -> Binding {
-    Binding::open().unwrap_or_else(|| {
-        panic!(
-            "no eikogram-ffi cdylib found; run `cargo build -p eikogram-ffi` \
-             first (or set EIKOGRAM_FFI_TEST_LIBRARY)"
-        )
-    })
+/// The built cdylib, or `None` when none exists (the examples skip loudly;
+/// CI's plain `cargo test` does not build cdylib artifacts, while the
+/// native-runtime job and the local `cargo build -p eikogram-ffi` flow do).
+fn built_library() -> Option<Binding> {
+    Binding::open()
 }
 
 #[test]
 fn abi_version_is_one() {
-    let binding = open_binding();
+    let Some(binding) = built_library() else {
+        eprintln!(
+            "skipping: no eikogram-ffi cdylib found; run \
+             `cargo build -p eikogram-ffi` first (or set \
+             EIKOGRAM_FFI_TEST_LIBRARY)"
+        );
+        return;
+    };
     assert_eq!(binding.abi_version(), 1);
 }
 
 #[test]
 fn free_accepts_the_zeroed_buffer() {
-    let binding = open_binding();
+    let Some(binding) = built_library() else {
+        eprintln!(
+            "skipping: no eikogram-ffi cdylib found; run \
+             `cargo build -p eikogram-ffi` first (or set \
+             EIKOGRAM_FFI_TEST_LIBRARY)"
+        );
+        return;
+    };
     let mut out = Buf::ZEROED;
     // SAFETY: the documented safe-input case (never written).
     unsafe {
@@ -150,7 +163,14 @@ fn free_accepts_the_zeroed_buffer() {
 
 #[test]
 fn an_empty_input_answers_the_named_parse_failure() {
-    let binding = open_binding();
+    let Some(binding) = built_library() else {
+        eprintln!(
+            "skipping: no eikogram-ffi cdylib found; run \
+             `cargo build -p eikogram-ffi` first (or set \
+             EIKOGRAM_FFI_TEST_LIBRARY)"
+        );
+        return;
+    };
     let (status, body) = binding.render_emf(&[]);
     assert_eq!(status, STATUS_PARSING);
     let parsed: serde_json::Value =
@@ -165,7 +185,14 @@ fn the_boundary_is_byte_transparent_over_the_corpus_subset() {
         eprintln!("corpus not configured (EMF_FIXTURE_ROOT unset); skipping");
         return;
     };
-    let binding = open_binding();
+    let Some(binding) = built_library() else {
+        eprintln!(
+            "skipping: no eikogram-ffi cdylib found; run \
+             `cargo build -p eikogram-ffi` first (or set \
+             EIKOGRAM_FFI_TEST_LIBRARY)"
+        );
+        return;
+    };
     let fixture_root = PathBuf::from(fixture_root);
 
     let mut subset = Vec::new();
